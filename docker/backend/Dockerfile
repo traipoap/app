@@ -18,7 +18,7 @@ ARG VERSION=unknown
 
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
-    CGO_ENABLED=1 GOOS=linux go build -trimpath \
+    CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -trimpath \
       -ldflags="-s -w -X main.Version=${VERSION}" \
       -o /out/app .
 
