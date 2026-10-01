@@ -1,4 +1,4 @@
-FROM node:26.8.1-alpine3.24 AS builder
+FROM node:26.10.0-alpine3.24 AS builder
 
 WORKDIR /app
 
@@ -9,7 +9,7 @@ COPY frontend/ ./
 RUN npm run build
 
 # ===================================================
-FROM node:26.8.1-alpine3.24
+FROM node:26.10.0-alpine3.24
 
 RUN apk --no-cache add ca-certificates \
  && addgroup -g 10001 app \
