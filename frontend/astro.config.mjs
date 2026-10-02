@@ -33,7 +33,7 @@ const API_PROXY_TARGET = (() => {
 // domain at build/run time without editing code, e.g.:
 //   ALLOWED_HOSTS="frontend.example.com,.example.com" docker build ...
 //   docker run -e ALLOWED_HOSTS=frontend.example.com .
-const ALLOWED_HOSTS = (process.env.ALLOWED_HOSTS || 'localhost,127.0.0.1')
+const ALLOWED_HOSTS = (process.env.ALLOWED_HOSTS || '*')
   .split(',')
   .map((h) => h.trim())
   .filter(Boolean);
