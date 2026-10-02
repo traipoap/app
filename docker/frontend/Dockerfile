@@ -16,7 +16,9 @@ RUN apk --no-cache add ca-certificates \
  && adduser -u 10001 -G app -s /sbin/nologin -D app
 
 RUN apk upgrade --no-cache && \
-    npm install -g npm@11.19.1
+    npm install -g npm@11.19.1 && \
+    npm install undici@8.10.2 && \
+    npm install brace-expansion@5.0.11
 
 WORKDIR /app
 
