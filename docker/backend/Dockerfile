@@ -4,7 +4,6 @@ FROM golang:1.27.1-alpine3.24 AS backend-builder
 
 WORKDIR /src
 
-# CGO toolchain for go-sqlite3. (git removed — go mod download uses GOPROXY)
 RUN apk add --no-cache gcc musl-dev sqlite-dev
 
 COPY backend/go.mod backend/go.sum ./
@@ -27,7 +26,6 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 
 FROM alpine:3.24.2
 
-# One layer: runtime libs + unprivileged user + writable dirs
 RUN apk add --no-cache ca-certificates sqlite-libs tzdata \
  && addgroup -g 10001 app \
  && adduser -u 10001 -G app -s /sbin/nologin -D app \
@@ -37,8 +35,6 @@ RUN apk add --no-cache ca-certificates sqlite-libs tzdata \
 WORKDIR /backend
 
 COPY --from=backend-builder --chown=app:app /out/app /backend/app
-# Only needed if the app actually runs on AWS Lambda — remove otherwise
-COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.8.4 /lambda-adapter /opt/extensions/lambda-adapter
 
 USER app
 
@@ -48,9 +44,11 @@ ENV GIN_MODE=release \
     BACKEND_PORT=8080 \
     DATABASE_PATH=/backend/data/users.db \
     JWT_SECRET="" \
-    BASE_PATH="./"
+    BASE_PATH="./" \
+    CORS_ORIGINS="*"
 
-ARG CORS_ORIGINS
-ENV CORS_ORIGINS=${CORS_ORIGINS}
+# ถ้าต้องการ config แบบ dynamic ให้ mount file แทน:
+# COPY cors-config.json /etc/app/cors-config.json
+# ENV CORS_CONFIG_FILE=/etc/app/cors-config.json
 
 CMD ["/backend/app"]

@@ -1,44 +1,26 @@
+# syntax=docker/dockerfile:1.7
+
+# ---- builder ----
 FROM node:26.10.0-alpine3.24 AS builder
 
 WORKDIR /app
 
 COPY frontend/package*.json ./
-RUN npm ci
+RUN npm ci --omit=dev
 
-COPY frontend/ ./
+COPY frontend/ .
 RUN npm run build
 
-# ===================================================
-# astro preview serves dist AND runs the /api proxy + allowedHosts
-# from astro.config.mjs — so node_modules must stay (can't swap to a
-# plain static server without losing the proxy).
-FROM node:26.10.0-alpine3.24
+# ---- runtime (nginx serve static) ----
+FROM nginx:1.27-alpine
 
-RUN apk add --no-cache ca-certificates \
- && addgroup -g 10001 app \
- && adduser -u 10001 -G app -s /sbin/nologin -D app
+COPY --from=builder /app/dist /usr/share/nginx/html
 
-WORKDIR /app
+# ถ้าต้องการ API proxy ใน prod uncomment บรรทัดด้านล่าง:
+# COPY nginx-proxy.conf /etc/nginx/conf.d/default.conf
 
-COPY --from=builder --chown=app:app \
-    /app/dist /app/dist \
-    /app/node_modules /app/node_modules \
-    /app/package*.json /app/ \
-    /app/astro.config.mjs /app/
-
-COPY --from=builder --chown=app:app \
-    /app/.astro /app/.astro
-
-USER app
+USER nginx
 
 EXPOSE 4321
 
-ENV PORT=4321 \
-    HOSTNAME="0.0.0.0"
-
-ARG ALLOWED_HOSTS
-ENV ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1}
-ARG API_PROXY_TARGET
-ENV API_PROXY_TARGET=${API_PROXY_TARGET:-}
-
-CMD ["npm", "run", "preview", "--", "--host", "0.0.0.0"]
+CMD ["nginx", "-g", "daemon off;"]
