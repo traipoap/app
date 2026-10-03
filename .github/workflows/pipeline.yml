@@ -1,22 +1,14 @@
 # SPDX-License-Identifier: Apache-2.0
 
-# Single entry-point pipeline:
-#   1. Security gate — Gitleaks (secret scan of full history) +
-#      SonarQube (code quality & security analysis)
-#   2. Per-service build (only when that service's paths changed) —
-#      and ONLY if the security gate passed. A failing Gitleaks or
-#      SonarQube job skips the builds automatically.
+# Pipeline: security gate (Gitleaks + SonarQube) → per-service build
+# (only changed paths) via the reusable build-and-push.yml
+# (build → Trivy gate → push GHCR, ECR [backend] / S3 [frontend]).
 #
-# Build → Trivy scan (gate) → push to GHCR happens inside the reusable
-# workflow .github/workflows/build-and-push.yml
-#
-# Configuration lives in Settings → Secrets and variables → Actions
-# (nothing secret is hardcoded in this file):
-#   Variable : SONAR_HOST_URL      e.g. http://10.10.16.4:9000
-#   Secret   : SONAR_TOKEN         e.g. sonarqube_xxxxxxxxxxxxxxxx
-#   (the project key lives in sonar-project.properties at the repo root —
-#    it is not a secret, so it is committed instead of a repo variable)
-#   Secret   : TOKEN_REGISTRY   GHCR fine-grained PAT
+# Config (Settings → Secrets and variables → Actions):
+#   Variable : SONAR_HOST_URL
+#   Secret   : SONAR_TOKEN
+#   Secret   : TOKEN_REGISTRY  (GHCR fine-grained PAT)
+#   Project key: committed sonar-project.properties (not a secret)
 
 name: Pipeline (Security → Build → Trivy → Push)
 
@@ -30,9 +22,7 @@ on:
       - '.github/workflows/**'
   pull_request:
 
-  # Manual trigger from the Actions tab — useful to (re)build services on
-  # demand, e.g. after fixing SonarQube findings or when a previous run was
-  # skipped by the path filter (docs/workflow-only changes).
+  # Manual trigger: (re)build on demand (e.g. when a run was skipped by the path filter).
   workflow_dispatch:
     inputs:
       force_build:
@@ -42,10 +32,8 @@ on:
         type: choice
         options: ['true', 'false']
 
-# NOTE: no top-level `permissions:` block here on purpose — a caller-level
-# permissions block becomes the ceiling for the reusable build workflow and
-# strips the `packages: write` / `security-events: write` it needs. Each job
-# below declares only what it requires.
+# No top-level permissions on purpose: a caller-level block would cap the
+# reusable build workflow (it needs packages/security-events: write).
 
 jobs:
   changes:
@@ -75,17 +63,17 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      security-events: write # required to upload the SARIF report
+      security-events: write # SARIF upload
     steps:
       - name: Checkout Code (full history)
         uses: actions/checkout@v6
         with:
-          fetch-depth: 0 # scan ALL commits, not just the tip
+          fetch-depth: 0 # scan full history
 
       - name: Run Gitleaks
         uses: gitleaks/gitleaks-action@v3
         env:
-          # Lets the action publish the SARIF report to the Security tab
+          # publish SARIF to the Security tab
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   sonarqube:
@@ -93,28 +81,26 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: write # post inline findings on PRs
+      pull-requests: write # inline findings on PRs
     steps:
       - name: Checkout Code
         uses: actions/checkout@v6
         with:
-          fetch-depth: 0 # full history for accurate new-code analysis
+          fetch-depth: 0 # full history for new-code analysis
 
       - name: Analyze with SonarQube
         uses: SonarSource/sonarqube-scan-action@v8
         env:
-          # Server + auth from repo Variable/Secret; project key & settings
-          # from the committed sonar-project.properties file
+          # Server/auth from repo Variable/Secret; project key in the committed sonar-project.properties
           SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_SCANNER_ARGS: '-Dproject.settings=./sonar-project.properties'
-          # Fail the pipeline on new security issues (the analysis itself
-          # only reports; this makes the gate meaningful).
+          # Fail on new security issues — makes the gate meaningful
           SONAR_QUALITY_GATE: 'true'
 
   build-backend:
     name: Backend — build, Trivy scan, push
-    # Gates: if gitleaks or sonarqube failed, this job is skipped.
+    # Skipped if the security gate (gitleaks/sonarqube) failed.
     needs: [changes, gitleaks, sonarqube]
     if: >-
       needs.changes.outputs.backend == 'true' ||
@@ -127,7 +113,7 @@ jobs:
 
   build-frontend:
     name: Frontend — build, Trivy scan, push
-    # Gates: if gitleaks or sonarqube failed, this job is skipped.
+    # Skipped if the security gate (gitleaks/sonarqube) failed.
     needs: [changes, gitleaks, sonarqube]
     if: >-
       needs.changes.outputs.frontend == 'true' ||
@@ -136,7 +122,6 @@ jobs:
     with:
       service: frontend
       dockerfile: ./docker/frontend/Dockerfile
-      # The final nginx image serves the build from /usr/share/nginx/html
-      # (/app/dist only exists in the builder stage, not the runtime image).
+      # Runtime (nginx) image serves /usr/share/nginx/html; /app/dist is builder-only.
       dist_path: /usr/share/nginx/html
     secrets: inherit
