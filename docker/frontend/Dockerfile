@@ -11,7 +11,7 @@ RUN npm ci --omit=dev
 COPY frontend/ .
 RUN npm run build
 
-# ---- runtime (nginx serve static) ----
+# ---- runtime (nginx serve static) -----
 FROM nginx:1.30.5-alpine3.24
 
 # Pull latest security fixes for the base image's packages from the

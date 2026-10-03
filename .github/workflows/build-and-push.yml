@@ -90,7 +90,7 @@ jobs:
         if: inputs.service == 'frontend' && success() && inputs.dist_path != ''
         run: |
           container_id=$(docker create ghcr.io/traipoap/${{ inputs.service }}:0.0.${{ github.run_number }})
-          docker cp "${container_id}:${inputs.dist_path}" dist-upload
+          docker cp "${container_id}:${{ inputs.dist_path }}" dist-upload
           docker rm "${container_id}"
           test -d dist-upload || { echo "::error::${{ inputs.dist_path }} not found in image"; exit 1; }
 
