@@ -47,7 +47,6 @@ ENV GIN_MODE=release \
     BASE_PATH="./" \
     CORS_ORIGINS="*"
 
-# ถ้าต้องการ config แบบ dynamic ให้ mount file แทน:
 # COPY cors-config.json /etc/app/cors-config.json
 # ENV CORS_CONFIG_FILE=/etc/app/cors-config.json
 

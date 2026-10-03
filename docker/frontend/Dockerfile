@@ -16,7 +16,6 @@ FROM nginx:1.27-alpine
 
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# ถ้าต้องการ API proxy ใน prod uncomment บรรทัดด้านล่าง:
 # COPY nginx-proxy.conf /etc/nginx/conf.d/default.conf
 
 USER nginx
