@@ -11,6 +11,10 @@ on:
       dockerfile:
         required: true
         type: string
+      dist_path:
+        required: false
+        type: string
+        description: Path of the built dist/ inside the image to upload to S3 (leave empty to skip)
 
 jobs:
   build-scan-push:
@@ -25,10 +29,10 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Log in to GHCR
-        run: docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.TOKEN_REGISTRY }}
+        run: podman login ghcr.io -u ${{ github.actor }} -p ${{ secrets.TOKEN_REGISTRY }}
 
       - name: Build image
-        run: docker build -t ghcr.io/traipoap/${{ inputs.service }}:0.0.${{ github.run_number }} --build-arg VERSION=0.0.${{ github.run_number }} -f ${{ inputs.dockerfile }} .
+        run: podman build -t ghcr.io/traipoap/${{ inputs.service }}:0.0.${{ github.run_number }} --build-arg VERSION=0.0.${{ github.run_number }} -f ${{ inputs.dockerfile }} .
 
       # Scan the LOCAL image BEFORE pushing — if the gate fails, the Push
       # step is skipped and no vulnerable image reaches the registry.
@@ -59,4 +63,34 @@ jobs:
 
       - name: Push image
         if: success()
-        run: docker push ghcr.io/traipoap/${{ inputs.service }}:0.0.${{ github.run_number }}
+        run: podman push ghcr.io/traipoap/${{ inputs.service }}:0.0.${{ github.run_number }}
+
+      - name: Log in to AWS
+        run: podman login ${{ secrets.AWS_ECR }} -u ${{ secrets.AWS_ACCESS_KEY_ID }} -p ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Tag image to AWS ECR
+        if: success()
+        run: podman tag ghcr.io/traipoap/${{ inputs.service }}:0.0.${{ github.run_number }} ${{ secrets.AWS_ECR }}/${{ inputs.service }}:0.0.${{ github.run_number }}
+
+      - name: Push image to AWS ECR
+        if: success()
+        run: podman push ${{ secrets.AWS_ECR }}/${{ inputs.service }}:0.0.${{ github.run_number }}
+
+      # --- Optional: upload the built dist/ from the image to S3 ---
+      # Extract the dist directory straight from the scanned/pushed image so
+      # the S3 copy is guaranteed to match the registry artifact.
+      - name: Extract dist from image
+        if: success() && inputs.dist_path != ''
+        run: |
+          container_id=$(podman create ghcr.io/traipoap/${{ inputs.service }}:0.0.${{ github.run_number }})
+          podman cp "${container_id}:${inputs.dist_path}" dist-upload
+          podman rm "${container_id}"
+          test -d dist-upload || { echo "::error::${{ inputs.dist_path }} not found in image"; exit 1; }
+
+      - name: Upload dist to AWS S3
+        if: success() && inputs.dist_path != ''
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_S3_REGION }}
+        run: aws s3 cp dist-upload "s3://${{ secrets.AWS_S3_BUCKET }}/${{ inputs.service }}/0.0.${{ github.run_number }}/" --recursive

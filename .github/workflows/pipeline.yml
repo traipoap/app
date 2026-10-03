@@ -136,4 +136,5 @@ jobs:
     with:
       service: frontend
       dockerfile: ./docker/frontend/Dockerfile
+      dist_path: /app/dist
     secrets: inherit
