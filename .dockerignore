@@ -46,3 +46,12 @@ tmp/
 temp/
 *.tmp
 *.log
+
+# Node (host node_modules MUST NOT leak into the build context —
+# it overwrites `npm ci` output and ships host-platform binaries)
+node_modules/
+**/node_modules/
+
+# Astro build artifacts (regenerated inside the image)
+frontend/dist/
+frontend/.astro/
