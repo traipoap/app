@@ -73,6 +73,7 @@ func main() {
 	log.Printf("Starting server on port %s", config.AppConfig.Port)
 	log.Printf("CORS_ORIGINS: %s", config.AppConfig.CorsOrigins)
 	log.Printf("Quickwit_URL: %s", config.AppConfig.QuickwitURL)
+	log.Printf("BASE_PATH: %s", filepath.Join(os.Getenv("BASE_PATH"), "exports"))
 	log.Printf("##########################################################################################")
 	if err := r.Run(":" + config.AppConfig.Port); err != nil {
 		log.Fatalf("failed to start server: %v", err)

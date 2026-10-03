@@ -24,13 +24,13 @@ import (
 )
 
 var exportService *services.ExportService
+var exportDirPath string
 
 // activeExports enforces at most one concurrent export, mirroring the Rust
 // backend's ACTIVE_EXPORTS guard.
 var activeExports int32
 
-var (
-	exportDirPath   = filepath.Join(os.Getenv("BASE_PATH"), "exports")
+const (
 	exportPageSize  = 10000 // Quickwit's per-request hit cap
 	exportPagePause = 100 * time.Millisecond
 	exportMaxAge    = 30 * time.Minute // hard cap for a single export job
@@ -50,16 +50,14 @@ func InitExportController() error {
 
 	qwClient := services.NewQuickwitClient(config.AppConfig.QuickwitURL)
 
-	// Create export dir if not exists
-	exportDir := filepath.Join(".", "exports")
-	if err := os.MkdirAll(exportDir, 0755); err != nil {
+	exportDirPath = filepath.Join(config.AppConfig.BasePath, "exports")
+	if err := os.MkdirAll(exportDirPath, 0755); err != nil {
 		return err
 	}
 
-	// PDPA fields to mask (load from env/config)
 	pdpaFields := []string{"source_ip", "user_id", "email", "phone"}
 
-	exportService = services.NewExportService(qwClient, exportDir, pdpaFields)
+	exportService = services.NewExportService(qwClient, exportDirPath, pdpaFields)
 	return nil
 }
 
@@ -115,6 +113,7 @@ func runExport(ctx context.Context, params models.SearchParams) error {
 		pageSize = *params.MaxHits
 	}
 
+	// runExport — replace the local block with:
 	if err := os.MkdirAll(exportDirPath, 0755); err != nil {
 		return fmt.Errorf("create exports directory: %w", err)
 	}
@@ -305,7 +304,9 @@ func appendHashRecord(hash, source string) error {
 		return fmt.Errorf("marshal hash record: %w", err)
 	}
 
-	registryPath := filepath.Join("exports", ".hash_registry.jsonl")
+	// appendHashRecord — replace the local declaration with:
+	registryPath := filepath.Join(exportDirPath, ".hash_registry.jsonl")
+
 	file, err := os.OpenFile(registryPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return fmt.Errorf("open hash registry: %w", err)

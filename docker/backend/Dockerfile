@@ -53,4 +53,6 @@ ENV CORS_ORIGINS=${CORS_ORIGINS}
 
 ENV JWT_SECRET=""
 
+ENV BASE_PATH="./"
+
 CMD ["/backend/app"]

@@ -15,7 +15,6 @@ import (
 )
 
 var (
-	exportsDir       = filepath.Join(os.Getenv("BASE_PATH"), "exports")
 	hashRegistryName = ".hash_registry.jsonl"
 )
 
@@ -27,7 +26,7 @@ type exportFile struct {
 }
 
 func hashRegistryPath() string {
-	return filepath.Join(exportsDir, hashRegistryName)
+	return filepath.Join(exportDirPath, hashRegistryName)
 }
 
 // readHashRegistry loads all valid records, in file order (last entry for a
@@ -91,7 +90,7 @@ func HandleExportsList(c *gin.Context) {
 		latest[filepath.Base(r.Source)] = r
 	}
 
-	files, err := os.ReadDir(exportsDir)
+	files, err := os.ReadDir(exportDirPath)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list exports"})
 		return
@@ -151,7 +150,7 @@ func HandleDeleteExport(c *gin.Context) {
 		return
 	}
 
-	filePath := filepath.Join(exportsDir, cleanName)
+	filePath := filepath.Join(exportDirPath, cleanName)
 	_, statErr := os.Stat(filePath)
 
 	// Collect registry entries, dropping every record that points at this file.
