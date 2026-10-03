@@ -89,6 +89,7 @@ jobs:
       # Extract the dist directory straight from the scanned/pushed image so
       # the S3 copy is guaranteed to match the registry artifact.
       - name: Extract dist from image
+        id: extract-dist
         if: success() && inputs.dist_path != ''
         run: |
           container_id=$(docker create ghcr.io/traipoap/${{ inputs.service }}:0.0.${{ github.run_number }})
@@ -96,8 +97,10 @@ jobs:
           docker rm "${container_id}"
           test -d dist-upload || { echo "::error::${{ inputs.dist_path }} not found in image"; exit 1; }
 
+      # Only run if the extract step actually succeeded — a *skipped*
+      # extract (no dist_path) must not trigger this step either.
       - name: Upload dist to AWS S3
-        if: success() && github.event_name != 'pull_request'
+        if: steps.extract-dist.outcome == 'success' && github.event_name != 'pull_request'
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}

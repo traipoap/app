@@ -22,7 +22,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
       -ldflags="-s -w -X main.Version=${VERSION}" \
       -o /out/app .
 
-# ===================================================
+# ====================================================
 
 FROM alpine:3.24.2
 
