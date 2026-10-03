@@ -115,7 +115,7 @@ jobs:
   build-backend:
     name: Backend — build, Trivy scan, push
     # Gates: if gitleaks or sonarqube failed, this job is skipped.
-    needs: [changes, gitleaks, sonarqube]
+    needs: [gitleaks, sonarqube]
     if: >-
       needs.changes.outputs.backend == 'true' ||
       (github.event_name == 'workflow_dispatch' && inputs.force_build == 'true')
@@ -128,7 +128,7 @@ jobs:
   build-frontend:
     name: Frontend — build, Trivy scan, push
     # Gates: if gitleaks or sonarqube failed, this job is skipped.
-    needs: [changes, gitleaks, sonarqube]
+    needs: [gitleaks, sonarqube]
     if: >-
       needs.changes.outputs.frontend == 'true' ||
       (github.event_name == 'workflow_dispatch' && inputs.force_build == 'true')
