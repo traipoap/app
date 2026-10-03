@@ -25,8 +25,8 @@ jobs:
       security-events: write
 
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v6
+      - name: Set up AWS CLI
+        uses: aws-actions/setup-aws-cli@v2
 
       - name: Log in to GHCR
         run: docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.TOKEN_REGISTRY }}
@@ -65,8 +65,14 @@ jobs:
         if: success()
         run: docker push ghcr.io/traipoap/${{ inputs.service }}:0.0.${{ github.run_number }}
 
-      - name: Log in to AWS
-        run: docker login ${{ secrets.AWS_ECR }} -u ${{ secrets.AWS_ACCESS_KEY_ID }} -p ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      - name: Log in to AWS ECR
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ap-southeast-1
+        run: |
+          aws ecr get-login-password --region ap-southeast-1 \
+            | docker login --username AWS --password-stdin ${{ secrets.AWS_ECR }}
 
       - name: Tag image to AWS ECR
         if: success()
