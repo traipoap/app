@@ -29,8 +29,8 @@ var exportService *services.ExportService
 // backend's ACTIVE_EXPORTS guard.
 var activeExports int32
 
-const (
-	exportDirPath   = "./exports"
+var (
+	exportDirPath   = filepath.Join(os.Getenv("BASE_PATH"), "exports")
 	exportPageSize  = 10000 // Quickwit's per-request hit cap
 	exportPagePause = 100 * time.Millisecond
 	exportMaxAge    = 30 * time.Minute // hard cap for a single export job

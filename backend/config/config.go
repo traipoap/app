@@ -11,6 +11,7 @@ type Settings struct {
 	QuickwitURL string
 	Port        string
 	CorsOrigins []string
+	BasePath    string
 }
 
 var AppConfig *Settings
@@ -22,6 +23,7 @@ func Load() error {
 		QuickwitURL: envOrDefault("QUICKWIT_URL", "http://127.0.0.1:7280"),
 		Port:        envOrDefault("BACKEND_PORT", "8080"),
 		CorsOrigins: envList("CORS_ORIGINS", []string{"http://localhost:4321", "http://127.0.0.1:4321"}),
+		BasePath:    envOrDefault("BASE_PATH", "./"),
 	}
 	return loadJWT()
 }

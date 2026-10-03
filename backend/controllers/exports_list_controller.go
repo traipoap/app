@@ -14,8 +14,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-const (
-	exportsDir       = "./exports"
+var (
+	exportsDir       = filepath.Join(os.Getenv("BASE_PATH"), "exports")
 	hashRegistryName = ".hash_registry.jsonl"
 )
 
