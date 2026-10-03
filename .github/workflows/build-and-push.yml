@@ -26,7 +26,7 @@ jobs:
 
     steps:
       - name: Set up AWS CLI
-        uses: aws-actions/setup-aws-cli@v2
+        uses: aws-actions/configure-aws-credentials@v6
 
       - name: Log in to GHCR
         run: docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.TOKEN_REGISTRY }}
