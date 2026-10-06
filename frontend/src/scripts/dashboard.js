@@ -141,34 +141,64 @@ async function loadEngine() {
 }
 
 // 1. ปรับปรุงการ Mapping (เน้นความยืดหยุ่น)
+// Map hit ให้เป็น Core Schema ของ UI + field มาตรฐาน OTel
+// (severityText, body, service.name, trace_id, span_id, kind, duration, status)
 function mapQuickwitHits(hits) {
   return hits.map(hit => {
-    // แปลง Timestamp: เช็คว่าเป็นวินาที หรือ มิลลิวินาที
-    // ถ้าค่าน้อยกว่า 10,000,000,000 แสดงว่าเป็นวินาที (Unix Timestamp) ให้คูณ 1000
-    let ts = hit.timestamp;
-    if (ts < 10000000000) ts *= 1000;
+    // แปลง Timestamp: รองรับ s / ms / µs / ns
+    const tsRaw = hit.timestamp ?? hit.timeUnixNano ?? hit.time_unix_nano ?? hit.start ?? hit.index_timestamp;
+    let ts = Number(tsRaw);
+    if (!isFinite(ts) || ts <= 0) ts = Date.now();
+    if (ts > 1e17) ts = Math.floor(ts / 1e6);        // ns → ms
+    else if (ts > 1e14) ts = Math.floor(ts / 1e3);  // µs → ms
+    else if (ts < 1e11) ts = Math.floor(ts * 1000); // s → ms
     const dateObj = new Date(ts);
 
-    // หา Level จากหลายๆ field
-    const rawLevel = hit.severity || hit.level || "info";
+    // Severity ตามมาตรฐาน OTel: severityText > severity > level
+    const rawLevel = hit.severity_text || hit.severityText || hit.severity || hit.level || "info";
     const normalizedLevel = normalizeSeverity(rawLevel);
+
+    // Service ตามมาตรฐาน: service.name > resource.service.name
+    const service = hit["service.name"] || hit.serviceName || hit.service || hit["resource.service.name"] || "";
+
+    // Status (traces): รองรับ string หรือ object {code, message}
+    let status = hit.status ?? hit.status_code ?? "";
+    if (status && typeof status === "object") status = status.code !== undefined ? status.code : status.message;
 
     // สร้าง Core Object
     const core = {
-      id: hit.id || Math.random().toString(36).substr(2, 9),
+      id: hit.id || hit["event.id"] || Math.random().toString(36).substr(2, 9),
       timestamp: dateObj,
       level: normalizedLevel,
-      source: hit.source_ip || hit.srcip || hit.source || hit.kubernetes.pod_ip|| "unknown",
+      source: hit.source_ip || hit.srcip || hit.source || hit.kubernetes.pod_ip || "unknown",
       host: hit.host || hit.hostname || hit.kubernetes.container_name || "unknown",
       message: hit.message || "",
-      pid: hit.pid || 0
+      pid: hit.pid || 0,
+      // ── Standard OTel fields ──
+      body: hit.body || hit.message || "",
+      service: service,
+      traceId: hit.trace_id || hit.traceId || hit.traceid || "",
+      spanId: hit.span_id || hit.spanId || hit.spanid || "",
+      spanName: hit.name || hit.span_name || hit.operation_name || "",
+      spanKind: hit.kind || hit.span_kind || "",
+      duration: hit.duration ?? hit.duration_ns ?? null,
+      status: status
     };
 
     // เก็บ Extra fields (Dynamic)
     const extras = {};
+    const coreKeys = [
+      'id', 'event.id', 'timestamp', 'timeUnixNano', 'time_unix_nano', 'start', 'index_timestamp',
+      'severity', 'severity_text', 'severityText', 'level',
+      'source_ip', 'srcip', 'source', 'kubernetes.pod_ip',
+      'host', 'hostname', 'kubernetes.container_name', 'message', 'pid',
+      'body', 'service.name', 'serviceName', 'service', 'resource.service.name',
+      'trace_id', 'traceId', 'traceid', 'span_id', 'spanId', 'spanid',
+      'name', 'span_name', 'operation_name', 'kind', 'span_kind',
+      'duration', 'duration_ns', 'status', 'status_code'
+    ];
     Object.keys(hit).forEach(key => {
       // ไม่เอา key ที่เราใช้ไปแล้วใน core มาซ้ำใน extras เพื่อความสะอาด
-      const coreKeys = ['timestamp', 'severity', 'level', 'source_ip', 'srcip', 'hostname'];
       if (!coreKeys.includes(key)) {
         extras[key] = hit[key];
       }
@@ -256,6 +286,7 @@ async function runSearch() {
   const source = document.getElementById("sourceInput").value.trim();
   const query = document.getElementById("searchInput").value.trim();
   const index = document.getElementById("indexSelect").value;
+  if (index) selectedIndex = index;
   const btn = document.getElementById("searchBtn");
 
   // 1. ดึงค่า Filter ปัจจุบัน
@@ -377,6 +408,197 @@ function normalizeSeverity(severity) {
     debug: "debug",
   };
   return map[severity?.toLowerCase()] ?? severity?.toLowerCase() ?? "info";
+}
+
+// ── Index schemas (column layout per index type) ────────────────
+// Field extraction follows standard conventions:
+//   syslogs      → timestamp, level, source, host, message, pid
+//   otel-logs    → timestamp, severityText, body, resource.service.name, trace_id, span_id
+//   otel-traces  → startTime, name, service.name, kind, duration, status, trace_id
+
+function sevRank(level) {
+  const order = { critical: 0, error: 1, warn: 2, info: 3, debug: 4 };
+  return order[String(level || "").toLowerCase()] ?? 5;
+}
+
+function statusRank(status) {
+  const s = String(
+    status == null ? "" : status.code !== undefined ? status.code : status,
+  ).toLowerCase();
+  if (s.includes("error") || s === "2") return 0;
+  if (s === "" || s.includes("unset") || s === "0") return 1;
+  return 2; // ok
+}
+
+function levelBadge(level) {
+  const l = String(level || "info").toLowerCase();
+  return `<span class="log-level-badge ${l}">${l}</span>`;
+}
+
+function statusBadge(status) {
+  const s = String(
+    status == null ? "" : status.code !== undefined ? status.code : status,
+  );
+  const sLower = s.toLowerCase();
+  if (sLower === "" || sLower === "unset" || sLower === "0")
+    return '<span class="kind-badge">unset</span>';
+  if (sLower.includes("error") || sLower === "2")
+    return '<span class="log-level-badge error">ERROR</span>';
+  if (sLower.includes("ok") || sLower === "1")
+    return '<span class="log-level-badge ok">OK</span>';
+  return `<span class="kind-badge">${escapeHtml(s.toUpperCase())}</span>`;
+}
+
+function formatDuration(d) {
+  const num = Number(d);
+  if (d == null || d === "" || !isFinite(num) || num <= 0) return "—";
+  let ms;
+  if (num > 1e12) ms = num / 1e6; // ns → ms
+  else if (num > 1e6) ms = num / 1e3; // µs → ms
+  else ms = num; // already ms
+  if (ms >= 1000) return (ms / 1000).toFixed(2) + " s";
+  if (ms >= 100) return Math.round(ms) + " ms";
+  if (ms >= 1) return ms.toFixed(1) + " ms";
+  return Math.round(ms * 1000) + " µs";
+}
+
+function durationClass(d) {
+  const num = Number(d);
+  if (!isFinite(num) || num <= 0) return "fast";
+  const ms = num > 1e12 ? num / 1e6 : num > 1e6 ? num / 1e3 : num;
+  if (ms >= 1000) return "slow";
+  if (ms >= 200) return "medium";
+  return "fast";
+}
+
+function traceCell(log) {
+  if (!log.traceId) return '<span class="dim">—</span>';
+  const id = String(log.traceId);
+  const short = id.length > 16 ? id.slice(0, 8) + "…" + id.slice(-4) : id;
+  return `<span class="trace-link" title="Search by trace ${escapeHtml(id)}" onclick="event.stopPropagation(); searchByTrace('${escapeHtml(id)}')">${escapeHtml(short)}</span>`;
+}
+
+// Set the search box to a trace ID and filter the loaded set (client-side)
+function searchByTrace(traceId) {
+  document.getElementById("searchInput").value = traceId;
+  applyFilters();
+  showToast(`Filtering by trace ${String(traceId).slice(0, 12)}…`);
+}
+
+const INDEX_SCHEMAS = {
+  syslogs: {
+    name: "syslogs",
+    columns: [
+      { key: "timestamp", label: "Timestamp", width: "170px", sortable: true, type: "time", sortVal: (l) => l.timestamp.getTime() },
+      { key: "level", label: "Level", width: "90px", sortable: true, type: "level", val: (l) => l.level, sortVal: (l) => sevRank(l.level) },
+      { key: "source", label: "Source", width: "130px", sortable: true, type: "text", val: (l) => l.source, sortVal: (l) => String(l.source || "") },
+      { key: "host", label: "Host", width: "110px", sortable: true, type: "text", val: (l) => l.host, sortVal: (l) => String(l.host || "") },
+      { key: "message", label: "Message", sortable: true, type: "text", val: (l) => l.message, sortVal: (l) => String(l.message || "").toLowerCase(), highlight: true },
+      { key: "pid", label: "PID", width: "50px", type: "text", val: (l) => l.pid, sortVal: (l) => Number(l.pid) || 0 },
+    ],
+  },
+  otel_logs: {
+    name: "otel_logs",
+    columns: [
+      { key: "timestamp", label: "Timestamp", width: "170px", sortable: true, type: "time", sortVal: (l) => l.timestamp.getTime() },
+      { key: "severity", label: "Severity", width: "100px", sortable: true, type: "level", val: (l) => l.level, sortVal: (l) => sevRank(l.level) },
+      { key: "service", label: "Service", width: "150px", sortable: true, type: "text", val: (l) => l.service, sortVal: (l) => String(l.service || "") },
+      { key: "body", label: "Body", sortable: true, type: "text", val: (l) => l.body || l.message, sortVal: (l) => String(l.body || l.message || "").toLowerCase(), highlight: true },
+      { key: "trace_id", label: "Trace ID", width: "140px", type: "trace", val: (l) => l.traceId, sortVal: (l) => String(l.traceId || "") },
+      { key: "span_id", label: "Span ID", width: "120px", type: "mono", val: (l) => l.spanId, sortVal: (l) => String(l.spanId || "") },
+    ],
+  },
+  otel_traces: {
+    name: "otel_traces",
+    columns: [
+      { key: "timestamp", label: "Start Time", width: "170px", sortable: true, type: "time", sortVal: (l) => l.timestamp.getTime() },
+      { key: "name", label: "Span Name", sortable: true, type: "text", val: (l) => l.spanName || l.message, sortVal: (l) => String(l.spanName || l.message || "").toLowerCase(), highlight: true },
+      { key: "service", label: "Service", width: "140px", sortable: true, type: "text", val: (l) => l.service, sortVal: (l) => String(l.service || "") },
+      { key: "kind", label: "Kind", width: "90px", sortable: true, type: "kind", val: (l) => l.spanKind, sortVal: (l) => String(l.spanKind || "").toLowerCase() },
+      { key: "duration", label: "Duration", width: "100px", sortable: true, type: "duration", val: (l) => formatDuration(l.duration), sortVal: (l) => Number(l.duration) || 0 },
+      { key: "status", label: "Status", width: "90px", sortable: true, type: "status", val: (l) => l.status, sortVal: (l) => statusRank(l.status) },
+      { key: "trace_id", label: "Trace ID", width: "140px", type: "trace", val: (l) => l.traceId, sortVal: (l) => String(l.traceId || "") },
+    ],
+  },
+};
+
+function getSchemaForIndex(indexId) {
+  const id = String(indexId || "").toLowerCase().replace(/[\s_-]+/g, "");
+  if (id.includes("trace")) return INDEX_SCHEMAS.otel_traces;
+  if (id.includes("otel") || id.includes("opentelemetry"))
+    return INDEX_SCHEMAS.otel_logs;
+  return INDEX_SCHEMAS.syslogs;
+}
+
+function currentSchema() {
+  const sel = document.getElementById("indexSelect");
+  return getSchemaForIndex(sel && sel.value ? sel.value : selectedIndex);
+}
+
+function renderTableHead(schema) {
+  const thead = document.getElementById("logTableHead");
+  if (!thead) return;
+  if (thead.dataset.schema === schema.name) return;
+  thead.dataset.schema = schema.name;
+  thead.innerHTML = `<tr>${schema.columns
+    .map(
+      (col) =>
+        `<th data-key="${col.key}"${col.width ? ` style="width:${col.width}"` : ""}${col.sortable ? ` onclick="sortLogs('${col.key}')"` : ""}>${col.label}<span class="sort-arrow"></span></th>`,
+    )
+    .join("")}</tr>`;
+  // Restore current sort indicator if this schema has that column
+  const th = thead.querySelector(`th[data-key="${sortField}"]`);
+  if (th) {
+    th.classList.add("sorted");
+    const arrow = th.querySelector(".sort-arrow");
+    if (arrow) arrow.textContent = sortDirection === "asc" ? "▲" : "▼";
+  }
+}
+
+function renderCell(log, col) {
+  const dash = '<span class="dim">—</span>';
+  switch (col.type) {
+    case "time": {
+      const d = log.timestamp;
+      return d && !isNaN(d.getTime()) ? formatTimestamp(d) : dash;
+    }
+    case "level":
+      return levelBadge(log.level);
+    case "kind":
+      return log.spanKind
+        ? `<span class="kind-badge">${escapeHtml(String(log.spanKind))}</span>`
+        : dash;
+    case "duration":
+      return `<span class="duration ${durationClass(log.duration)}">${formatDuration(log.duration)}</span>`;
+    case "status":
+      return statusBadge(log.status);
+    case "trace":
+      return traceCell(log);
+    case "mono": {
+      const v = col.val ? col.val(log) : "";
+      if (!v) return dash;
+      const s = String(v);
+      return `<span class="mono-cell" title="${escapeHtml(s)}">${escapeHtml(s.length > 14 ? s.slice(0, 14) + "…" : s)}</span>`;
+    }
+    case "text":
+    default: {
+      const v = col.val ? col.val(log) : "";
+      if (v === null || v === undefined || v === "") return dash;
+      const raw = String(v);
+      if (col.highlight) {
+        const search = document.getElementById("searchInput").value;
+        if (search) {
+          const escRaw = escapeHtml(raw);
+          const escSearch = escapeHtml(search);
+          return escRaw.replace(
+            new RegExp(`(${escapeRegex(escSearch)})`, "gi"),
+            '<span class="highlight">$1</span>',
+          );
+        }
+      }
+      return escapeHtml(raw);
+    }
+  }
 }
 
 // Sample data generators (platform-themed: K3s GitOps stack on Proxmox)
@@ -575,9 +797,9 @@ function applyFilters() {
         }
     }
 
-    // กรอง Search
+    // กรอง Search (รวม field มาตรฐาน OTel ด้วย)
     if (search) {
-      const searchIn = `${log.message} ${log.source} ${log.host} ${log.level}`.toLowerCase();
+      const searchIn = `${log.message} ${log.body || ""} ${log.source} ${log.host} ${log.level} ${log.service || ""} ${log.traceId || ""} ${log.spanId || ""} ${log.spanName || ""} ${log.spanKind || ""} ${log.status || ""}`.toLowerCase();
       if (!searchIn.includes(search)) return false;
     }
 
@@ -605,26 +827,21 @@ function sortLogs(field) {
     sortDirection = field === "timestamp" ? "desc" : "asc";
   }
 
-  // Update header styles
-  document.querySelectorAll(".log-table th").forEach((th) => {
-    th.classList.remove("sorted");
-    const arrow = th.querySelector(".sort-arrow");
-    if (arrow) arrow.textContent = "";
-  });
+  // Update header styles (ตาม header ที่ render จาก schema)
+  const thead = document.getElementById("logTableHead");
+  if (thead) {
+    thead.querySelectorAll("th").forEach((th) => {
+      th.classList.remove("sorted");
+      const arrow = th.querySelector(".sort-arrow");
+      if (arrow) arrow.textContent = "";
+    });
 
-  const thIndex = {
-    timestamp: 0,
-    level: 1,
-    source: 2,
-    host: 3,
-    message: 4,
-    pid: 5,
-  };
-  const headerTh = document.querySelectorAll(".log-table th")[thIndex[field]];
-  if (headerTh) {
-    headerTh.classList.add("sorted");
-    const arrow = headerTh.querySelector(".sort-arrow");
-    if (arrow) arrow.textContent = sortDirection === "asc" ? "▲" : "▼";
+    const headerTh = thead.querySelector(`th[data-key="${field}"]`);
+    if (headerTh) {
+      headerTh.classList.add("sorted");
+      const arrow = headerTh.querySelector(".sort-arrow");
+      if (arrow) arrow.textContent = sortDirection === "asc" ? "▲" : "▼";
+    }
   }
 
   sortLogsInternal();
@@ -632,37 +849,12 @@ function sortLogs(field) {
 }
 
 function sortLogsInternal() {
+  // ใช้ sortVal จาก schema ของ index ที่เลือก (generic comparator)
+  const col = currentSchema().columns.find((c) => c.key === sortField);
+  const getVal = col && col.sortVal ? col.sortVal : (l) => l.timestamp.getTime();
   filteredLogs.sort((a, b) => {
-    let valA, valB;
-    switch (sortField) {
-      case "timestamp":
-        valA = a.timestamp.getTime();
-        valB = b.timestamp.getTime();
-        break;
-      case "level":
-        valA = levels.indexOf(a.level);
-        valB = levels.indexOf(b.level);
-        break;
-      case "source":
-        valA = a.source;
-        valB = b.source;
-        break;
-      case "host":
-        valA = a.host;
-        valB = b.host;
-        break;
-      case "message":
-        valA = a.message.toLowerCase();
-        valB = b.message.toLowerCase();
-        break;
-      case "pid":
-        valA = a.pid;
-        valB = b.pid;
-        break;
-      default:
-        valA = a.timestamp.getTime();
-        valB = b.timestamp.getTime();
-    }
+    const valA = getVal(a);
+    const valB = getVal(b);
     if (valA < valB) return sortDirection === "asc" ? -1 : 1;
     if (valA > valB) return sortDirection === "asc" ? 1 : -1;
     return 0;
@@ -671,15 +863,15 @@ function sortLogsInternal() {
 
 function renderTable() {
   const tbody = document.getElementById("logTableBody");
-  const search = document.getElementById("searchInput").value.toLowerCase();
+  const schema = currentSchema();
+  renderTableHead(schema);
   const start = (currentPage - 1) * pageSize;
-  const end = start + pageSize;
-  const pageLogs = filteredLogs.slice(start, end);
+  const pageLogs = filteredLogs.slice(start, start + pageSize);
 
   if (pageLogs.length === 0) {
     tbody.innerHTML = `
           <tr>
-              <td colspan="6">
+              <td colspan="${schema.columns.length}">
                   <div class="empty-state">
                       <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
                           <circle cx="12" cy="12" r="10"></circle>
@@ -695,24 +887,15 @@ function renderTable() {
     return;
   }
 
+  // Render cells ตาม column ของ schema (highlight/escape จัดการใน renderCell)
   tbody.innerHTML = pageLogs
     .map((log) => {
-      let displayMessage = log.message;
-      if (search) {
-        const regex = new RegExp(`(${escapeRegex(search)})`, "gi");
-        displayMessage = displayMessage.replace(
-          regex,
-          '<span class="highlight">$1</span>',
-        );
-      }
+      const cells = schema.columns
+        .map((col) => `<td>${renderCell(log, col)}</td>`)
+        .join("");
       return `
           <tr class="log-row" onclick="showLogDetail('${log.id}')">
-              <td class="timestamp">${formatTimestamp(log.timestamp)}</td>
-              <td><span class="log-level-badge ${log.level}">${log.level}</span></td>
-              <td class="log-source">${log.source}</td>
-              <td>${log.host}</td>
-              <td class="log-message">${displayMessage}</td>
-              <td>${log.pid}</td>
+              ${cells}
           </tr>
       `;
     })
@@ -842,31 +1025,47 @@ function showLogDetail(id) {
   if (!log) return;
   selectedLog = log;
 
-  // Create the core HTML
-  let html = `
-      <div class="detail-grid">
-          <div class="detail-label">Timestamp</div>
-          <div class="template-value">${formatTimestamp(log.timestamp)}</div>
-          <div class="detail-label">Level</div>
-          <div class="detail-value"><span class="log-level-badge ${log.level}">${log.level}</span></div>
-          <div class="detail-label">Source</div>
-          <div class="detail-value">${log.source}</div>
-          <div class="detail-label">Host</div>
-          <div class="detail-value">${log.host}</div>
-          <div class="detail-label">Message</div>
-          <div class="detail-value full-width">${log.message}</div>
-  `;
+  // สร้าง detail-grid ตาม schema ของ index ที่เลือก
+  const schema = currentSchema();
+  let html = `<div class="detail-grid">`;
+  schema.columns.forEach((col) => {
+    if (col.type === "time") {
+      html += `<div class="detail-label">${col.label}</div>
+               <div class="detail-value">${formatTimestamp(log.timestamp)}</div>`;
+      return;
+    }
+    const v = col.val ? col.val(log) : "";
+    let valueHtml;
+    if (v == null || v === "" || (typeof v === "number" && !isFinite(v))) {
+      valueHtml = '<span class="dim">—</span>';
+    } else if (col.type === "level") {
+      valueHtml = `<span class="log-level-badge ${String(log.level).toLowerCase()}">${String(log.level).toLowerCase()}</span>`;
+    } else if (col.type === "status") {
+      valueHtml = statusBadge(v);
+    } else if (col.type === "kind") {
+      valueHtml = v ? `<span class="kind-badge">${escapeHtml(String(v))}</span>` : "";
+    } else if (col.type === "duration") {
+      valueHtml = `<span class="duration ${durationClass(v)}">${formatDuration(v)}</span>`;
+    } else if (col.type === "trace") {
+      valueHtml = `<span class="trace-link">${escapeHtml(String(v))}</span>`;
+    } else {
+      valueHtml = escapeHtml(String(v));
+    }
+    html += `<div class="detail-label">${col.label}</div>
+             <div class="detail-value${col.highlight ? " full-width" : ""}">${valueHtml}</div>`;
+  });
 
-  // Check if extras exists and has keys before calling Object.keys
+  // แสดง Additional Properties (fields ที่ไม่ได้ map เป็น column)
   if (log.extras && typeof log.extras === 'object' && Object.keys(log.extras).length > 0) {
-    html += `<div class="detail-full-width" style="grid-column: 1/-1; margin-top: 20px; border-top: 1px solid #444; padding-top: 10px;">
-                <h4 style="margin-bottom: 10px;">Additional Properties</h4>
-             </div>`;
-
-    html += Object.keys(log.extras).map(key => `
-      <div class="detail-label">${key}</div>
-      <div class="detail-value">${log.extras[key]}</div>
-    `).join('');
+    html += `<div class="detail-section-title">Additional Properties</div>`;
+    html += Object.keys(log.extras).map(key => {
+      const val = log.extras[key];
+      const display = val !== null && typeof val === "object" ? JSON.stringify(val) : val;
+      return `
+      <div class="detail-label">${escapeHtml(key)}</div>
+      <div class="detail-value">${escapeHtml(String(display))}</div>
+    `;
+    }).join('');
   }
 
   html += `</div>`;
@@ -903,16 +1102,16 @@ async function showExportHistoryModal() {
         <td class="hash-cell" title="${item.hash}" onclick="copyHash('${escapeHtml(item.hash)}')">${truncate(item.hash, 20)}</td>
         <td>${formatFileSize(item.size)}</td>
         <td>
-          <button class="btn-action" onclick="downloadExport('${escapeHtml(item.name)}')" title="Download">⬇️</button>
-          <button class="btn-action" onclick="deleteExport('${escapeHtml(item.name)}')" title="Delete">🗑️</button>
+          <button class="btn-action" onclick="downloadExport('${escapeHtml(item.name)}')" title="Download"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>
+          <button class="btn-action" onclick="deleteExport('${escapeHtml(item.name)}')" title="Delete"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
         </td>
       </tr>
     `).join("");
 
     const html = `
       <div style="display:flex;justify-content:space-between;align-items:center;padding:0.75rem 1rem">
-        <h3 style="margin:0;font-size:1.1rem">📂 Export History</h3>
-        <span class="badge" style="background:#334155;color:#94a3b8;padding:2px 10px;border-radius:999px;font-size:0.8rem">
+        <h3 style="margin:0;font-size:1.05rem;font-weight:600">Exports</h3>
+        <span class="badge" style="background:rgba(148,163,184,0.1);color:#9aa7bd;padding:2px 10px;border-radius:999px;font-size:0.75rem;font-family:var(--mono)">
           ${exports.length} file${exports.length !== 1 ? 's' : ''}
         </span>
       </div>
@@ -1125,7 +1324,8 @@ function toggleView() {
     statsBar.style.display = "";
     toolbar.style.display = "";
     btn.classList.remove("active");
-    btn.innerHTML = "📊 Dashboard";
+    btn.innerHTML =
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Dashboard';
   } else {
     // สลับไปหน้า Dashboard
     dashView.classList.add("active");
@@ -1133,7 +1333,8 @@ function toggleView() {
     statsBar.style.display = "none";
     toolbar.style.display = "none";
     btn.classList.add("active");
-    btn.innerHTML = "📋 Logs";
+    btn.innerHTML =
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>Logs';
 
     // สำคัญ: ต้องสั่ง renderDashboard() ทุกครั้งที่สลับมาหน้า Dashboard
     // เพื่อให้กราฟและสถิติใช้ข้อมูลล่าสุดจาก allLogs
@@ -1332,6 +1533,18 @@ document.addEventListener("DOMContentLoaded", () => {
   const dayAgo = new Date(now - 86400000);
   document.getElementById("dateFrom").value = dayAgo.toISOString().slice(0, 16);
   document.getElementById("dateTo").value = now.toISOString().slice(0, 16);
+
+  // เปลี่ยน table columns ตาม index ที่เลือก + ดึงข้อมูลใหม่
+  const indexSelect = document.getElementById("indexSelect");
+  if (indexSelect) {
+    indexSelect.addEventListener("change", () => {
+      selectedIndex = indexSelect.value;
+      sortField = "timestamp";
+      sortDirection = "desc";
+      renderTableHead(currentSchema());
+      runSearch();
+    });
+  }
 
   // Close modal on overlay click
   document.getElementById("logModal").addEventListener("click", (e) => {
