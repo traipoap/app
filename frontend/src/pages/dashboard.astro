@@ -9,7 +9,7 @@ import "../styles/main.css";
         <title>LUMINA — K3s GitOps Log Platform</title>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
-            href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
             rel="stylesheet"
         />
         <!-- Client-side route protection: runs in the browser -->
@@ -37,8 +37,20 @@ import "../styles/main.css";
             <!-- Header -->
             <header class="header">
                 <div class="logo">
-                    <div class="logo-icon">📋</div>
-                    <span>LUMINA · K3s GitOps Logs</span>
+                    <div class="logo-icon">
+                        <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        >
+                            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
+                        </svg>
+                    </div>
+                    <span class="logo-word">LUMINA</span>
+                    <span class="logo-sub">K3s GitOps Logs</span>
                 </div>
                 <div class="header-actions">
                     <div class="live-indicator" id="liveIndicator">
@@ -50,27 +62,72 @@ import "../styles/main.css";
                         id="refreshBtn"
                         onclick="refreshLogs()"
                     >
-                        ↻ Refresh
+                        <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        >
+                            <path d="M23 4v6h-6" />
+                            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+                        </svg>
+                        Refresh
                     </button>
                     <button
                         class="header-btn"
                         id="generateBtn"
                         onclick="generateLogs()"
                     >
-                        + Generate
+                        <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        >
+                            <path d="M12 5v14M5 12h14" />
+                        </svg>
+                        Generate
                     </button>
                     <button
                         class="header-btn"
                         id="dashboardToggle"
                         onclick="toggleView()"
                     >
-                        📊 Dashboard
+                        <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        >
+                            <line x1="18" y1="20" x2="18" y2="10" />
+                            <line x1="12" y1="20" x2="12" y2="4" />
+                            <line x1="6" y1="20" x2="6" y2="14" />
+                        </svg>
+                        Dashboard
                     </button>
                     <button
                         class="header-btn"
                         id="signoutBtn"
                         onclick="signout()"
                     >
+                        <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        >
+                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                            <polyline points="16 17 21 12 16 7" />
+                            <line x1="21" y1="12" x2="9" y2="12" />
+                        </svg>
                         Sign Out
                     </button>
                 </div>
@@ -79,13 +136,6 @@ import "../styles/main.css";
             <!-- Sidebar -->
             <aside class="sidebar">
                 <div class="sidebar-section">
-                    <div class="sidebar-title">Query Engine</div>
-                    <select class="filter-select" id="engineSelect">
-                        <option value="">Loading...</option>
-                    </select>
-                </div>
-
-                <div class="sidebar-section">
                     <div class="sidebar-title">Index</div>
                     <select class="filter-select" id="indexSelect">
                         <option value="">Loading...</option>
@@ -93,9 +143,28 @@ import "../styles/main.css";
                 </div>
 
                 <div class="sidebar-section">
+                    <div class="sidebar-title">Query Engine</div>
+                    <select class="filter-select" id="engineSelect">
+                        <option value="">Loading...</option>
+                    </select>
+                </div>
+
+                <div class="sidebar-section">
                     <div class="sidebar-title">Source</div>
                     <div class="search-wrapper">
-                        <span class="search-icon">🔍</span>
+                        <span class="search-icon">
+                            <svg
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            >
+                                <circle cx="11" cy="11" r="8" />
+                                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                            </svg>
+                        </span>
                         <input
                             type="text"
                             class="search-input"
@@ -129,18 +198,18 @@ import "../styles/main.css";
                         class="filter-group"
                         style="display:flex; gap:6px; flex-wrap:wrap;"
                     >
-                        <button class="level-btn" onclick="setQuickDate('1h')"
-                            >1h</button
-                        >
-                        <button class="level-btn" onclick="setQuickDate('24h')"
-                            >24h</button
-                        >
-                        <button class="level-btn" onclick="setQuickDate('7d')"
-                            >7d</button
-                        >
-                        <button class="level-btn" onclick="setQuickDate('30d')"
-                            >30d</button
-                        >
+                        <button class="level-btn" onclick="setQuickDate('1h')">
+                            1h
+                        </button>
+                        <button class="level-btn" onclick="setQuickDate('24h')">
+                            24h
+                        </button>
+                        <button class="level-btn" onclick="setQuickDate('7d')">
+                            7d
+                        </button>
+                        <button class="level-btn" onclick="setQuickDate('30d')">
+                            30d
+                        </button>
                     </div>
                 </div>
 
@@ -150,37 +219,49 @@ import "../styles/main.css";
                         <button
                             class="level-btn active"
                             data-level="error"
-                            onclick="toggleLevel(this)">ERROR</button
+                            onclick="toggleLevel(this)"
                         >
+                            ERROR
+                        </button>
 
                         <button
                             class="level-btn active"
                             data-level="warn"
-                            onclick="toggleLevel(this)">WARN</button
+                            onclick="toggleLevel(this)"
                         >
+                            WARN
+                        </button>
 
                         <button
                             class="level-btn active"
                             data-level="info"
-                            onclick="toggleLevel(this)">INFO</button
+                            onclick="toggleLevel(this)"
                         >
+                            INFO
+                        </button>
 
                         <button
                             class="level-btn active"
                             data-level="debug"
-                            onclick="toggleLevel(this)">DEBUG</button
+                            onclick="toggleLevel(this)"
                         >
+                            DEBUG
+                        </button>
 
                         <button
                             class="level-btn active"
                             data-level="critical"
-                            onclick="toggleLevel(this)">CRITICAL</button
+                            onclick="toggleLevel(this)"
                         >
+                            CRITICAL
+                        </button>
                     </div>
                     <button
                         class="clear-filters-btn"
-                        onclick="clearAllFilters()">✕ Clear All Filters</button
+                        onclick="clearAllFilters()"
                     >
+                        Clear All Filters
+                    </button>
                 </div>
 
                 <div class="sidebar-section">
@@ -222,7 +303,19 @@ import "../styles/main.css";
                 <div class="sidebar-section">
                     <div class="sidebar-title">Full Text Search</div>
                     <div class="search-wrapper">
-                        <span class="search-icon">🔍</span>
+                        <span class="search-icon">
+                            <svg
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            >
+                                <circle cx="11" cy="11" r="8" />
+                                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                            </svg>
+                        </span>
                         <input
                             type="text"
                             class="search-input"
@@ -236,7 +329,18 @@ import "../styles/main.css";
                         id="searchBtn"
                         onclick="runSearch()"
                     >
-                        🔍 Search
+                        <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        >
+                            <circle cx="11" cy="11" r="8" />
+                            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                        </svg>
+                        Search
                     </button>
                 </div>
             </aside>
@@ -246,14 +350,41 @@ import "../styles/main.css";
                 <!-- Stats Bar -->
                 <div class="stats-bar" id="statsBar">
                     <div class="stat-card">
-                        <div class="stat-icon total">📄</div>
+                        <div class="stat-icon total">
+                            <svg
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            >
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                <polyline points="14 2 14 8 20 8" />
+                                <line x1="16" y1="13" x2="8" y2="13" />
+                                <line x1="16" y1="17" x2="8" y2="17" />
+                            </svg>
+                        </div>
                         <div class="stat-info">
                             <h4 id="totalCount">0</h4>
                             <p>Total Logs</p>
                         </div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-icon error">⛔</div>
+                        <div class="stat-icon error">
+                            <svg
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            >
+                                <circle cx="12" cy="12" r="10" />
+                                <line x1="15" y1="9" x2="9" y2="15" />
+                                <line x1="9" y1="9" x2="15" y2="15" />
+                            </svg>
+                        </div>
                         <div class="stat-info">
                             <h4
                                 id="errorCount"
@@ -268,7 +399,20 @@ import "../styles/main.css";
                         </div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-icon warn">⚠️</div>
+                        <div class="stat-icon warn">
+                            <svg
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            >
+                                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                                <line x1="12" y1="9" x2="12" y2="13" />
+                                <line x1="12" y1="17" x2="12.01" y2="17" />
+                            </svg>
+                        </div>
                         <div class="stat-info">
                             <h4
                                 id="warnCount"
@@ -283,7 +427,20 @@ import "../styles/main.css";
                         </div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-icon info">ℹ️</div>
+                        <div class="stat-icon info">
+                            <svg
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            >
+                                <circle cx="12" cy="12" r="10" />
+                                <line x1="12" y1="16" x2="12" y2="12" />
+                                <line x1="12" y1="8" x2="12.01" y2="8" />
+                            </svg>
+                        </div>
                         <div class="stat-info">
                             <h4
                                 id="infoCount"
@@ -299,11 +456,10 @@ import "../styles/main.css";
                 <!-- Toolbar -->
                 <div class="toolbar">
                     <div class="toolbar-left">
-                        <span class="result-count"
-                            >Showing <span id="filteredCount">0</span> of <span
-                                id="totalFiltered">0</span
-                            > entries</span
-                        >
+                        <span class="result-count">
+                            Showing <span id="filteredCount">0</span> of{" "}
+                            <span id="totalFiltered">0</span> entries
+                        </span>
                     </div>
                     <div class="toolbar-right">
                         <select
@@ -312,22 +468,61 @@ import "../styles/main.css";
                             onchange="changePageSize()"
                         >
                             <option value="25">25 per page</option>
-                            <option value="50" selected>50 per page</option>
+                            <option value="50" selected>
+                                50 per page
+                            </option>
                             <option value="100">100 per page</option>
                             <option value="250">250 per page</option>
                         </select>
-                        <button class="export-btn" onclick="exportCSV()"
-                            >📥 Export CSV</button
-                        >
-                        <button class="export-btn" onclick="exportLargeCSV()"
-                            >📥 Export Large CSV</button
-                        >
+                        <button class="export-btn" onclick="exportCSV()">
+                            <svg
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            >
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                <polyline points="7 10 12 15 17 10" />
+                                <line x1="12" y1="15" x2="12" y2="3" />
+                            </svg>
+                            Export CSV
+                        </button>
+                        <button class="export-btn" onclick="exportLargeCSV()">
+                            <svg
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            >
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                <polyline points="7 10 12 15 17 10" />
+                                <line x1="12" y1="15" x2="12" y2="3" />
+                            </svg>
+                            Export Large CSV
+                        </button>
                         <button
                             class="export-btn"
                             style="background: var(--bg-tertiary); border: 1px solid var(--border-color);"
                             onclick="showExportHistoryModal()"
-                            >📥 Export History</button
                         >
+                            <svg
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            >
+                                <path d="M3 3v5h5" />
+                                <path d="M3.05 13A9 9 0 1 0 6 5.3L3 8" />
+                                <line x1="12" y1="12" x2="12" y2="18" />
+                            </svg>
+                            Export History
+                        </button>
                     </div>
                 </div>
 
@@ -338,16 +533,19 @@ import "../styles/main.css";
                             <h3>Export History</h3>
                             <button
                                 class="modal-close"
-                                onclick="closeExportHistoryModal()">×</button
+                                onclick="closeExportHistoryModal()"
                             >
+                                ×
+                            </button>
                         </div>
                         <div class="modal-body" id="modalContent"></div>
                         <div class="modal-footer">
                             <button
                                 class="btn-secondary"
                                 onclick="closeExportHistoryModal()"
-                                >Close</button
                             >
+                                Close
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -355,37 +553,8 @@ import "../styles/main.css";
                 <!-- Log Table View -->
                 <div class="log-container" id="logTableView">
                     <table class="log-table">
-                        <thead>
-                            <tr>
-                                <th
-                                    style="width: 180px;"
-                                    onclick="sortLogs('timestamp')"
-                                    >Timestamp <span class="sort-arrow">▲</span
-                                    ></th
-                                >
-                                <th
-                                    style="width: 90px;"
-                                    onclick="sortLogs('level')"
-                                    >Level <span class="sort-arrow">▼</span></th
-                                >
-                                <th
-                                    style="width: 130px;"
-                                    onclick="sortLogs('source')"
-                                    >Source <span class="sort-arrow"></span></th
-                                >
-                                <th
-                                    style="width: 100px;"
-                                    onclick="sortLogs('host')"
-                                    >Host <span class="sort-arrow"></span></th
-                                >
-                                <th onclick="sortLogs('message')"
-                                    >Message <span class="sort-arrow"
-                                    ></span></th
-                                >
-                                <th style="width: 50px;">PID</th>
-                            </tr>
-                        </thead>
-                        <tbody id="logTableBody"> </tbody>
+                        <thead id="logTableHead"></thead>
+                        <tbody id="logTableBody"></tbody>
                     </table>
                 </div>
 
@@ -394,7 +563,9 @@ import "../styles/main.css";
                     <div class="dashboard-grid">
                         <div class="dashboard-card">
                             <h4>Total Logs (24h)</h4>
-                            <div class="value" id="dashTotal">N/A</div>
+                            <div class="value" id="dashTotal">
+                                N/A
+                            </div>
                         </div>
                         <div class="dashboard-card">
                             <h4>Error Rate</h4>
@@ -447,8 +618,10 @@ import "../styles/main.css";
                     <div class="pagination-info" id="paginationInfo">
                         Page 1 of 1
                     </div>
-                    <div class="pagination-controls" id="paginationControls">
-                    </div>
+                    <div
+                        class="pagination-controls"
+                        id="paginationControls"
+                    ></div>
                 </div>
             </main>
         </div>
@@ -458,31 +631,75 @@ import "../styles/main.css";
             <div class="modal">
                 <div class="modal-header">
                     <h3>Log Details</h3>
-                    <button class="modal-close" onclick="closeModal()">×</button
-                    >
+                    <button class="modal-close" onclick="closeModal()">
+                        ×
+                    </button>
                 </div>
                 <div class="modal-body" id="modalBody"></div>
                 <div class="modal-footer">
-                    <button class="btn-secondary" onclick="closeModal()"
-                        >Close</button
-                    >
+                    <button class="btn-secondary" onclick="closeModal()">
+                        Close
+                    </button>
 
-                    <button class="btn-primary" onclick="copyLogDetail()"
-                        >📋 Copy</button
-                    >
+                    <button class="btn-primary" onclick="copyLogDetail()">
+                        <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        >
+                            <rect
+                                x="9"
+                                y="9"
+                                width="13"
+                                height="13"
+                                rx="2"
+                                ry="2"
+                            />
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                        </svg>
+                        Copy
+                    </button>
 
-                    <button class="btn-primary" onclick="exportSingleLog()"
-                        >📥 Export</button
-                    >
+                    <button class="btn-primary" onclick="exportSingleLog()">
+                        <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        >
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                            <polyline points="7 10 12 15 17 10" />
+                            <line x1="12" y1="15" x2="12" y2="3" />
+                        </svg>
+                        Export
+                    </button>
                 </div>
             </div>
         </div>
 
         <!-- Toast -->
         <div class="toast" id="toast">
-            <span class="toast-icon">✅</span>
-            <span class="toast-message" id="toastMessage">Action completed</span
-            >
+            <span class="toast-icon">
+                <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                >
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M8 12l3 3 5-6" />
+                </svg>
+            </span>
+            <span class="toast-message" id="toastMessage">
+                Action completed
+            </span>
         </div>
     </body>
 </html>
