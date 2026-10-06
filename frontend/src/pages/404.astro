@@ -1,6 +1,4 @@
 ---
-import "../styles/signin.css";
-
 interface Props {
     redirect?: string;
 }
@@ -12,93 +10,339 @@ interface Props {
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>Page Not Found — LUMINA</title>
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+        <link rel="icon" href="/favicon.ico" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
         <link
-            href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
             rel="stylesheet"
         />
     </head>
-    <body>
-        <div class="login-container">
-            <!-- Animated Background -->
-            <div class="login-bg">
-                <div class="bg-shape shape-1"></div>
-                <div class="bg-shape shape-2"></div>
-                <div class="bg-shape shape-3"></div>
+    <body class="auth notfound">
+        <a href="/" class="back-link">
+            <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+            >
+                <path d="M19 12H5M12 19l-7-7 7-7"></path>
+            </svg>
+            Back to LUMINA
+        </a>
+
+        <main class="nf-card">
+            <div class="nf-code" aria-hidden="true">
+                404
             </div>
-
-            <!-- 404 Card -->
-            <div class="login-card">
-                <!-- Logo Section -->
-                <div class="login-header">
-                    <div class="logo-icon">
-                        <svg
-                            width="32"
-                            height="32"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            xmlns="http://www.w3.org/2000/svg"
-                        >
-                            <path
-                                d="M9 5H7C5.89543 5 5 5.89543 5 7V19C5 20.1046 5.89543 21 7 21H17C18.1046 21 19 20.1046 19 19V7C19 5.89543 18.1046 5 17 5H15"
-                                stroke="currentColor"
-                                stroke-width="2"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"></path>
-                            <path
-                                d="M9 5C9 3.89543 9.89543 3 11 3H13C14.1046 3 15 3.89543 15 5C15 6.10457 14.1046 7 13 7H11C9.89543 7 9 6.10457 9 5Z"
-                                stroke="currentColor"
-                                stroke-width="2"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"></path>
-                            <path
-                                d="M9 14L11 16L15 12"
-                                stroke="currentColor"
-                                stroke-width="2"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"></path>
-                        </svg>
-                    </div>
-                    <div class="header-text">
-                        <h1>404</h1>
-                        <p>Page Not Found</p>
-                    </div>
-                </div>
-
-                <!-- Error Message -->
-                <div class="error-message">
-                    <p>
-                        The page you're looking for doesn't exist or has been
-                        moved.
-                    </p>
-                </div>
-
-                <!-- Action Buttons -->
-                <div
-                    class="form-options"
-                    style="margin-top: 24px; justify-content: center;"
+            <h1>Page not found</h1>
+            <p>The page you're looking for doesn't exist or has been moved.</p>
+            <div class="nf-actions">
+                <a href="/dashboard" class="btn btn-primary">
+                    Go to Dashboard
+                    <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                    >
+                        <path d="M5 12h14M12 5l7 7-7 7"></path>
+                    </svg>
+                </a>
+                <button
+                    type="button"
+                    class="btn btn-ghost"
+                    onclick="window.history.back()"
                 >
-                    <button
-                        class="btn-login"
-                        onclick="window.location.href = '/dashboard'"
-                        style="margin-right: 12px;"
-                    >
-                        <span class="btn-text">Go to Dashboard</span>
-                    </button>
-                    <button
-                        class="btn-login"
-                        onclick="window.history.back()"
-                        style="background: var(--bg-tertiary); border: 1px solid var(--border-color);"
-                    >
-                        <span class="btn-text">Go Back</span>
-                    </button>
-                </div>
-
-                <!-- Footer -->
-                <div class="login-footer" style="margin-top: 32px;">
-                    <p>Need help? <a href="/contact">Contact support</a></p>
-                </div>
+                    Go Back
+                </button>
             </div>
-        </div>
+            <p class="nf-help">
+                Need help?
+                <a href="/contact">Contact support</a>
+            </p>
+        </main>
+
+        <p class="auth-note">K3s GitOps Log Platform · self-hosted</p>
+
+        <style>
+            /* ── Design tokens (matches landing + signin) ────── */
+            .auth {
+                --bg: #070b14;
+                --bg-elev: #0b1120;
+                --panel: #0d1424;
+                --border: rgba(148, 163, 184, 0.14);
+                --border-strong: rgba(148, 163, 184, 0.28);
+                --text: #e7ecf5;
+                --muted: #9aa7bd;
+                --faint: #64748b;
+                --accent: #818cf8;
+                --accent-strong: #6366f1;
+                --accent-2: #22d3ee;
+                --success: #34d399;
+                --danger: #f87171;
+                --mono:
+                    "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo,
+                    monospace;
+
+                position: relative;
+                min-height: 100vh;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                gap: 1rem;
+                padding: 5rem 1.25rem 3rem;
+                background: var(--bg);
+                color: var(--text);
+                font-family:
+                    "Inter",
+                    system-ui,
+                    -apple-system,
+                    "Segoe UI",
+                    sans-serif;
+                -webkit-font-smoothing: antialiased;
+                overflow-x: clip;
+                text-align: center;
+            }
+
+            .auth::before {
+                content: "";
+                position: absolute;
+                inset: 0;
+                pointer-events: none;
+                background-image:
+                    linear-gradient(
+                        rgba(148, 163, 184, 0.05) 1px,
+                        transparent 1px
+                    ),
+                    linear-gradient(
+                        90deg,
+                        rgba(148, 163, 184, 0.05) 1px,
+                        transparent 1px
+                    );
+                background-size: 44px 44px;
+                -webkit-mask-image: radial-gradient(
+                    ellipse 70% 55% at 50% 20%,
+                    #000 20%,
+                    transparent 75%
+                );
+                mask-image: radial-gradient(
+                    ellipse 70% 55% at 50% 20%,
+                    #000 20%,
+                    transparent 75%
+                );
+            }
+
+            .auth::after {
+                content: "";
+                position: absolute;
+                top: -180px;
+                left: 50%;
+                transform: translateX(-50%);
+                width: min(720px, 90vw);
+                height: 460px;
+                pointer-events: none;
+                background:
+                    radial-gradient(
+                        closest-side,
+                        rgba(99, 102, 241, 0.18),
+                        transparent 70%
+                    ),
+                    radial-gradient(
+                        closest-side,
+                        rgba(34, 211, 238, 0.07),
+                        transparent 70%
+                    );
+            }
+
+            .auth * {
+                box-sizing: border-box;
+            }
+
+            /* ── Back link ───────────────────────────────────── */
+            .back-link {
+                position: absolute;
+                top: 1.375rem;
+                left: 1.5rem;
+                display: inline-flex;
+                align-items: center;
+                gap: 0.5rem;
+                text-decoration: none;
+                color: var(--muted);
+                font-size: 0.8125rem;
+                font-weight: 500;
+                transition: color 0.15s ease;
+            }
+
+            .back-link svg {
+                width: 15px;
+                height: 15px;
+            }
+
+            .back-link:hover {
+                color: var(--text);
+            }
+
+            /* ── Card ────────────────────────────────────────── */
+            .nf-card {
+                position: relative;
+                width: 100%;
+                max-width: 420px;
+                padding: clamp(2rem, 5vw, 3rem) clamp(1.5rem, 4vw, 2.5rem);
+                border: 1px solid var(--border-strong);
+                border-radius: 18px;
+                background: var(--bg-elev);
+                box-shadow:
+                    0 30px 80px -30px rgba(0, 0, 0, 0.75),
+                    0 12px 50px -18px rgba(99, 102, 241, 0.25);
+                animation: rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+            }
+
+            @keyframes rise {
+                from {
+                    opacity: 0;
+                    transform: translateY(20px);
+                }
+                to {
+                    opacity: 1;
+                    transform: none;
+                }
+            }
+
+            .nf-code {
+                font-family: var(--mono);
+                font-size: clamp(3.5rem, 10vw, 4.75rem);
+                font-weight: 600;
+                letter-spacing: 0.06em;
+                line-height: 1;
+                background: linear-gradient(
+                    120deg,
+                    var(--accent) 20%,
+                    var(--accent-2) 90%
+                );
+                -webkit-background-clip: text;
+                background-clip: text;
+                -webkit-text-fill-color: transparent;
+                color: transparent;
+                margin-bottom: 1rem;
+            }
+
+            .nf-card h1 {
+                font-size: 1.375rem;
+                font-weight: 700;
+                letter-spacing: -0.02em;
+                margin: 0 0 0.5rem;
+            }
+
+            .nf-card p:not(.nf-help) {
+                font-size: 0.9375rem;
+                line-height: 1.6;
+                color: var(--muted);
+                margin: 0 0 1.75rem;
+            }
+
+            .nf-actions {
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 0.75rem;
+            }
+
+            .nf-help {
+                font-size: 0.8125rem;
+                color: var(--faint);
+                margin: 1.5rem 0 0;
+            }
+
+            .nf-help a {
+                color: var(--accent);
+                text-decoration: none;
+                font-weight: 500;
+                transition: color 0.15s ease;
+            }
+
+            .nf-help a:hover {
+                color: #a5b4fc;
+                text-decoration: underline;
+            }
+
+            /* ── Buttons ─────────────────────────────────────── */
+            .btn {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                gap: 0.5rem;
+                padding: 0.7rem 1.375rem;
+                border-radius: 10px;
+                border: 1px solid transparent;
+                text-decoration: none;
+                font-weight: 600;
+                font-size: 0.9375rem;
+                font-family: inherit;
+                line-height: 1.2;
+                cursor: pointer;
+                white-space: nowrap;
+                transition:
+                    background 0.18s ease,
+                    border-color 0.18s ease,
+                    box-shadow 0.18s ease,
+                    transform 0.18s ease,
+                    color 0.18s ease;
+            }
+
+            .btn svg {
+                width: 16px;
+                height: 16px;
+            }
+
+            .btn-primary {
+                background: var(--accent-strong);
+                color: #fff;
+                box-shadow:
+                    0 1px 0 rgba(255, 255, 255, 0.12) inset,
+                    0 10px 28px -10px rgba(99, 102, 241, 0.55);
+            }
+
+            .btn-primary:hover {
+                background: #7478f3;
+                transform: translateY(-1px);
+                box-shadow:
+                    0 1px 0 rgba(255, 255, 255, 0.14) inset,
+                    0 14px 34px -10px rgba(99, 102, 241, 0.65);
+            }
+
+            .btn-ghost {
+                background: rgba(148, 163, 184, 0.04);
+                border-color: var(--border-strong);
+                color: var(--text);
+            }
+
+            .btn-ghost:hover {
+                background: rgba(148, 163, 184, 0.1);
+                border-color: rgba(148, 163, 184, 0.45);
+            }
+
+            .auth-note {
+                position: relative;
+                font-size: 0.75rem;
+                color: var(--faint);
+                margin: 0;
+            }
+
+            @media (prefers-reduced-motion: reduce) {
+                .auth *,
+                .auth *::before,
+                .auth *::after {
+                    animation: none !important;
+                    transition: none !important;
+                }
+            }
+        </style>
     </body>
 </html>
