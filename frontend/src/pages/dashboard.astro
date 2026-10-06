@@ -265,37 +265,29 @@ import "../styles/main.css";
                 </div>
 
                 <div class="sidebar-section">
-                    <div class="sidebar-title">Source</div>
+                    <div class="sidebar-title" id="sourceFilterTitle">
+                        Source
+                    </div>
                     <select
                         class="filter-select"
                         id="sourceFilter"
                         onchange="applyFilters()"
                     >
                         <option value="">All Sources</option>
-                        <option value="nginx">nginx</option>
-                        <option value="postgresql">postgresql</option>
-                        <option value="redis">redis</option>
-                        <option value="app-server">app-server</option>
-                        <option value="auth-service">auth-service</option>
-                        <option value="cron">cron</option>
-                        <option value="systemd">systemd</option>
-                        <option value="kernel">kernel</option>
                     </select>
                 </div>
 
                 <div class="sidebar-section">
                     <div class="filter-group">
-                        <label class="filter-label">Host</label>
+                        <label class="filter-label" id="hostFilterTitle">
+                            Host
+                        </label>
                         <select
                             class="filter-select"
                             id="hostFilter"
                             onchange="applyFilters()"
                         >
                             <option value="">All Hosts</option>
-                            <option value="prod-web-01">prod-web-01</option>
-                            <option value="prod-web-02">prod-web-02</option>
-                            <option value="prod-db-01">prod-db-01</option>
-                            <option value="prod-cache-01">prod-cache-01</option>
                         </select>
                     </div>
                 </div>
