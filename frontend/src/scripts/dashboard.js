@@ -147,7 +147,8 @@ async function loadEngine() {
     const localISOTime = `${year}-${month}-${day}T${hours}:${minutes}`;
     document.getElementById("dateTo").value = localISOTime;
 
-    //runSearch();
+    // 4. ดึงข้อมูลครั้งแรก — เพื่อให้ dropdown Source/Host ถูก populate จากข้อมูลจริง
+    runSearch();
 
   } catch (err) {
     console.error("Fetch failed:", err);
@@ -175,6 +176,9 @@ function mapQuickwitHits(hits) {
     // Service ตามมาตรฐาน: service.name > resource.service.name
     const service = hit["service.name"] || hit.serviceName || hit.service || hit["resource.service.name"] || "";
 
+    // Host ตามมาตรฐาน OTel resource: resource.host.name / host.name
+    const otelHost = hit["resource.host.name"] || hit["host.name"] || "";
+
     // Status (traces): รองรับ string หรือ object {code, message}
     let status = hit.status ?? hit.status_code ?? "";
     if (status && typeof status === "object") status = status.code !== undefined ? status.code : status.message;
@@ -184,8 +188,8 @@ function mapQuickwitHits(hits) {
       id: hit.id || hit["event.id"] || Math.random().toString(36).substr(2, 9),
       timestamp: dateObj,
       level: normalizedLevel,
-      source: hit.source_ip || hit.srcip || hit.source || hit.kubernetes.pod_ip || "unknown",
-      host: hit.host || hit.hostname || hit.kubernetes.container_name || "unknown",
+      source: hit.source_ip || hit.srcip || hit.source || hit.kubernetes.pod_ip || service || "unknown",
+      host: hit.host || hit.hostname || otelHost || hit.kubernetes.container_name || "unknown",
       message: hit.message || "",
       pid: hit.pid || 0,
       // ── Standard OTel fields ──
@@ -207,6 +211,7 @@ function mapQuickwitHits(hits) {
       'source_ip', 'srcip', 'source', 'kubernetes.pod_ip',
       'host', 'hostname', 'kubernetes.container_name', 'message', 'pid',
       'body', 'service.name', 'serviceName', 'service', 'resource.service.name',
+      'resource.host.name', 'host.name',
       'trace_id', 'traceId', 'traceid', 'span_id', 'spanId', 'spanid',
       'name', 'span_name', 'operation_name', 'kind', 'span_kind',
       'duration', 'duration_ns', 'status', 'status_code'
@@ -355,26 +360,39 @@ async function runSearch() {
     // 7. อัปเดตข้อมูล (ใช้ mapQuickwitHits ที่เราคุยกันก่อนหน้า)
     allLogs = mapQuickwitHits(data.hits || []);
 
-    // 8. อัปเดต Dropdown Source IP
-    const uniqueIps = (data.hits || [])
-      .map(item => item.source_ip)
-      .filter((id, idx, self) => id && self.indexOf(id) === idx);
-
-    document.getElementById("sourceFilter").innerHTML = ['<option value="">All Sources</option>']
-      .concat(uniqueIps.map(id => `<option value="${id}">${id}</option>`))
+    // 8. อัปเดต Dropdown Source/Host — ใช้ค่าเดียวกับที่ applyFilters เปรียบเทียบ (log.source/log.host)
+    const schema = currentSchema();
+    const uniqueSources = allLogs
+      .map((l) => l.source)
+      .filter((v, idx, self) => v && v !== "unknown" && self.indexOf(v) === idx);
+    document.getElementById("sourceFilter").innerHTML = [
+      `<option value="">All ${schema.sourceLabel || "Source"}</option>`,
+    ]
+      .concat(
+        uniqueSources.map((v) => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`),
+      )
       .join("");
     // ล้าง filter source เพื่อให้แสดงผลการ search ใหม่แบบทั้งหมด
     document.getElementById("sourceFilter").value = "";
 
-    const uniqueHosts = (data.hits || [])
-      .map(item => item.host)
-      .filter((id, idx, self) => id && self.indexOf(id) === idx);
-
-    document.getElementById("hostFilter").innerHTML = ['<option value="">All Hosts</option>']
-      .concat(uniqueHosts.map(id => `<option value="${id}">${id}</option>`))
+    const uniqueHosts = allLogs
+      .map((l) => l.host)
+      .filter((v, idx, self) => v && v !== "unknown" && self.indexOf(v) === idx);
+    document.getElementById("hostFilter").innerHTML = [
+      `<option value="">All ${schema.hostLabel || "Host"}</option>`,
+    ]
+      .concat(
+        uniqueHosts.map((v) => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`),
+      )
       .join("");
-    // ล้าง filter source เพื่อให้แสดงผลการ search ใหม่แบบทั้งหมด
+    // ล้าง filter host เพื่อให้แสดงผลการ search ใหม่แบบทั้งหมด
     document.getElementById("hostFilter").value = "";
+
+    // อัปเดตชื่อหัวข้อ section ตาม schema (เช่น index OTel → "Service")
+    const sourceTitle = document.getElementById("sourceFilterTitle");
+    if (sourceTitle) sourceTitle.textContent = schema.sourceLabel || "Source";
+    const hostTitle = document.getElementById("hostFilterTitle");
+    if (hostTitle) hostTitle.textContent = schema.hostLabel || "Host";
 
     // 9. อัปเดต UI ทั้งหมด
     applyFilters();
@@ -502,6 +520,8 @@ function searchByTrace(traceId) {
 const INDEX_SCHEMAS = {
   syslogs: {
     name: "syslogs",
+    sourceLabel: "Source",
+    hostLabel: "Host",
     columns: [
       { key: "timestamp", label: "Timestamp", width: "170px", sortable: true, type: "time", sortVal: (l) => l.timestamp.getTime() },
       { key: "level", label: "Level", width: "90px", sortable: true, type: "level", val: (l) => l.level, sortVal: (l) => sevRank(l.level) },
@@ -513,6 +533,8 @@ const INDEX_SCHEMAS = {
   },
   otel_logs: {
     name: "otel_logs",
+    sourceLabel: "Service",
+    hostLabel: "Host",
     columns: [
       { key: "timestamp", label: "Timestamp", width: "170px", sortable: true, type: "time", sortVal: (l) => l.timestamp.getTime() },
       { key: "severity", label: "Severity", width: "100px", sortable: true, type: "level", val: (l) => l.level, sortVal: (l) => sevRank(l.level) },
@@ -524,6 +546,8 @@ const INDEX_SCHEMAS = {
   },
   otel_traces: {
     name: "otel_traces",
+    sourceLabel: "Service",
+    hostLabel: "Host",
     columns: [
       { key: "timestamp", label: "Start Time", width: "170px", sortable: true, type: "time", sortVal: (l) => l.timestamp.getTime() },
       { key: "name", label: "Span Name", sortable: true, type: "text", val: (l) => l.spanName || l.message, sortVal: (l) => String(l.spanName || l.message || "").toLowerCase(), highlight: true },
@@ -1394,21 +1418,25 @@ function signout() {
 }
 
 // Initialize
-document.addEventListener("DOMContentLoaded", () => {
-  //generateLogs(500);
+document.addEventListener("DOMContentLoaded", async () => {
+  //generateLogs(100);
   renderDashboard();
   //startLiveMode();
 
-  // If loadEngine is the function name
-  if (typeof loadEngine === 'function') {
-    loadEngine();
-  }
-
-  // Set default date range
+  // Set default date range (ก่อนโหลดรายการ index)
   const now = new Date();
   const dayAgo = new Date(now - 86400000);
   document.getElementById("dateFrom").value = dayAgo.toISOString().slice(0, 16);
   document.getElementById("dateTo").value = now.toISOString().slice(0, 16);
+
+  // หลัง login: รอโหลดรายการ index เสร็จแล้ว auto-search ทันที
+  if (typeof loadEngine === 'function') {
+    await loadEngine();
+    const autoSelect = document.getElementById("indexSelect");
+    if (autoSelect && autoSelect.value) {
+      runSearch();
+    }
+  }
 
   // เปลี่ยน table columns ตาม index ที่เลือก + ดึงข้อมูลใหม่
   const indexSelect = document.getElementById("indexSelect");
@@ -1435,7 +1463,6 @@ document.addEventListener("DOMContentLoaded", () => {
       document.getElementById("searchInput").focus();
     }
   });
-  
 });
 
 const exportedFunctions = {
