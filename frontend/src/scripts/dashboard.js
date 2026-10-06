@@ -1,3 +1,5 @@
+import { LogGenerator, createLogs } from "./log-generator.js";
+
 // State
 let allLogs = [];
 let filteredLogs = [];
@@ -9,6 +11,18 @@ let selectedLog = null;
 let liveMode = true;
 let liveInterval = null;
 let selectedIndex = "syslogs";
+
+// Generate sample logs เข้า state ของ dashboard (ข้อมูลมาจาก LogGenerator module)
+function generateLogs(count = 500) {
+  allLogs = createLogs(count);
+  applyFilters();
+  updateStats();
+  if (document.getElementById("dashboardView").classList.contains("active")) {
+    renderDashboard();
+  }
+  refreshAllUI();
+  showToast(`${count} log entries generated`);
+}
 
 // Use SAME-ORIGIN relative /api/* URLs. The Vite dev proxy (astro.config.mjs)
 // forwards these to http://localhost:8080 locally, and the production
@@ -599,144 +613,6 @@ function renderCell(log, col) {
       return escapeHtml(raw);
     }
   }
-}
-
-// Sample data generators (platform-themed: K3s GitOps stack on Proxmox)
-const sources = [
-  "vector",
-  "kube-apiserver",
-  "k3s",
-  "etcd",
-  "flux-operator",
-  "istio-proxy",
-  "quickwit",
-  "garage",
-  "haproxy",
-  "kubelet",
-  "systemd",
-  "kernel",
-];
-const hosts = [
-  "k3s-master-1",
-  "k3s-master-2",
-  "k3s-worker-1",
-  "k3s-worker-2",
-  "super-node-1",
-  "super-node-2",
-];
-const levels = ["error", "warn", "info", "debug", "critical"];
-const levelWeights = [15, 20, 45, 15, 5];
-
-const messages = {
-  error: [
-    "Quickwit search timed out after 30s on index syslogs",
-    "Failed to reconcile GitRepository fleet-infra: upstream error",
-    "etcd: failed to commit transaction: timeout",
-    "Istio proxy: upstream connect error or disconnect/reset before headers",
-    "Vector: component crash — batch send failed (retry 5/5)",
-    "kubelet: Container runtime network not ready",
-    "Garage: shard quorum lost for bucket logs (1/3 peers)",
-    "HAProxy: backend k3s-apiserver down (L7Check fail)",
-    "cert-manager: order finalization failed: no available CA",
-    "Failed to flush log batch to Quickwit: connection refused",
-  ],
-  warn: [
-    "Node k3s-worker-1: memory pressure at 87% of allocatable",
-    "Certificate expires in 7 days for frontend.codezap.win",
-    "Flux: reconciliation drift detected in namespace lumina",
-    "Quickwit: index ingestion lag at 12s for syslogs",
-    "Garage: replica sync behind on super-node-2 (45s)",
-    "Istio: mTLS handshake retries elevated on gateway",
-    "Vector: source file descriptor usage at 80%",
-    "etcd: raft election in progress on k3s-master-2",
-    "HAProxy: session limit reached (95/100) on LB vserver",
-    "kubelet: PLEG is not healthy: taking longer than 3m0s",
-  ],
-  info: [
-    "Flux reconciled namespace lumina (0 drifts) in 2.4s",
-    "Vector batch flushed: 12,482 events → Quickwit syslogs",
-    "Quickwit: index syslogs refreshed, 4.2M docs",
-    "HAProxy: backend k3s-apiserver marked UP (L7Check OK)",
-    "Garage: replication completed for bucket logs (3/3 shards)",
-    "cert-manager: certificate frontend.codezap.win renewed",
-    "Istio: config pushed to 6 proxies (revision 1.24)",
-    "K3s: node k3s-worker-2 heartbeat OK (kubelet 1.31)",
-    "GitHub Actions: image ghcr.io/traipoap/gitops-backend:latest published",
-    "Flux: HelmRelease prometheus upgraded to 1.42.0",
-  ],
-  debug: [
-    "Lucene query: message:(k3s AND warning) time range 15m",
-    "Quickwit: scroll cursor advanced to index_timestamp=1758012345678",
-    "Vector: transform pipeline `mask-pdpa` applied to 1,024 events",
-    "etcd: heartbeat from k3s-master-1 (round 48211)",
-    "Istio: route matched → HTTPRoute lumina/backend → svc backend-svc:8080",
-    "Garage: GET bucket=logs key=export/any_20260525.csv (200 OK)",
-    "HAProxy: frontend vLan16 sessions=142 rate=12/s",
-    "kubelet: syncing kubernetes.io/nfs volume for pod quickwit-indexer-0",
-    "Flux: source reconciliation completed in 380ms",
-    "Kernel: NFS: server 10.10.16.5 ready; waiting for first request",
-  ],
-  critical: [
-    "CLUSTER QUORUM LOST: only 1/3 etcd members reachable",
-    "K3s control plane unreachable from all workers for 60s",
-    "Vector pipeline halted: disk full on /var/log (99% used)",
-    "Quickwit: segment corruption detected in index syslogs",
-    "Garage: data loss risk — 2/3 shards offline for bucket logs",
-    "HAProxy: no healthy backends for vserver k3s-apiserver",
-    "Kernel: Out of memory: killed process 1421 (vector)",
-    "Flux: reconciliation failing for 30 min — all namespaces",
-    "Istio: sidecar crashloop detected in 4 pods (lumina)",
-    "NFS: server 10.10.16.5 not responding — mounts stale",
-  ],
-};
-
-function weightedRandom(arr, weights) {
-  const total = weights.reduce((a, b) => a + b, 0);
-  let random = Math.random() * total;
-  for (let i = 0; i < arr.length; i++) {
-    random -= weights[i];
-    if (random <= 0) return arr[i];
-  }
-  return arr[arr.length - 1];
-}
-
-function generateLogEntry(timestamp) {
-  const level = weightedRandom(levels, levelWeights);
-  const source = sources[Math.floor(Math.random() * sources.length)];
-  const host = hosts[Math.floor(Math.random() * hosts.length)];
-  const messageTemplates = messages[level];
-  let message =
-    messageTemplates[Math.floor(Math.random() * messageTemplates.length)];
-  if (message.includes("{pid}")) {
-    message = message.replace("{pid}", Math.floor(Math.random() * 30000));
-  }
-  return {
-    id: Math.random().toString(36).substr(2, 9),
-    timestamp: timestamp || new Date(Date.now() - Math.random() * 86400000 * 7),
-    level: level,
-    source: source,
-    host: host,
-    message: message,
-    pid: Math.floor(Math.random() * 30000) + 1000,
-    extras: {}
-  };
-}
-
-function generateLogs(count = 500) {
-  allLogs = [];
-  const now = Date.now();
-  for (let i = 0; i < count; i++) {
-    const ts = new Date(now - Math.random() * 86400000 * 7);
-    allLogs.push(generateLogEntry(ts));
-  }
-  allLogs.sort((a, b) => b.timestamp - a.timestamp);
-  applyFilters();
-  updateStats();
-  if (document.getElementById("dashboardView").classList.contains("active")) {
-    renderDashboard();
-  }
-  refreshAllUI();
-  showToast(`${count} log entries generated`);
 }
 
 function formatTimestamp(date) {
@@ -1423,7 +1299,7 @@ function renderDashboard() {
 
   // 5. Level distribution (Legend)
   const levelCounts = {};
-  levels.forEach((l) => (levelCounts[l] = 0));
+  LogGenerator.levels.forEach((l) => (levelCounts[l] = 0));
   allLogs.forEach((l) => {
     if (levelCounts.hasOwnProperty(l.level)) levelCounts[l.timestamp] = 0; // safety
     if (levelCounts.hasOwnProperty(l.level)) levelCounts[l.level]++;
@@ -1431,7 +1307,7 @@ function renderDashboard() {
 
   const legend = document.getElementById("levelLegend");
   if (legend) {
-    legend.innerHTML = levels
+    legend.innerHTML = LogGenerator.levels
       .map((level) => {
         const count = levelCounts[level] || 0;
         const pct = total > 0 ? ((count / total) * 100).toFixed(1) : 0;
@@ -1498,7 +1374,7 @@ function startLiveMode() {
   if (liveInterval) clearInterval(liveInterval);
   liveInterval = setInterval(() => {
     if (liveMode) {
-      const newLog = generateLogEntry(new Date());
+      const newLog = LogGenerator.generateLogEntry(new Date());
       allLogs.unshift(newLog);
       // Keep max 10000 logs
       if (allLogs.length > 10000) {
@@ -1559,6 +1435,7 @@ document.addEventListener("DOMContentLoaded", () => {
       document.getElementById("searchInput").focus();
     }
   });
+  
 });
 
 const exportedFunctions = {
