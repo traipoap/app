@@ -1,0 +1,484 @@
+---
+import Layout from "../layouts/Layout.astro";
+import "../styles/main.css";
+---
+
+<Layout title="Query — LUMINA">
+    <!-- Client-side route protection: runs in the browser -->
+    <script>
+        (function protectRoute() {
+            if (typeof window === "undefined") return;
+
+            // Check both storages (signin sets localStorage, other code may use sessionStorage)
+            const token =
+                window.sessionStorage.getItem("authToken") ||
+                window.localStorage.getItem("authToken");
+
+            if (!token) {
+                // small delay to avoid interfering with initial rendering
+                setTimeout(function () {
+                    window.location.href = "/signin";
+                }, 100);
+            }
+        })();
+    </script>
+    <!-- Page-level toolbar (global navigation lives in the left rail) -->
+    <div class="dash-toolbar">
+        <span class="tb-live" id="liveIndicator">
+            <span class="tb-dot"></span>
+            <span>Live</span>
+        </span>
+        <button
+            class="tb-btn"
+            type="button"
+            id="refreshBtn"
+            onclick="refreshLogs()"
+        >
+            <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+            >
+                <path d="M23 4v6h-6"></path>
+                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+            </svg>
+            <span class="tb-label">Refresh</span>
+        </button>
+        <button
+            class="tb-btn"
+            type="button"
+            id="generateBtn"
+            onclick="generateLogs()"
+        >
+            <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+            >
+                <path d="M12 5v14M5 12h14"></path>
+            </svg>
+            <span class="tb-label">Generate</span>
+        </button>
+        <button
+            class="tb-btn"
+            type="button"
+            id="rawToggle"
+            onclick="toggleRawQuery()"
+        >
+            <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+            >
+                <path d="M16 18l6-6-6-6 M8 6l-6 6 6 6"></path>
+            </svg>
+            <span class="tb-label">Raw Query</span>
+        </button>
+    </div>
+
+    <!-- Raw Query panel (Quickwit / Lucene) -->
+    <div class="raw-panel" id="rawPanel" hidden>
+        <div class="raw-head">
+            <label for="rawQueryInput">
+                Raw Query
+                <span class="raw-hint">
+                    Quickwit / Lucene — applies on top of the date range
+                </span>
+            </label>
+            <div class="raw-actions">
+                <button class="search-btn" type="button" onclick="runSearch()">
+                    Run Query
+                </button>
+                <button
+                    class="clear-filters-btn"
+                    type="button"
+                    onclick="resetRawQuery()"
+                >
+                    Reset
+                </button>
+            </div>
+        </div>
+        <textarea
+            id="rawQueryInput"
+            class="raw-input"
+            spellcheck="false"
+            placeholder='e.g.  level:ERROR AND message:"crash"   —   when not empty, this replaces the Message / Source / Host filters'
+        ></textarea>
+    </div>
+
+    <!-- Compact filter bar (replaces the old 280px sidebar) -->
+    <div class="filterbar">
+        <div class="fb-row">
+            <div class="search-wrapper fb-search">
+                <span class="search-icon">
+                    <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                    >
+                        <circle cx="11" cy="11" r="8" />
+                        <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                    </svg>
+                </span>
+                <input
+                    type="text"
+                    class="search-input"
+                    id="searchInput"
+                    placeholder="Search logs — message, service, trace, span…"
+                    oninput="debounceSearch()"
+                />
+            </div>
+            <button class="search-btn" id="searchBtn" onclick="runSearch()">
+                <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                >
+                    <circle cx="11" cy="11" r="8" />
+                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+                Search
+            </button>
+            <select class="filter-select" id="indexSelect" aria-label="Index">
+                <option value="">Loading...</option>
+            </select>
+            <select
+                class="filter-select"
+                id="engineSelect"
+                aria-label="Query engine"
+            >
+                <option value="">Loading...</option>
+            </select>
+            <div class="fb-chips" role="group" aria-label="Time range">
+                <button class="level-btn" onclick="setQuickDate('1h')">
+                    1h
+                </button>
+                <button class="level-btn" onclick="setQuickDate('24h')">
+                    24h
+                </button>
+                <button class="level-btn" onclick="setQuickDate('7d')">
+                    7d
+                </button>
+                <button class="level-btn" onclick="setQuickDate('30d')">
+                    30d
+                </button>
+            </div>
+            <div class="fb-dates">
+                <input
+                    type="datetime-local"
+                    class="filter-input"
+                    id="dateFrom"
+                    aria-label="From"
+                    onchange="applyFilters()"
+                />
+                <span class="fb-sep">→</span>
+                <input
+                    type="datetime-local"
+                    class="filter-input"
+                    id="dateTo"
+                    aria-label="To"
+                    onchange="applyFilters()"
+                />
+            </div>
+        </div>
+        <div class="fb-row">
+            <div class="fb-levels" role="group" aria-label="Log level">
+                <button
+                    class="level-btn active"
+                    data-level="error"
+                    onclick="toggleLevel(this)"
+                >
+                    ERROR
+                </button>
+                <button
+                    class="level-btn active"
+                    data-level="warn"
+                    onclick="toggleLevel(this)"
+                >
+                    WARN
+                </button>
+                <button
+                    class="level-btn active"
+                    data-level="info"
+                    onclick="toggleLevel(this)"
+                >
+                    INFO
+                </button>
+                <button
+                    class="level-btn active"
+                    data-level="debug"
+                    onclick="toggleLevel(this)"
+                >
+                    DEBUG
+                </button>
+                <button
+                    class="level-btn active"
+                    data-level="critical"
+                    onclick="toggleLevel(this)"
+                >
+                    CRITICAL
+                </button>
+            </div>
+            <span class="fb-label" id="sourceFilterTitle">
+                Source
+            </span>
+            <select
+                class="filter-select"
+                id="sourceFilter"
+                onchange="applyFilters()"
+            >
+                <option value="">All Sources</option>
+            </select>
+            <span class="fb-label" id="hostFilterTitle">
+                Host
+            </span>
+            <select
+                class="filter-select"
+                id="hostFilter"
+                onchange="applyFilters()"
+            >
+                <option value="">All Hosts</option>
+            </select>
+            <div class="search-wrapper fb-source">
+                <span class="search-icon">
+                    <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                    >
+                        <circle cx="11" cy="11" r="8" />
+                        <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                    </svg>
+                </span>
+                <input
+                    type="text"
+                    class="search-input"
+                    id="sourceInput"
+                    placeholder="Source text…"
+                />
+            </div>
+            <button class="clear-filters-btn" onclick="clearAllFilters()">
+                Clear
+            </button>
+        </div>
+    </div>
+
+    <div class="app-container">
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Toolbar -->
+            <div class="toolbar">
+                <div class="toolbar-left">
+                    <span class="result-count">
+                        Showing <span id="filteredCount">0</span> of{" "}
+                        <span id="totalFiltered">0</span> entries
+                    </span>
+                </div>
+                <div class="toolbar-right">
+                    <select
+                        class="page-size-select"
+                        id="pageSize"
+                        onchange="changePageSize()"
+                    >
+                        <option value="25">25 per page</option>
+                        <option value="50" selected>
+                            50 per page
+                        </option>
+                        <option value="100">100 per page</option>
+                        <option value="250">250 per page</option>
+                    </select>
+                    <button class="export-btn" onclick="exportCSV()">
+                        <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        >
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                            <polyline points="7 10 12 15 17 10" />
+                            <line x1="12" y1="15" x2="12" y2="3" />
+                        </svg>
+                        Export CSV
+                    </button>
+                    <button class="export-btn" onclick="exportLargeCSV()">
+                        <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        >
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                            <polyline points="7 10 12 15 17 10" />
+                            <line x1="12" y1="15" x2="12" y2="3" />
+                        </svg>
+                        Export Large CSV
+                    </button>
+                    <button
+                        class="export-btn"
+                        style="background: var(--bg-tertiary); border: 1px solid var(--border-color);"
+                        onclick="showExportHistoryModal()"
+                    >
+                        <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        >
+                            <path d="M3 3v5h5" />
+                            <path d="M3.05 13A9 9 0 1 0 6 5.3L3 8" />
+                            <line x1="12" y1="12" x2="12" y2="18" />
+                        </svg>
+                        Export History
+                    </button>
+                </div>
+            </div>
+
+            <!-- Export History Modal -->
+            <div class="modal-overlay" id="exportHistoryModal">
+                <div class="modal">
+                    <div class="modal-header">
+                        <h3>Export History</h3>
+                        <button
+                            class="modal-close"
+                            onclick="closeExportHistoryModal()"
+                        >
+                            ×
+                        </button>
+                    </div>
+                    <div class="modal-body" id="modalContent"></div>
+                    <div class="modal-footer">
+                        <button
+                            class="btn-secondary"
+                            onclick="closeExportHistoryModal()"
+                        >
+                            Close
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Log Table View -->
+            <div class="log-container" id="logTableView">
+                <table class="log-table">
+                    <thead id="logTableHead"></thead>
+                    <tbody id="logTableBody"></tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            <div class="pagination">
+                <div class="pagination-info" id="paginationInfo">
+                    Page 1 of 1
+                </div>
+                <div class="pagination-controls" id="paginationControls"></div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Log Detail Modal -->
+    <div class="modal-overlay" id="logModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Log Details</h3>
+                <button class="modal-close" onclick="closeModal()">
+                    ×
+                </button>
+            </div>
+            <div class="modal-body" id="modalBody"></div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeModal()">
+                    Close
+                </button>
+
+                <button class="btn-primary" onclick="copyLogDetail()">
+                    <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                    >
+                        <rect
+                            x="9"
+                            y="9"
+                            width="13"
+                            height="13"
+                            rx="2"
+                            ry="2"
+                        />
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                    </svg>
+                    Copy
+                </button>
+
+                <button class="btn-primary" onclick="exportSingleLog()">
+                    <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                    >
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="7 10 12 15 17 10" />
+                        <line x1="12" y1="15" x2="12" y2="3" />
+                    </svg>
+                    Export
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast">
+        <span class="toast-icon">
+            <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+            >
+                <circle cx="12" cy="12" r="10" />
+                <path d="M8 12l3 3 5-6" />
+            </svg>
+        </span>
+        <span class="toast-message" id="toastMessage">
+            Action completed
+        </span>
+    </div>
+    <script src="../scripts/dashboard.js"></script>
+</Layout>
