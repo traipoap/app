@@ -41,14 +41,14 @@ func HandleRegister(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		// 4. Create new user instance
+		// 4. Create new user instance.
+		// Role is ALWAYS "user": self-registration must not be able to grant
+		// elevated roles ("admin") — that would let a client escalate itself.
+		// Elevated accounts are provisioned by an operator out-of-band.
 		newUser := models.User{
 			Username:     input.Username,
 			PasswordHash: hashedPassword,
-			Role:         "user", // Default role
-		}
-		if input.Role != "" {
-			newUser.Role = input.Role
+			Role:         "user",
 		}
 
 		// 5. Save to SQLite database

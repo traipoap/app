@@ -24,7 +24,7 @@ const API_PROXY_TARGET = (() => {
   try {
     return new URL(raw).origin;
   } catch {
-    console.warn(`[astro] API_PROXY_TARGET is not a valid URL, falling back to default: ${raw}`);
+    console.warn(`[astro] API_PROXY_TARGET is not a valid URL, falling back to default: http://localhost:8080`);
     return 'http://localhost:8080';
   }
 })();
@@ -32,26 +32,28 @@ const API_PROXY_TARGET = (() => {
 // Hosts the dev/preview servers accept (Vite host check). Inject the real
 // domain at build/run time without editing code, e.g.:
 //   ALLOWED_HOSTS="frontend.example.com,.example.com" docker build ...
-//   docker run -e ALLOWED_HOSTS=frontend.example.com .
+//   docker run -e ALLOWED_HOSTS="frontend.example.com" .
 const ALLOWED_HOSTS = (process.env.ALLOWED_HOSTS || '*')
   .split(',')
   .map((h) => h.trim())
   .filter(Boolean);
 
-// https://astro.build/config
 export default defineConfig({
+  // /api/* is forwarded to the Go backend (dev/preview only — in production
+  // the frontend is static and the Go backend serves the API directly,
+  // with CORS_ORIGINS covering the frontend origin).
   vite: {
-    server: {
-      proxy: {
-        '/api': {
-          target: API_PROXY_TARGET,
-          changeOrigin: true,
-        },
-      },
-      allowedHosts: ALLOWED_HOSTS // dev / server
+  server: {
+    proxy: {
+      '/api': {
+        target: API_PROXY_TARGET,
+        changeOrigin: true
+      }
     },
-    preview: {
-      allowedHosts: ALLOWED_HOSTS // preview
-    }
+    allowedHosts: ALLOWED_HOSTS // dev / server
+  },
+  preview: {
+    allowedHosts: ALLOWED_HOSTS
   }
+}
 });

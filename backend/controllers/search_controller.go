@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 
@@ -88,13 +89,41 @@ var luceneReplacer = strings.NewReplacer(
 	`~`, `\~`, `*`, `\*`, `?`, `\?`, `|`, `\|`, `&`, `\&`, `/`, `\/`,
 )
 
+// tenantField returns the Quickwit field used to pin rows to a tenant.
+// Overridable via env TENANT_FIELD (default "tenant_id").
+func tenantField() string {
+	if f := os.Getenv("TENANT_FIELD"); f != "" {
+		return f
+	}
+	return "tenant_id"
+}
+
+// tenantClause builds the tenant pin for the Lucene query, or "" when the
+// request is not tenant-scoped (global workspace).
+func tenantClause(p models.SearchParams) string {
+	if p.Tenant == nil || strings.TrimSpace(*p.Tenant) == "" {
+		return ""
+	}
+	return fmt.Sprintf(`%s:"%s"`, tenantField(), escapeLucene(*p.Tenant))
+}
+
 // buildLuceneQuery constructs Lucene-style query from params.
-// If a user-supplied raw query (raw_query) is present it takes precedence
-// over the message/source_ip filters; the timestamp range is still applied
-// on top of it so time-window semantics stay consistent.
+//
+// Tenant scoping: when `tenant` is provided, a tenant pin
+// (tenant_id:"<slug>") is AND-ed into EVERY branch, so search AND export
+// (both call this) can never leak another tenant's rows.
+//
+// A user-supplied raw query (raw_query) takes precedence over the
+// message/source_ip filters; the timestamp range is still applied on top
+// of it so time-window semantics stay consistent.
 func buildLuceneQuery(p models.SearchParams) string {
+	var parts []string
+
+	if clause := tenantClause(p); clause != "" {
+		parts = append(parts, clause)
+	}
+
 	if p.RawQuery != nil && strings.TrimSpace(*p.RawQuery) != "" {
-		var parts []string
 		if p.FromTimestamp != nil && p.ToTimestamp != nil {
 			parts = append(parts, fmt.Sprintf("timestamp:[%s TO %s]",
 				*p.FromTimestamp, *p.ToTimestamp))
@@ -102,8 +131,6 @@ func buildLuceneQuery(p models.SearchParams) string {
 		parts = append(parts, *p.RawQuery)
 		return strings.Join(parts, " AND ")
 	}
-
-	var parts []string
 
 	// ✅ Timestamp range
 	if p.FromTimestamp != nil && p.ToTimestamp != nil {

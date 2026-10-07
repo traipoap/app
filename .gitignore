@@ -1,6 +1,12 @@
 # build output
 dist/
 
+# tenant runtime data (multi-tenant)
+frontend/data/
+
+# stray build artifacts
+backend/exporter-new
+
 # generated types
 .astro/
 

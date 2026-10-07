@@ -38,7 +38,7 @@ func setupAuthRoutes(r *gin.Engine, jwtService *services.JWTService, db *gorm.DB
 	{
 		auth.POST("/login", controllers.HandleSignIn(db, jwtService))
 		auth.POST("/refresh", controllers.HandleRefresh(db, jwtService))
-		//auth.POST("/register", controllers.HandleRegister(db))
+		auth.POST("/register", controllers.HandleRegister(db))
 	}
 
 	// Protected routes

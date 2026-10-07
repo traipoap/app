@@ -14,7 +14,7 @@ const {
     bodyClass,
 } = Astro.props;
 
-// แสดง nav rail เฉพาะหน้าแอป (Query + Dashboard)
+// แสดง nav rail เฉพาะหน้าแอป (Query + Dashboard + Admin)
 const showNav =
     Astro.url.pathname.startsWith("/dashboard") ||
     Astro.url.pathname.startsWith("/query");

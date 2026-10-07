@@ -7,6 +7,7 @@ type SearchParams struct {
 	SourceIP          *string `form:"source_ip"`
 	Message           *string `form:"message"`
 	RawQuery          *string `form:"raw_query"`
+	Tenant            *string `form:"tenant"`
 	MaxHits           *int    `form:"max_hits"`
 	EndIndexTimestamp *string `form:"index_timestamp"`
 }

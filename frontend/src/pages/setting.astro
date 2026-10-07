@@ -38,14 +38,26 @@ import Layout from "../layouts/Layout.astro";
                 </div>
                 <div class="field">
                     <label for="fullName">Full name</label>
-                    <input id="fullName" type="text" value="Platform Admin" readonly />
+                    <input
+                        id="fullName"
+                        type="text"
+                        value="Platform Admin"
+                        readonly
+                    />
                 </div>
                 <div class="field">
                     <label for="email">Email</label>
-                    <input id="email" type="email" value="admin@example.com" readonly />
+                    <input
+                        id="email"
+                        type="email"
+                        value="admin@example.com"
+                        readonly
+                    />
                 </div>
                 <div class="field">
-                    <span class="field-label" id="roleLabel">Role</span>
+                    <span class="field-label" id="roleLabel">
+                        Role
+                    </span>
                     <span class="role-badge" aria-labelledby="roleLabel">
                         <svg
                             viewBox="0 0 24 24"
@@ -135,7 +147,6 @@ import Layout from "../layouts/Layout.astro";
             window.location.href = "/signin";
         });
     </script>
-
     <style>
         .settings-page {
             width: 100%;
@@ -253,7 +264,9 @@ import Layout from "../layouts/Layout.astro";
             border-radius: 8px;
             color: var(--text);
             font-size: 0.875rem;
-            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+            transition:
+                border-color 0.15s ease,
+                box-shadow 0.15s ease;
         }
 
         .field input[readonly] {
@@ -342,7 +355,9 @@ import Layout from "../layouts/Layout.astro";
             font-size: 0.8125rem;
             font-weight: 600;
             cursor: pointer;
-            transition: background 0.15s ease, border-color 0.15s ease;
+            transition:
+                background 0.15s ease,
+                border-color 0.15s ease;
         }
 
         .btn-signout svg {

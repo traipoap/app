@@ -426,7 +426,14 @@ const { redirect = "/dashboard" } = Astro.props;
             btn.setAttribute("aria-pressed", String(!wasPassword));
         }
     </script>
+    <script define:vars={{ redirect }}>
+        window.__LUMINA_REDIRECT__ = redirect;
+    </script>
     <script type="module">
+        // Redirect target injected from the frontmatter (module scripts
+        // can't see frontmatter scope directly).
+        const redirect = window.__LUMINA_REDIRECT__ || "/dashboard";
+
         const form = document.getElementById("signupForm");
         const errorEl = document.getElementById("signupError");
         const successEl = document.getElementById("signupSuccess");
@@ -434,11 +441,29 @@ const { redirect = "/dashboard" } = Astro.props;
         const btnText = btn.querySelector(".btn-text");
         const btnSpinner = btn.querySelector(".btn-spinner");
 
+        /** Parse a {error|message} JSON body, best-effort. */
+        async function apiErrorMessage(res) {
+            try {
+                const d = await res.json();
+                return d.error || d.message || null;
+            } catch {
+                return null;
+            }
+        }
+
+        function setLoading(on) {
+            btn.disabled = on;
+            btnText.style.display = on ? "none" : "block";
+            btnSpinner.style.display = on ? "block" : "none";
+        }
+
         form.addEventListener("submit", async (e) => {
             e.preventDefault();
 
-            const fullname = form.querySelector('[name="fullname"]').value;
-            const email = form.querySelector('[name="email"]').value;
+            const fullname = form
+                .querySelector('[name="fullname"]')
+                .value.trim();
+            const email = form.querySelector('[name="email"]').value.trim();
             const password = form.querySelector('[name="password"]').value;
             const confirmPassword = form.querySelector(
                 '[name="confirmPassword"]',
@@ -466,42 +491,106 @@ const { redirect = "/dashboard" } = Astro.props;
                 return;
             }
 
-            // Show loading spinner
-            btnText.style.display = "none";
-            btnSpinner.style.display = "block";
-            btn.disabled = true;
+            setLoading(true);
 
-            // Simulate API call (replace with actual auth logic)
-            setTimeout(() => {
-                // Create a demo session
-                sessionStorage.setItem(
-                    "user",
-                    JSON.stringify({
-                        name: fullname,
-                        email: email,
-                        role: "admin",
-                        created: new Date().toISOString(),
-                    }),
+            const timeoutMs = 10000;
+
+            try {
+                // 1) Create the account. Role is intentionally NOT sent:
+                //    the server forces "user" (self-signup cannot escalate).
+                const regController = new AbortController();
+                const regTimer = setTimeout(
+                    () => regController.abort(),
+                    timeoutMs,
                 );
-                sessionStorage.setItem(
-                    "sessionToken",
-                    Math.random().toString(36).substr(2, 20),
+                let reg;
+                try {
+                    reg = await fetch("/api/auth/register", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ username: email, password }),
+                        signal: regController.signal,
+                    });
+                } finally {
+                    clearTimeout(regTimer);
+                }
+
+                if (reg.status === 409) {
+                    showError(
+                        "This email is already registered — try signing in instead",
+                    );
+                    return;
+                }
+                if (reg.status === 404) {
+                    // Backend is running old code without the register route.
+                    showError(
+                        "Backend has no /api/auth/register endpoint — restart/redeploy the Go backend with the latest code",
+                    );
+                    return;
+                }
+                if (!reg.ok) {
+                    showError(
+                        (await apiErrorMessage(reg)) ||
+                            "Registration failed — please try again",
+                    );
+                    return;
+                }
+
+                // 2) Auto-login with the same contract as /signin
+                //    (Basic auth header → JWT access + refresh tokens).
+                const loginController = new AbortController();
+                const loginTimer = setTimeout(
+                    () => loginController.abort(),
+                    timeoutMs,
                 );
+                let login;
+                try {
+                    login = await fetch("/api/auth/login", {
+                        method: "POST",
+                        headers: {
+                            Authorization: `Basic ${btoa(`${email}:${password}`)}`,
+                            "Content-Type": "application/json",
+                        },
+                        credentials: "include",
+                        signal: loginController.signal,
+                    });
+                } finally {
+                    clearTimeout(loginTimer);
+                }
 
-                // Hide loading, show success
-                btnText.style.display = "block";
-                btnSpinner.style.display = "none";
-                btn.disabled = false;
+                if (!login.ok) {
+                    // Account exists now — send the user to sign in manually.
+                    const why = (await apiErrorMessage(login)) || "";
+                    successEl.textContent = `Account created, but sign-in failed (${why}). Please sign in.`;
+                    successEl.style.display = "block";
+                    setTimeout(() => {
+                        window.location.href = "/signin";
+                    }, 2000);
+                    return;
+                }
 
-                // Success message
-                successEl.textContent = "Account created successfully!";
+                const data = await login.json();
+                localStorage.setItem("authToken", data.token);
+                if (data.refresh_token) {
+                    localStorage.setItem("refreshToken", data.refresh_token);
+                }
+
+                // Success → redirect
+                successEl.textContent =
+                    "Account created successfully — signing you in…";
                 successEl.style.display = "block";
-
-                // Redirect to dashboard
                 setTimeout(() => {
                     window.location.href = `${redirect}?from=${encodeURIComponent(window.location.pathname + window.location.search)}`;
-                }, 1500);
-            }, 1000);
+                }, 1200);
+            } catch (err) {
+                showError(
+                    err?.name === "AbortError"
+                        ? "Request timed out — check your connection and try again"
+                        : "Could not reach the server — is the backend running?",
+                );
+            } finally {
+                setLoading(false);
+            }
         });
 
         function showError(message) {
