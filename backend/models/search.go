@@ -6,6 +6,7 @@ type SearchParams struct {
 	ToTimestamp       *string `form:"to_timestamp"`
 	SourceIP          *string `form:"source_ip"`
 	Message           *string `form:"message"`
+	RawQuery          *string `form:"raw_query"`
 	MaxHits           *int    `form:"max_hits"`
 	EndIndexTimestamp *string `form:"index_timestamp"`
 }
