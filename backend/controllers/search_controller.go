@@ -88,8 +88,21 @@ var luceneReplacer = strings.NewReplacer(
 	`~`, `\~`, `*`, `\*`, `?`, `\?`, `|`, `\|`, `&`, `\&`, `/`, `\/`,
 )
 
-// buildLuceneQuery constructs Lucene-style query from params
+// buildLuceneQuery constructs Lucene-style query from params.
+// If a user-supplied raw query (raw_query) is present it takes precedence
+// over the message/source_ip filters; the timestamp range is still applied
+// on top of it so time-window semantics stay consistent.
 func buildLuceneQuery(p models.SearchParams) string {
+	if p.RawQuery != nil && strings.TrimSpace(*p.RawQuery) != "" {
+		var parts []string
+		if p.FromTimestamp != nil && p.ToTimestamp != nil {
+			parts = append(parts, fmt.Sprintf("timestamp:[%s TO %s]",
+				*p.FromTimestamp, *p.ToTimestamp))
+		}
+		parts = append(parts, *p.RawQuery)
+		return strings.Join(parts, " AND ")
+	}
+
 	var parts []string
 
 	// ✅ Timestamp range
