@@ -16,10 +16,6 @@ let selectedIndex = "syslogs";
 function generateLogs(count = 500) {
   allLogs = createLogs(count);
   applyFilters();
-  updateStats();
-  if (document.getElementById("dashboardView").classList.contains("active")) {
-    renderDashboard();
-  }
   refreshAllUI();
   showToast(`${count} log entries generated`);
 }
@@ -317,18 +313,21 @@ async function runSearch() {
   // 2. เตรียม Params พื้นฐาน
   const params = new URLSearchParams({ index_id: index, max_hits: 100 });
 
-  // 3. เพิ่ม Query/Message
-  if (query) params.set("message", query);
-
-  // 4. เพิ่ม Source IP
-  if (currentSourceFilter) {
-    params.set("source_ip", currentSourceFilter);
-  } else if (source) {
-    params.set("source_ip", source);
+  // 3. เพิ่ม Query: ถ้ามี Raw Query ให้ส่ง raw_query (backend จะใช้แทน message/source_ip)
+  //    ไม่งั้นใช้ field filters ปกติ
+  const rawQueryEl = document.getElementById("rawQueryInput");
+  const rawQuery = rawQueryEl ? rawQueryEl.value.trim() : "";
+  if (rawQuery) {
+    params.set("raw_query", rawQuery);
+  } else {
+    if (query) params.set("message", query);
+    if (currentSourceFilter) {
+      params.set("source_ip", currentSourceFilter);
+    } else if (source) {
+      params.set("source_ip", source);
+    }
+    if (currentHostFilter) params.set("host", currentHostFilter);
   }
-
-  // 5. เพิ่ม Host
-  if (currentHostFilter) params.set("host", currentHostFilter);
 
   // 6. จัดการเรื่อง Timestamp (แปลงจาก ISO String -> Milliseconds)
   // หมายเหตุ: ถ้า Backend ต้องการเป็น Seconds ให้หารด้วย 1000 (เช่น .getTime() / 1000)
@@ -396,12 +395,6 @@ async function runSearch() {
 
     // 9. อัปเดต UI ทั้งหมด
     applyFilters();
-    updateStats();
-
-    // ถ้าหน้า Dashboard เปิดอยู่ ให้วาดกราฟใหม่ด้วย
-    if (document.getElementById("dashboardView").classList.contains("active")) {
-      renderDashboard();
-    }
 
     showToast(`Found ${data.total || 0} results`);
 
@@ -417,12 +410,6 @@ async function runSearch() {
 
 function refreshAllUI() {
   applyFilters();   // อัปเดตตารางและตัวกรอง
-  updateStats();    // อัปเดตตัวเลข Error/Warn/Info ด้านบน
-
-  // ถ้าหน้า Dashboard กำลังเปิดอยู่ ให้วาดกราฟและตัวเลขใหม่ทันที
-  if (document.getElementById("dashboardView").classList.contains("active")) {
-    renderDashboard();
-  }
 }
 
 function normalizeSeverity(severity) {
@@ -853,17 +840,6 @@ function changePageSize() {
   renderPagination();
 }
 
-function updateStats() {
-  const total = allLogs.length;
-  const errors = allLogs.filter((l) => l.level === "error").length;
-  const warns = allLogs.filter((l) => l.level === "warn").length;
-  const infos = allLogs.filter((l) => l.level === "info").length;
-
-  document.getElementById("totalCount").textContent = total.toLocaleString();
-  document.getElementById("errorCount").textContent = errors.toLocaleString();
-  document.getElementById("warnCount").textContent = warns.toLocaleString();
-  document.getElementById("infoCount").textContent = infos.toLocaleString();
-}
 
 function toggleLevel(btn) {
   btn.classList.toggle("active");
@@ -1210,175 +1186,7 @@ async function exportLargeCSV() {
   }
 }
 
-function toggleView() {
-  const tableView = document.getElementById("logTableView");
-  const dashView = document.getElementById("dashboardView");
-  const btn = document.getElementById("dashboardToggle");
-  const statsBar = document.getElementById("statsBar");
-  const toolbar = document.querySelector(".toolbar");
 
-  if (dashView.classList.contains("active")) {
-    // สลับไปหน้า Table
-    dashView.classList.remove("active");
-    tableView.style.display = "";
-    statsBar.style.display = "";
-    toolbar.style.display = "";
-    btn.classList.remove("active");
-    btn.innerHTML =
-      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Dashboard';
-  } else {
-    // สลับไปหน้า Dashboard
-    dashView.classList.add("active");
-    tableView.style.display = "none";
-    statsBar.style.display = "none";
-    toolbar.style.display = "none";
-    btn.classList.add("active");
-    btn.innerHTML =
-      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>Logs';
-
-    // สำคัญ: ต้องสั่ง renderDashboard() ทุกครั้งที่สลับมาหน้า Dashboard
-    // เพื่อให้กราฟและสถิติใช้ข้อมูลล่าสุดจาก allLogs
-    renderDashboard();
-  }
-}
-
-function renderDashboard() {
-  const total = allLogs.length;
-  //const now = Date.running ? Date.now() : Date.now(); // Ensure current time
-  const twentyFourHoursAgo = Date.now() - (24 * 60 * 60 * 1000);
-
-  // 1. คำนวณ Error Rate
-  const errors = allLogs.filter(
-    (l) => l.level === "error" || l.level === "critical",
-  ).length;
-  const errorRate = total > 0 ? ((errors / total) * 100).toFixed(1) : 0;
-
-  // 2. คำนวณ Total Logs (24h) - กรองเฉพาะที่เกิดในช่วง 24 ชม. ล่าสุด
-  const logsLast24h = allLogs.filter(
-    (l) => l.timestamp.getTime() > twentyFourHoursAgo
-  ).length;
-
-  // 3. คำนวณ Avg Response Time (ดึงจาก extras.duration หรือ extras.response_time)
-  const responseTimes = allLogs
-    .map((l) => parseFloat(l.extras?.duration || l.extras?.response_time || l.extras?.res_time))
-    .filter((t) => !isNaN(t));
-  const avgResponse = responseTimes.length > 0
-    ? (responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length).toFixed(2) + "ms"
-    : "N/A";
-  // คำนวณ Active Sources (นับจำนวน source ที่ไม่ซ้ำกัน)
-  const activeSourcesCount = new Set(allLogs.map(l => l.source)).size;
-
-  // --- อัปเดตตัวเลขลงใน UI ---
-  // หมายเหตุ: ตรวจสอบว่าใน HTML ของคุณมี id เหล่านี้ (dashTotal, dashErrorRate, dashTotal24h, dashAvgResponse)
-  const dashTotalElem = document.getElementById("dashTotal");
-  if (dashTotalElem) dashTotalElem.textContent = total.toLocaleString();
-
-  const dashErrorRateElem = document.getElementById("dashErrorRate");
-  if (dashErrorRateElem) dashErrorRateElem.textContent = errorRate + "%";
-
-  const dashTotal24hElem = document.getElementById("dashTotal24h");
-  if (dashTotal24hElem) dashTotal24hElem.textContent = logsLast24h.toLocaleString();
-
-  const dashAvgRespElem = document.getElementById("dashAvgResponse");
-  if (dashAvgRespElem) dashAvgRespElem.textContent = avgResponse;
-
-  const dashSourcesElem = document.getElementById("dashSources");
-  if (dashSourcesElem) dashSourcesElem.textContent = activeSourcesCount;
-
-  // 4. Time distribution chart (Bar Chart)
-  const hourData = new Array(24).fill(0);
-  allLogs.forEach((log) => {
-    const hoursAgo = (Date.now() - log.timestamp.getTime()) / 3600000;
-    const hour = Math.floor(hoursAgo);
-    if (hour >= 0 && hour < 24) {
-      hourData[hour]++;
-    }
-  });
-  hourData.reverse();
-
-  const maxHour = Math.max(...hourData, 1);
-  const colors = {
-    error: "var(--accent-red)",
-    warn: "var(--accent-yellow)",
-    info: "var(--cal-blue)", // ปรับให้ตรงกับ CSS ของคุณ
-    debug: "var(--accent-purple)",
-    critical: "#dc2626",
-  };
-
-  const timeChart = document.getElementById("timeChart");
-  if (timeChart) {
-    timeChart.innerHTML = hourData
-      .map((count, i) => {
-        const height = (count / maxHour) * 130;
-        const hourLabel = `${23 - i}h`;
-        return `
-          <div class="bar-group">
-              <div class="bar" style="height: ${height}px; background: var(--accent-blue); opacity: ${0.4 + (count / maxHour) * 0.6};" title="${count} logs"></div>
-              <span class="bar-label">${hourLabel}</span>
-          </div>
-        `;
-      })
-      .join("");
-  }
-
-  // 5. Level distribution (Legend)
-  const levelCounts = {};
-  LogGenerator.levels.forEach((l) => (levelCounts[l] = 0));
-  allLogs.forEach((l) => {
-    if (levelCounts.hasOwnProperty(l.level)) levelCounts[l.timestamp] = 0; // safety
-    if (levelCounts.hasOwnProperty(l.level)) levelCounts[l.level]++;
-  });
-
-  const legend = document.getElementById("levelLegend");
-  if (legend) {
-    legend.innerHTML = LogGenerator.levels
-      .map((level) => {
-        const count = levelCounts[level] || 0;
-        const pct = total > 0 ? ((count / total) * 100).toFixed(1) : 0;
-        return `
-          <div class="legend-item">
-              <span class="legend-dot" style="background: ${colors[level] || 'gray'};"></span>
-              <span style="margin-left: 8px;">${level.charAt(0).toUpperCase() + level.slice(1)}</span>
-              <span class="legend-count" style="margin-left: auto;">${count} (${pct}%)</span>
-          </div>
-        `;
-      })
-      .join("");
-  }
-
-  // 6. Top sources (Horizontal Bar)
-  const sourceCounts = {};
-  allLogs.forEach((l) => {
-    const src = l.source || "unknown";
-    sourceCounts[src] = (sourceCounts[src] || 0) + 1;
-  });
-  const sortedSources = Object.entries(sourceCounts).sort((a, b) => b[1] - a[1]);
-  const maxSource = sortedSources.length > 0 ? sortedSources[0][1] : 1;
-  const sourceColors = [
-    "var(--accent-blue)", "var(--accent-cyan)", "var(--accent-green)",
-    "var(--accent-purple)", "var(--accent-yellow)", "var(--accent-red)",
-    "#06b6d4", "#ec4899",
-  ];
-
-  const topSourcesList = document.getElementById("topSourcesList");
-  if (topSourcesList) {
-    topSourcesList.innerHTML = sortedSources
-      .slice(0, 8) // แสดงแค่ Top 8 เพื่อความสวยงาม
-      .map(([source, count], i) => {
-        const width = (count / maxSource) * 100;
-        return `
-          <div class="source-item">
-              <span class="source-name">${source}</span>
-              <div class="source-bar-container">
-                  <div class="source-bar" style="width: ${width}%; background: ${sourceColors[i % sourceColors.length]};"></div>
-              </div>
-              <span class="source-count">${count}</span>
-          </div>
-        `;
-      })
-      .join("");
-  }
-}
 
 function refreshLogs() {
   applyFilters();
@@ -1405,7 +1213,6 @@ function startLiveMode() {
         allLogs = allLogs.slice(0, 10000);
       }
       applyFilters();
-      updateStats();
       refreshAllUI();
     }
   }, 3000);
@@ -1419,8 +1226,6 @@ function signout() {
 
 // Initialize
 document.addEventListener("DOMContentLoaded", async () => {
-  //generateLogs(100);
-  renderDashboard();
   //startLiveMode();
 
   // Set default date range (ก่อนโหลดรายการ index)
@@ -1468,7 +1273,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 const exportedFunctions = {
   refreshLogs,
   generateLogs,
-  toggleView,
   toggleLevel,
   applyFilters,
   setQuickDate,
@@ -1495,7 +1299,28 @@ const exportedFunctions = {
   parseFlexibleTimestamp,
   dynamicMapper,
   copyHash,
+  toggleRawQuery,
+  resetRawQuery,
 };
+
+// ── Raw Query panel (Quickwit / Lucene) ─────────────────────
+function toggleRawQuery() {
+  const panel = document.getElementById("rawPanel");
+  const btn = document.getElementById("rawToggle");
+  if (!panel) return;
+  panel.hidden = !panel.hidden;
+  if (btn) btn.classList.toggle("active", !panel.hidden);
+  if (!panel.hidden) {
+    const el = document.getElementById("rawQueryInput");
+    if (el) el.focus();
+  }
+}
+
+function resetRawQuery() {
+  const el = document.getElementById("rawQueryInput");
+  if (el) el.value = "";
+  showToast("Raw query cleared — using field filters");
+}
 
 // Attach ไปยัง window object
 Object.keys(exportedFunctions).forEach((fnName) => {
