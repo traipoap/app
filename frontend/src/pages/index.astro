@@ -2,7 +2,7 @@
 import Layout from "../layouts/Layout.astro";
 ---
 
-<Layout title="LUMINA — K3s GitOps Log Platform">
+<Layout title="LUMINA — Kubernetes GitOps Log Platform">
     <div class="landing">
         <main>
             <!-- ══════════════════ Hero ══════════════════ -->
@@ -11,11 +11,13 @@ import Layout from "../layouts/Layout.astro";
                     <div class="hero-copy" data-reveal>
                         <span class="badge">
                             <span class="badge-dot"></span>
-                            K3s · FluxCD GitOps · Proxmox
+                            Kubernetes · FluxCD GitOps · Proxmox
                         </span>
                         <h1 class="hero-title">
                             Real-time log analytics for your
-                            <span class="gradient">K3s GitOps platform</span>
+                            <span class="gradient">
+                                Kubernetes GitOps platform
+                            </span>
                         </h1>
                         <p class="hero-sub">
                             LUMINA ships logs from every cluster node and pod
@@ -249,7 +251,7 @@ import Layout from "../layouts/Layout.astro";
                                             <span class="query-prompt">❯</span>
                                             <span class="query-text">
                                                 level:error AND
-                                                host:k3s-worker-1
+                                                host:kubernetes-worker-1
                                             </span>
                                             <span class="caret"></span>
                                         </div>
@@ -306,7 +308,7 @@ import Layout from "../layouts/Layout.astro";
                                                     WARN
                                                 </span>
                                                 <span class="log-msg">
-                                                    k3s-worker-1: memory
+                                                    kubernetes-worker-1: memory
                                                     pressure 87%
                                                 </span>
                                             </div>
@@ -395,8 +397,9 @@ import Layout from "../layouts/Layout.astro";
                             <span class="step-num">01</span>
                             <h3>Collect</h3>
                             <p>
-                                Vector tails K3s nodes, containers, and syslogs,
-                                batching every event into Quickwit indexes.
+                                Vector tails Kubernetes nodes, containers, and
+                                syslogs, batching every event into Quickwit
+                                indexes.
                             </p>
                         </div>
                         <div class="step">
@@ -493,10 +496,11 @@ import Layout from "../layouts/Layout.astro";
                                     ></line>
                                 </svg>
                             </span>
-                            <h3>HA K3s Cluster</h3>
+                            <h3>HA Kubernetes Cluster</h3>
                             <p>
-                                High-availability K3s on a Proxmox VM fleet —
-                                provisioned with Terraform, tuned with Ansible.
+                                High-availability Kubernetes on a Proxmox VM
+                                fleet — provisioned with Terraform, tuned with
+                                Ansible.
                             </p>
                         </article>
 
@@ -627,7 +631,7 @@ import Layout from "../layouts/Layout.astro";
                         <li>Proxmox VE</li>
                         <li>Terraform</li>
                         <li>Ansible</li>
-                        <li>K3s</li>
+                        <li>Kubernetes</li>
                         <li>FluxCD</li>
                         <li>Istio</li>
                         <li>cert-manager</li>
@@ -648,9 +652,9 @@ import Layout from "../layouts/Layout.astro";
                     <div class="cta" data-reveal>
                         <h2>Ready to query the platform?</h2>
                         <p>
-                            Sign in and start searching live logs from the K3s
-                            cluster — or create an account to explore the full
-                            stack.
+                            Sign in and start searching live logs from the
+                            Kubernetes cluster — or create an account to explore
+                            the full stack.
                         </p>
                         <div class="cta-actions">
                             <a href="/signin" class="btn btn-primary btn-lg">
@@ -686,8 +690,8 @@ import Layout from "../layouts/Layout.astro";
                             <span class="logo-word">LUMINA</span>
                         </a>
                         <p>
-                            K3s GitOps log platform on Proxmox — self-hosted,
-                            GitOps-driven, end to end.
+                            Kubernetes GitOps log platform on Proxmox —
+                            self-hosted, GitOps-driven, end to end.
                         </p>
                     </div>
                     <div class="footer-col">
@@ -722,7 +726,7 @@ import Layout from "../layouts/Layout.astro";
                     </div>
                 </div>
                 <div class="footer-bottom">
-                    <p>© 2026 · LUMINA — K3s GitOps Log Platform</p>
+                    <p>© 2026 · LUMINA — Kubernetes GitOps Log Platform</p>
                     <p>Built with Terraform · Ansible · FluxCD</p>
                 </div>
             </div>
