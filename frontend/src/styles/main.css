@@ -1172,6 +1172,39 @@ select {
     transform: none;
 }
 
+/* Log Details Modal — กว้าง/สูงขึ้นเพื่อให้อ่าน log ได้สบายตา */
+#logModal .modal {
+    max-width: 920px;
+    max-height: 92vh;
+}
+
+#logModal .modal-body {
+    font-size: 0.9375rem;
+    line-height: 1.65;
+    padding: 1.5rem 1.75rem;
+}
+
+#logModal .detail-value {
+    word-break: break-word;
+    white-space: pre-wrap;
+    font-size: 0.9375rem;
+    line-height: 1.7;
+}
+
+#logModal .detail-value.full-width {
+    font-size: 0.875rem;
+}
+
+#logModal .detail-label {
+    font-size: 0.75rem;
+}
+
+#logModal .detail-value .dim,
+#logModal .detail-value .log-level-badge,
+#logModal .detail-value .trace-link {
+    white-space: normal;
+}
+
 .modal-header {
     display: flex;
     align-items: center;
