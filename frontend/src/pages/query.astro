@@ -831,10 +831,13 @@ import "../styles/main.css";
         function mapQuickwitHits(hits) {
             return hits.map((hit) => {
                 // แปลง Timestamp: รองรับ s / ms / µs / ns
+                // (OTel logs: timestamp_nanos / observed_timestamp_nanos)
                 const tsRaw =
                     hit.timestamp ??
                     hit.timeUnixNano ??
                     hit.time_unix_nano ??
+                    hit.timestamp_nanos ??
+                    hit.observed_timestamp_nanos ??
                     hit.start ??
                     hit.index_timestamp;
                 let ts = Number(tsRaw);
@@ -846,19 +849,46 @@ import "../styles/main.css";
                 else if (ts < 1e11) ts = Math.floor(ts * 1000); // s → ms
                 const dateObj = new Date(ts);
 
+                // OTel severity_number → text (OTel spec: 9-12 info, 13-14 warn, ...)
+                const otelSevText = {
+                    5: "debug",
+                    6: "debug",
+                    7: "debug",
+                    8: "debug",
+                    9: "info",
+                    10: "info",
+                    11: "info",
+                    12: "info",
+                    13: "warn",
+                    14: "warn",
+                    15: "error",
+                    16: "error",
+                    17: "error",
+                    18: "critical",
+                    19: "critical",
+                    20: "critical",
+                    21: "critical",
+                    22: "critical",
+                    23: "critical",
+                    24: "critical",
+                };
+
                 // Severity ตามมาตรฐาน OTel: severityText > severity > level
                 const rawLevel =
                     hit.severity_text ||
                     hit.severityText ||
+                    otelSevText[hit.severity_number] ||
                     hit.severity ||
                     hit.level ||
                     "info";
                 const normalizedLevel = normalizeSeverity(rawLevel);
 
                 // Service ตามมาตรฐาน: service.name > resource.service.name
+                // (OTel exporter ใช้ key แบนราบ `service_name`)
                 const service =
                     hit["service.name"] ||
                     hit.serviceName ||
+                    hit.service_name ||
                     hit.service ||
                     hit["resource.service.name"] ||
                     "";
@@ -866,14 +896,28 @@ import "../styles/main.css";
                 // Host ตามมาตรฐาน OTel resource: resource.host.name / host.name
                 const otelHost =
                     hit["resource.host.name"] || hit["host.name"] || "";
+                // k8s pod จาก resource_attributes (OTel exporter)
+                const k8sPod =
+                    (hit.resource_attributes &&
+                        hit.resource_attributes["k8s.pod.name"]) ||
+                    "";
 
                 // Status (traces): รองรับ string หรือ object {code, message}
-                let status = hit.status ?? hit.status_code ?? "";
+                let status =
+                    hit.status ?? hit.status_code ?? hit.span_status ?? "";
                 if (status && typeof status === "object")
                     status =
                         status.code !== undefined
                             ? status.code
                             : status.message;
+
+                // body อาจเป็น string หรือ object OTel {message: "..."}
+                let bodyVal = hit.body ?? "";
+                if (bodyVal && typeof bodyVal === "object")
+                    bodyVal =
+                        typeof bodyVal.message === "string"
+                            ? bodyVal.message
+                            : JSON.stringify(bodyVal);
 
                 // สร้าง Core Object
                 const core = {
@@ -887,26 +931,31 @@ import "../styles/main.css";
                         hit.source_ip ||
                         hit.srcip ||
                         hit.source ||
-                        hit.kubernetes.pod_ip ||
+                        hit.kubernetes?.pod_ip ||
                         service ||
                         "unknown",
                     host:
                         hit.host ||
                         hit.hostname ||
                         otelHost ||
-                        hit.kubernetes.container_name ||
+                        k8sPod ||
+                        hit.kubernetes?.container_name ||
                         "unknown",
-                    message: hit.message || "",
+                    message: hit.message || bodyVal,
                     pid: hit.pid || 0,
                     // ── Standard OTel fields ──
-                    body: hit.body || hit.message || "",
+                    body: bodyVal || hit.message || "",
                     service: service,
                     traceId: hit.trace_id || hit.traceId || hit.traceid || "",
                     spanId: hit.span_id || hit.spanId || hit.spanid || "",
                     spanName:
                         hit.name || hit.span_name || hit.operation_name || "",
                     spanKind: hit.kind || hit.span_kind || "",
-                    duration: hit.duration ?? hit.duration_ns ?? null,
+                    duration:
+                        hit.duration ??
+                        hit.duration_ns ??
+                        hit.span_duration_millis ??
+                        null,
                     status: status,
                 };
 
@@ -918,11 +967,14 @@ import "../styles/main.css";
                     "timestamp",
                     "timeUnixNano",
                     "time_unix_nano",
+                    "timestamp_nanos",
+                    "observed_timestamp_nanos",
                     "start",
                     "index_timestamp",
                     "severity",
                     "severity_text",
                     "severityText",
+                    "severity_number",
                     "level",
                     "source_ip",
                     "srcip",
@@ -936,6 +988,7 @@ import "../styles/main.css";
                     "body",
                     "service.name",
                     "serviceName",
+                    "service_name",
                     "service",
                     "resource.service.name",
                     "resource.host.name",
@@ -953,8 +1006,10 @@ import "../styles/main.css";
                     "span_kind",
                     "duration",
                     "duration_ns",
+                    "span_duration_millis",
                     "status",
                     "status_code",
+                    "span_status",
                 ];
                 Object.keys(hit).forEach((key) => {
                     // ไม่เอา key ที่เราใช้ไปแล้วใน core มาซ้ำใน extras เพื่อความสะอาด
@@ -1972,8 +2027,8 @@ import "../styles/main.css";
                         (item) => `
       <tr>
         <td>${formatExportTime(item.time)}</td>
-        <td title="${item.name}">${truncate(item.name, 40)}</td>
-        <td class="hash-cell" title="${item.hash}" onclick="copyHash('${escapeHtml(item.hash)}')">${truncate(item.hash, 20)}</td>
+        <td title="${item.name}">${escapeHtml(item.name)}</td>
+        <td class="hash-cell" title="${escapeHtml(item.hash)}" onclick="copyHash('${escapeHtml(item.hash)}')">${escapeHtml(item.hash)}</td>
         <td>${formatFileSize(item.size)}</td>
         <td>
           <button class="btn-action" onclick="downloadExport('${escapeHtml(item.name)}')" title="Download"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>
