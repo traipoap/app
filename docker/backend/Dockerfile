@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 
-FROM golang:1.27.1-alpine3.24 AS backend-builder
+FROM golang:1.27.2-alpine3.24 AS backend-builder
 
 WORKDIR /src
 
