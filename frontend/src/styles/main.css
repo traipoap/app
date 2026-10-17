@@ -1199,6 +1199,45 @@ select {
     font-size: 0.75rem;
 }
 
+/* Export History Modal — กว้างขึ้นให้ table 5 คอลัมน์ไม่ต้องย่อ/ไถ่ */
+#exportHistoryModal .modal {
+    max-width: 1280px;
+    max-height: 90vh;
+}
+
+@media (min-width: 900px) {
+    /* คอลัมน์ File Name / HASH ใช้น้ำหนักเต็ม (ปกติถูก cap ที่ 220px + ellipsis) */
+    #exportHistoryModal .export-history-table th,
+    #exportHistoryModal .export-history-table td {
+        max-width: none;
+    }
+
+    #exportHistoryModal .export-history-table tr th:nth-child(1),
+    #exportHistoryModal .export-history-table tr td:nth-child(1) {
+        width: 200px;
+    }
+
+    #exportHistoryModal .export-history-table tr th:nth-child(2),
+    #exportHistoryModal .export-history-table tr td:nth-child(2) {
+        width: auto;
+    }
+
+    #exportHistoryModal .export-history-table tr th:nth-child(3),
+    #exportHistoryModal .export-history-table tr td:nth-child(3) {
+        width: auto;
+    }
+
+    #exportHistoryModal .export-history-table tr th:nth-child(4),
+    #exportHistoryModal .export-history-table tr td:nth-child(4) {
+        width: 90px;
+    }
+
+    #exportHistoryModal .export-history-table tr th:nth-child(5),
+    #exportHistoryModal .export-history-table tr td:nth-child(5) {
+        width: 90px;
+    }
+}
+
 #logModal .detail-value .dim,
 #logModal .detail-value .log-level-badge,
 #logModal .detail-value .trace-link {
