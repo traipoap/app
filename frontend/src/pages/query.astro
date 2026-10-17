@@ -2116,30 +2116,21 @@ import "../styles/main.css";
                 .classList.remove("active");
         }
 
-        async function downloadExport(fileName) {
-            showToast(`Downloading ${fileName}...`);
-
-            try {
-                const res = await authenticatedFetch(
-                    `${API_BASE}/api/exports/${encodeURIComponent(fileName)}`,
-                );
-                if (!res.ok) throw new Error(`Download failed (${res.status})`);
-
-                const blob = await res.blob();
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = fileName;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-
-                showToast(`Downloaded ${fileName}`);
-            } catch (err) {
-                console.error("Download error:", err);
-                showToast("Download failed. Please try again.");
+        function downloadExport(fileName) {
+            // Native browser download (progress bar, streamed — no whole-file
+            // blob buffering). A plain navigation can't send an Authorization
+            // header, so the JWT goes via ?token= (accepted by JWTAuth).
+            const token = getAuthToken();
+            let href = `${API_BASE}/api/exports/${encodeURIComponent(fileName)}`;
+            if (token) {
+                href += `?token=${encodeURIComponent(token)}`;
             }
+            const a = document.createElement("a");
+            a.href = href;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
         }
 
         async function deleteExport(fileName) {

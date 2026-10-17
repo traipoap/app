@@ -13,21 +13,33 @@ func JWTAuth() gin.HandlerFunc {
 	jwtService := services.NewJWTService()
 
 	return func(c *gin.Context) {
+		var tokenString string
+
 		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" {
+		if authHeader != "" {
+			parts := strings.Split(authHeader, " ")
+			if len(parts) == 2 && parts[0] == "Bearer" {
+				tokenString = parts[1]
+			}
+		}
+
+		// Fallback: ?token= query param — needed for native browser file
+		// downloads (a plain <a href> cannot carry an Authorization header).
+		if tokenString == "" {
+			tokenString = c.Query("token")
+		}
+
+		if tokenString == "" {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header required"})
 			c.Abort()
 			return
 		}
-
-		parts := strings.Split(authHeader, " ")
-		if len(parts) != 2 || parts[0] != "Bearer" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid authorization format"})
+		if strings.Contains(tokenString, "\n") || strings.Contains(tokenString, "\r") {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid token"})
 			c.Abort()
 			return
 		}
 
-		tokenString := parts[1]
 		claims, err := jwtService.ValidateToken(tokenString)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
