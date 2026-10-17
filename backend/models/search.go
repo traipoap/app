@@ -19,7 +19,8 @@ type SearchResponse struct {
 
 // Quickwit API request (internal use)
 type QuickwitSearchRequest struct {
-	Query   string `json:"query"`
-	MaxHits int    `json:"max_hits"`
-	SortBy  string `json:"sort_by,omitempty"` // Quickwit expects a single field name for fast-field sort
+	Query       string `json:"query"`
+	MaxHits     int    `json:"max_hits"`
+	SortBy      string `json:"sort_by,omitempty"`      // Quickwit expects a single field name for fast-field sort
+	StartOffset int    `json:"start_offset,omitempty"` // capped at 10_000 by Quickwit
 }

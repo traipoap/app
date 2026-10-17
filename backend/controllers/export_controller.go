@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"sync/atomic"
 	"time"
 
@@ -143,59 +144,46 @@ func runExport(ctx context.Context, params models.SearchParams) error {
 	wtr := csv.NewWriter(bufw)
 
 	var processed int
-	prevBound := ""
-
-	for {
-		page, err := quickwitClient.SearchPage(ctx, buildLuceneQuery(params), pageSize, params.IndexID)
-		if err != nil {
-			return fmt.Errorf("search Quickwit: %w", err)
-		}
-		if len(page.Hits) == 0 {
-			break
-		}
-
-		if processed == 0 {
+	headerWritten := false
+	sink := func(hit map[string]json.RawMessage) error {
+		if !headerWritten {
 			if err := wtr.Write([]string{"message"}); err != nil {
 				return fmt.Errorf("write CSV header: %w", err)
 			}
+			headerWritten = true
 		}
-
-		for _, hit := range page.Hits {
-			msg, ok := hit["message"]
-			value := ""
-			if ok && len(msg) > 0 {
-				value = csvCell(msg)
-			}
-
-			if err := wtr.Write([]string{value}); err != nil {
-				return fmt.Errorf("write CSV row: %w", err)
-			}
-			processed++
+		if err := wtr.Write([]string{csvMessage(hit)}); err != nil {
+			return fmt.Errorf("write CSV row: %w", err)
 		}
+		processed++
+		return nil
+	}
 
-		if err := bufw.Flush(); err != nil {
-			return fmt.Errorf("flush CSV buffer: %w", err)
-		}
+	f := fieldsForIndex(deref(params.IndexID))
+	from, okFrom := parseMS(params.FromTimestamp)
+	to, okTo := parseMS(params.ToTimestamp)
 
-		// Advance the cursor: the next page is bounded by the last hit's
-		// index_timestamp (same strategy as the Rust handler).
-		bound, ok := lastBound(page.Hits)
-		if !ok || bound == prevBound {
-			break // no cursor, or the bound did not move (avoids looping forever)
-		}
-		prevBound = bound
-		params.EndIndexTimestamp = &bound
-
-		select {
-		case <-ctx.Done():
-			return fmt.Errorf("export aborted: %w", ctx.Err())
-		case <-time.After(exportPagePause):
-		}
+	err = nil
+	if !okFrom || !okTo {
+		// No time window supplied — the whole index is capped by Quickwit's
+		// 10k start_offset limit (newest ~20k rows).
+		fmt.Printf("export: no time window — capped at %d rows (Quickwit start_offset limit)\n", pageSize+quickwitOffsetCap)
+		_, err = writeOffsetPages(ctx, buildLuceneQuery(params), params.IndexID, pageSize, sink)
+	} else {
+		// Windowed export: chunk + bounded offset paging (fully covered,
+		// no dups, no skips — see exportWindow).
+		_, err = exportWindow(ctx, params, f, params.IndexID, from, to, pageSize, sink)
+	}
+	if err != nil {
+		return fmt.Errorf("export rows: %w", err)
 	}
 
 	wtr.Flush()
 	if err := wtr.Error(); err != nil {
 		return fmt.Errorf("csv writer: %w", err)
+	}
+	if err := bufw.Flush(); err != nil {
+		return fmt.Errorf("flush CSV buffer: %w", err)
 	}
 	if processed == 0 {
 		_ = os.Remove(filePath) // drop the empty file; deferred Close is harmless
@@ -213,14 +201,112 @@ func runExport(ctx context.Context, params models.SearchParams) error {
 	return nil
 }
 
-// lastBound returns the index_timestamp of the last hit, used as the next
-// page's inclusive upper bound.
-func lastBound(hits []map[string]json.RawMessage) (string, bool) {
-	raw, ok := hits[len(hits)-1]["index_timestamp"]
-	if !ok || len(raw) == 0 {
-		return "", false
+// csvMessage pulls the human-readable message out of a hit. Syslog-style
+// indexes store it under `message`; OTel log records carry it as an embedded
+// `body.message` object — the old code only read the former, so OTel exports
+// produced an empty column for every row.
+func csvMessage(hit map[string]json.RawMessage) string {
+	if raw, ok := hit["message"]; ok {
+		if v := csvCell(raw); v != "" {
+			return v
+		}
 	}
-	return string(raw), true
+	if raw, ok := hit["body"]; ok && len(raw) > 0 {
+		if raw[0] == '{' {
+			var obj map[string]json.RawMessage
+			if err := json.Unmarshal(raw, &obj); err == nil {
+				if m, ok := obj["message"]; ok && len(m) > 0 {
+					return csvCell(m)
+				}
+			}
+		}
+		return csvCell(raw)
+	}
+	return ""
+}
+
+// quickwitOffsetCap — Quickwit rejects start_offset > 10_000, so offset
+// paging can never reach beyond (offset 10_000 + one page) rows per window.
+const quickwitOffsetCap = 10000
+
+// minExportWindowMs is the smallest time slice exportWindow recurses to.
+// Must be 1 ms (the datetime fields' resolution) — high-density indexes can
+// hold >20k rows even in sub-minute slices, so a larger floor would
+// silently cap those slices and lose rows.
+const minExportWindowMs = 1
+
+// writeOffsetPages streams at most (pageSize + quickwitOffsetCap) rows of
+// `query` in oldest-first order — the deep-paging ceiling Quickwit enforces
+// (start_offset max 10_000).
+func writeOffsetPages(ctx context.Context, query string, indexID *string, pageSize int, sink func(map[string]json.RawMessage) error) (int, error) {
+	rows := 0
+	maxRows := pageSize + quickwitOffsetCap
+	for offset := 0; offset < maxRows; offset += pageSize {
+		if err := ctx.Err(); err != nil {
+			return rows, err
+		}
+		page, err := quickwitClient.SearchPage(ctx, query, pageSize, indexID, offset, false)
+		if err != nil {
+			return rows, fmt.Errorf("search Quickwit: %w", err)
+		}
+		if len(page.Hits) == 0 {
+			break
+		}
+		for _, hit := range page.Hits {
+			if err := sink(hit); err != nil {
+				return rows, err
+			}
+			rows++
+		}
+		select {
+		case <-ctx.Done():
+			return rows, fmt.Errorf("export aborted: %w", ctx.Err())
+		case <-time.After(exportPagePause):
+		}
+	}
+	return rows, nil
+}
+
+// exportWindow fully exports [fromMs, toMs]: it counts the window and, when
+// the row count exceeds Quickwit's deep-paging ceiling, splits the window
+// in half and recurses on both halves. The slices are disjoint and together
+// cover the range exactly, so no row is lost or duplicated — unlike timestamp
+// cursors, which are unreliable here because these indexes store event times
+// at ms resolution (a bound-1 cursor re-includes the boundary row).
+func exportWindow(ctx context.Context, params models.SearchParams, f indexFields, indexID *string, fromMs, toMs int64, pageSize int, sink func(map[string]json.RawMessage) error) (int, error) {
+	if err := ctx.Err(); err != nil {
+		return 0, err
+	}
+
+	fromStr := strconv.FormatInt(fromMs, 10)
+	toStr := strconv.FormatInt(toMs, 10)
+	win := params
+	win.FromTimestamp = &fromStr
+	win.ToTimestamp = &toStr
+	query := buildLuceneQuery(win)
+
+	probe, err := quickwitClient.SearchPage(ctx, query, 1, indexID, 0, true)
+	if err != nil {
+		return 0, fmt.Errorf("search Quickwit: %w", err)
+	}
+	if probe.NumHits == 0 {
+		return 0, nil
+	}
+
+	maxRows := pageSize + quickwitOffsetCap
+	if probe.NumHits > uint64(maxRows) && toMs-fromMs > minExportWindowMs {
+		mid := (fromMs + toMs) / 2
+		n1, err := exportWindow(ctx, params, f, indexID, fromMs, mid, pageSize, sink)
+		if err != nil {
+			return n1, err
+		}
+		return exportWindow(ctx, params, f, indexID, mid+1, toMs, pageSize, sink)
+	}
+
+	if probe.NumHits > uint64(maxRows) {
+		fmt.Printf("export: %d rows in the smallest window (> %d); exporting the first %d\n", probe.NumHits, maxRows, maxRows)
+	}
+	return writeOffsetPages(ctx, query, indexID, pageSize, sink)
 }
 
 // csvCell renders a raw JSON value as a CSV cell without boxing it into

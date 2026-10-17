@@ -107,6 +107,60 @@ func tenantClause(p models.SearchParams) string {
 	return fmt.Sprintf(`%s:"%s"`, tenantField(), escapeLucene(*p.Tenant))
 }
 
+// indexFields holds the per-index Quickwit field mapping. The OTel exporter
+// indexes use different field names and time units than `syslogs`, so a
+// single static query shape cannot serve all of them.
+type indexFields struct {
+	messageField string // field matched by the `message` filter param
+	sourceField  string // field matched by the `source_ip` filter param
+	timeField    string // field used for the time-range clause
+	timeUnit     int64  // multiplier from ms (API units) to this field's units
+	cursorField  string // integer ns field used for export cursor pagination
+}
+
+// fieldsForIndex returns the field mapping for an index family. Verified
+// against the live Quickwit cluster (field lists + search probes).
+func fieldsForIndex(indexID string) indexFields {
+	switch {
+	case strings.HasPrefix(indexID, "otel-traces"):
+		return indexFields{"span_name", "service_name", "span_start_timestamp_nanos", 1_000_000, "span_start_timestamp_nanos"}
+	case strings.HasPrefix(indexID, "otel-logs"):
+		return indexFields{"body.message", "service_name", "timestamp_nanos", 1_000_000, "timestamp_nanos"}
+	default: // syslogs
+		return indexFields{"message", "source_ip", "timestamp", 1, "index_timestamp"}
+	}
+}
+
+func deref(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
+}
+
+// parseMS parses a millisecond epoch value from a query param.
+func parseMS(s *string) (int64, bool) {
+	if s == nil {
+		return 0, false
+	}
+	v, err := strconv.ParseInt(strings.TrimSpace(*s), 10, 64)
+	if err != nil {
+		return 0, false
+	}
+	return v, true
+}
+
+// timeClause builds the time-range clause in the target index's time field
+// and units, or "" when either bound is missing/invalid.
+func timeClause(p models.SearchParams, f indexFields) string {
+	from, okFrom := parseMS(p.FromTimestamp)
+	to, okTo := parseMS(p.ToTimestamp)
+	if !okFrom || !okTo {
+		return ""
+	}
+	return fmt.Sprintf("%s:[%d TO %d]", f.timeField, from*f.timeUnit, to*f.timeUnit)
+}
+
 // buildLuceneQuery constructs Lucene-style query from params.
 //
 // Tenant scoping: when `tenant` is provided, a tenant pin
@@ -117,6 +171,7 @@ func tenantClause(p models.SearchParams) string {
 // message/source_ip filters; the timestamp range is still applied on top
 // of it so time-window semantics stay consistent.
 func buildLuceneQuery(p models.SearchParams) string {
+	f := fieldsForIndex(deref(p.IndexID))
 	var parts []string
 
 	if clause := tenantClause(p); clause != "" {
@@ -124,35 +179,32 @@ func buildLuceneQuery(p models.SearchParams) string {
 	}
 
 	if p.RawQuery != nil && strings.TrimSpace(*p.RawQuery) != "" {
-		if p.FromTimestamp != nil && p.ToTimestamp != nil {
-			parts = append(parts, fmt.Sprintf("timestamp:[%s TO %s]",
-				*p.FromTimestamp, *p.ToTimestamp))
+		if tsClause := timeClause(p, f); tsClause != "" {
+			parts = append(parts, tsClause)
 		}
 		parts = append(parts, *p.RawQuery)
 		return strings.Join(parts, " AND ")
 	}
 
-	// ✅ Timestamp range
-	if p.FromTimestamp != nil && p.ToTimestamp != nil {
-		parts = append(parts, fmt.Sprintf("timestamp:[%s TO %s]",
-			*p.FromTimestamp, *p.ToTimestamp))
+	// ✅ Timestamp range (field+units depend on the index family)
+	if tsClause := timeClause(p, f); tsClause != "" {
+		parts = append(parts, tsClause)
 	}
 
-	// ✅ Source IP with escaping
-	if p.SourceIP != nil {
-		parts = append(parts, fmt.Sprintf("source_ip:%s", escapeLucene(*p.SourceIP)))
+	// ✅ Source filter with escaping
+	if p.SourceIP != nil && *p.SourceIP != "" {
+		parts = append(parts, fmt.Sprintf("%s:%s", f.sourceField, escapeLucene(*p.SourceIP)))
 	}
 
 	// ✅ Custom filter with escaping
-	if p.Message != nil {
-		parts = append(parts, fmt.Sprintf("message:%s", escapeLucene(*p.Message)))
+	if p.Message != nil && *p.Message != "" {
+		parts = append(parts, fmt.Sprintf("%s:%s", f.messageField, escapeLucene(*p.Message)))
 	}
 
-	// ✅ Index timestamp (fix: ใช้ %s สำหรับ *string)
-	if p.EndIndexTimestamp == nil {
-		parts = append(parts, "index_timestamp:[* TO *]")
-	} else {
-		parts = append(parts, fmt.Sprintf("index_timestamp:[* TO %s]", *p.EndIndexTimestamp))
+	// ✅ Export pagination cursor (bound set by runExport as last-bound-1,
+	// making the inclusive range exclusive).
+	if p.EndIndexTimestamp != nil && *p.EndIndexTimestamp != "" {
+		parts = append(parts, fmt.Sprintf("%s:[* TO %s]", f.cursorField, *p.EndIndexTimestamp))
 	}
 
 	if len(parts) == 0 {

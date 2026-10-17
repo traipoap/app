@@ -7,6 +7,7 @@ import (
 	"exporter/models"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -47,11 +48,26 @@ type quickwitSearchResponse struct {
 	NumHits uint64                   `json:"num_hits"`
 }
 
+// sortFieldForIndex returns the fast integer timestamp field each index
+// family supports for sort_by and cursor pagination. All are nanosecond
+// epoch values, which makes `bound-1` exclusive-bound pagination safe.
+func sortFieldForIndex(indexID string) string {
+	switch {
+	case strings.HasPrefix(indexID, "otel-traces"):
+		return "span_start_timestamp_nanos"
+	case strings.HasPrefix(indexID, "otel-logs"):
+		return "timestamp_nanos"
+	default: // syslogs and other syslog-style indexes
+		return "index_timestamp"
+	}
+}
+
 func (c *QuickwitClient) Search(ctx context.Context, query string, max_hits *int, index_id *string) (*models.SearchResponse, error) {
+	sortBy := "+" + sortFieldForIndex(derefString(index_id))
 	payload := models.QuickwitSearchRequest{
 		Query:   query,
 		MaxHits: *max_hits,
-		SortBy:  "index_timestamp", // sort by fast-field timestamp (newest-first by doc-id default)
+		SortBy:  sortBy, // "+" = newest first
 	}
 
 	body, err := json.Marshal(payload)
@@ -106,10 +122,11 @@ func (c *QuickwitClient) SearchRaw(ctx context.Context, query string, maxHits *i
 		limit = *maxHits
 	}
 
+	sortBy := "+" + sortFieldForIndex(derefString(indexID))
 	payload := models.QuickwitSearchRequest{
 		Query:   query,
 		MaxHits: limit,
-		SortBy:  "index_timestamp",
+		SortBy:  sortBy, // "+" = newest first
 	}
 
 	body, err := json.Marshal(payload)
@@ -164,11 +181,18 @@ type QuickwitPage struct {
 }
 
 // SearchPage fetches a single page of hits from Quickwit.
-func (c *QuickwitClient) SearchPage(ctx context.Context, query string, maxHits int, indexID *string) (*QuickwitPage, error) {
+// SearchPage fetches a single page of hits from Quickwit.
+// newestFirst=false sorts oldest-first (stable offset paging order).
+func (c *QuickwitClient) SearchPage(ctx context.Context, query string, maxHits int, indexID *string, startOffset int, newestFirst bool) (*QuickwitPage, error) {
+	dir := "+"
+	if !newestFirst {
+		dir = "-"
+	}
 	payload := models.QuickwitSearchRequest{
-		Query:   query,
-		MaxHits: maxHits,
-		SortBy:  "index_timestamp",
+		Query:       query,
+		MaxHits:     maxHits,
+		SortBy:      dir + sortFieldForIndex(derefString(indexID)),
+		StartOffset: startOffset,
 	}
 
 	body, err := json.Marshal(payload)
@@ -212,4 +236,11 @@ func (c *QuickwitClient) Get(ctx context.Context, path string) (*http.Response, 
 		return nil, err
 	}
 	return c.httpClient.Do(req)
+}
+
+func derefString(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
 }
