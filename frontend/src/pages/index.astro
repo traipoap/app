@@ -62,8 +62,13 @@ import Layout from "../layouts/Layout.astro";
                             self-hosted, continuously reconciled by GitOps.
                         </p>
                         <div class="hero-cta">
-                            <a href="/dashboard" class="btn btn-primary">
-                                View Dashboard
+                            <a
+                                href="https://github.com/traipoap/app"
+                                target="_blank"
+                                rel="noopener"
+                                class="btn btn-primary"
+                            >
+                                Explore the code
                                 <svg
                                     viewBox="0 0 24 24"
                                     fill="none"
@@ -458,6 +463,449 @@ import Layout from "../layouts/Layout.astro";
                 </div>
             </section>
 
+            <!-- ══════════════════ Architecture ══════════════════ -->
+            <section class="section" id="architecture">
+                <div class="container">
+                    <div class="section-head" data-reveal>
+                        <span class="eyebrow">Architecture</span>
+                        <h2>How it all fits together</h2>
+                        <p class="section-sub">
+                            One Proxmox host, one Git repo, zero manual steps.
+                            Terraform and Ansible provision the nodes; K3s (HA,
+                            embedded etcd) runs the workloads behind Istio
+                            ambient mTLS; Vector streams every node and pod into
+                            Quickwit; FluxCD reconciles it all from Git — and
+                            GitHub Actions builds and ships the app itself.
+                        </p>
+                    </div>
+                    <div
+                        class="section-actions"
+                        data-reveal
+                        data-reveal-delay="100"
+                    >
+                        <a
+                            href="https://github.com/traipoap/infra"
+                            target="_blank"
+                            rel="noopener"
+                            class="btn btn-ghost"
+                        >
+                            Read the 14 ADRs
+                            <svg
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            >
+                                <path d="M5 12h14M12 5l7 7-7 7"></path>
+                            </svg>
+                        </a>
+                        <a
+                            href="https://github.com/traipoap/infra"
+                            target="_blank"
+                            rel="noopener"
+                            class="btn btn-ghost"
+                        >
+                            Deployment &amp; runbook
+                            <svg
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            >
+                                <path d="M5 12h14M12 5l7 7-7 7"></path>
+                            </svg>
+                        </a>
+                    </div>
+                    <figure class="arch" data-reveal data-reveal-delay="150">
+                        <svg
+                            viewBox="0 0 960 480"
+                            role="img"
+                            aria-label="Architecture diagram. Proxmox VE hosts a K3s cluster (1 master, 1 worker, HA etcd) provisioned by Terraform and Ansible. The cluster runs Vector into Quickwit, Istio ambient mTLS, and cert-manager, serving the LUMINA API and dashboard. Garage S3 and NFS provide shared storage. GitHub reconciles the cluster through FluxCD and ships images via GitHub Actions and GHCR."
+                        >
+                            <defs>
+                                <marker
+                                    id="archArrow"
+                                    viewBox="0 0 10 10"
+                                    refX="8.5"
+                                    refY="5"
+                                    markerWidth="6.5"
+                                    markerHeight="6.5"
+                                    orient="auto"
+                                >
+                                    <path
+                                        d="M0 0L10 5L0 10z"
+                                        style="fill: var(--faint)"
+                                    ></path>
+                                </marker>
+                                <marker
+                                    id="archArrowCi"
+                                    viewBox="0 0 10 10"
+                                    refX="8.5"
+                                    refY="5"
+                                    markerWidth="6.5"
+                                    markerHeight="6.5"
+                                    orient="auto"
+                                >
+                                    <path
+                                        d="M0 0L10 5L0 10z"
+                                        style="fill: var(--accent-2)"
+                                    ></path>
+                                </marker>
+                            </defs>
+
+                            <!-- links -->
+                            <path
+                                class="arch-line"
+                                d="M174 72H244"
+                                marker-end="url(#archArrow)"
+                            ></path>
+                            <path
+                                class="arch-line"
+                                d="M330 116L129 220"
+                                marker-end="url(#archArrow)"
+                            ></path>
+                            <path
+                                class="arch-line"
+                                d="M414 116L369 220"
+                                marker-end="url(#archArrow)"
+                            ></path>
+                            <path
+                                class="arch-line"
+                                d="M498 116L592 220"
+                                marker-end="url(#archArrow)"
+                            ></path>
+                            <path
+                                class="arch-line"
+                                d="M129 290L309 380"
+                                marker-end="url(#archArrow)"
+                            ></path>
+                            <path
+                                class="arch-line"
+                                d="M369 290L404 380"
+                                marker-end="url(#archArrow)"
+                            ></path>
+                            <path
+                                class="arch-line"
+                                d="M592 290L499 380"
+                                marker-end="url(#archArrow)"
+                            ></path>
+                            <path
+                                class="arch-line"
+                                d="M584 110H710V255H744"
+                                marker-end="url(#archArrow)"
+                            ></path>
+                            <path
+                                class="arch-line-ci"
+                                d="M744 58H584"
+                                marker-end="url(#archArrowCi)"
+                            ></path>
+                            <path
+                                class="arch-line-ci"
+                                d="M744 86H584"
+                                marker-end="url(#archArrowCi)"
+                            ></path>
+
+                            <!-- link labels -->
+                            <text
+                                class="arch-note"
+                                x="209"
+                                y="56"
+                                text-anchor="middle"
+                            >
+                                Terraform
+                            </text>
+                            <text
+                                class="arch-note"
+                                x="209"
+                                y="96"
+                                text-anchor="middle"
+                            >
+                                Ansible
+                            </text>
+                            <text
+                                class="arch-note"
+                                x="664"
+                                y="44"
+                                text-anchor="middle"
+                            >
+                                FluxCD reconcile
+                            </text>
+                            <text
+                                class="arch-note"
+                                x="664"
+                                y="102"
+                                text-anchor="middle"
+                            >
+                                Actions → GHCR
+                            </text>
+
+                            <!-- boxes -->
+                            <rect
+                                class="arch-box"
+                                x="24"
+                                y="40"
+                                width="150"
+                                height="64"
+                                rx="10"
+                            ></rect>
+                            <text
+                                class="arch-title"
+                                x="99"
+                                y="68"
+                                text-anchor="middle"
+                            >
+                                Proxmox VE
+                            </text>
+                            <text
+                                class="arch-sub"
+                                x="99"
+                                y="88"
+                                text-anchor="middle"
+                            >
+                                virtualization host
+                            </text>
+
+                            <rect
+                                class="arch-box arch-box-accent"
+                                x="244"
+                                y="28"
+                                width="340"
+                                height="88"
+                                rx="10"
+                            ></rect>
+                            <text
+                                class="arch-title"
+                                x="414"
+                                y="60"
+                                text-anchor="middle"
+                            >
+                                K3s cluster
+                            </text>
+                            <text
+                                class="arch-sub"
+                                x="414"
+                                y="82"
+                                text-anchor="middle"
+                            >
+                                1 master · 1 worker · HA etcd
+                            </text>
+
+                            <rect
+                                class="arch-box"
+                                x="744"
+                                y="40"
+                                width="192"
+                                height="64"
+                                rx="10"
+                            ></rect>
+                            <text
+                                class="arch-title"
+                                x="840"
+                                y="68"
+                                text-anchor="middle"
+                            >
+                                GitHub
+                            </text>
+                            <text
+                                class="arch-sub"
+                                x="840"
+                                y="88"
+                                text-anchor="middle"
+                            >
+                                source of truth
+                            </text>
+
+                            <rect
+                                class="arch-box"
+                                x="24"
+                                y="220"
+                                width="210"
+                                height="70"
+                                rx="10"
+                            ></rect>
+                            <text
+                                class="arch-title"
+                                x="129"
+                                y="250"
+                                text-anchor="middle"
+                            >
+                                Vector → Quickwit
+                            </text>
+                            <text
+                                class="arch-sub"
+                                x="129"
+                                y="270"
+                                text-anchor="middle"
+                            >
+                                node &amp; pod logs
+                            </text>
+
+                            <rect
+                                class="arch-box"
+                                x="264"
+                                y="220"
+                                width="210"
+                                height="70"
+                                rx="10"
+                            ></rect>
+                            <text
+                                class="arch-title"
+                                x="369"
+                                y="250"
+                                text-anchor="middle"
+                            >
+                                Istio
+                            </text>
+                            <text
+                                class="arch-sub"
+                                x="369"
+                                y="270"
+                                text-anchor="middle"
+                            >
+                                ambient mTLS
+                            </text>
+
+                            <rect
+                                class="arch-box"
+                                x="504"
+                                y="220"
+                                width="176"
+                                height="70"
+                                rx="10"
+                            ></rect>
+                            <text
+                                class="arch-title"
+                                x="592"
+                                y="250"
+                                text-anchor="middle"
+                            >
+                                cert-manager
+                            </text>
+                            <text
+                                class="arch-sub"
+                                x="592"
+                                y="270"
+                                text-anchor="middle"
+                            >
+                                cluster TLS
+                            </text>
+
+                            <rect
+                                class="arch-box"
+                                x="744"
+                                y="220"
+                                width="192"
+                                height="70"
+                                rx="10"
+                            ></rect>
+                            <text
+                                class="arch-title"
+                                x="840"
+                                y="250"
+                                text-anchor="middle"
+                            >
+                                Garage S3 + NFS
+                            </text>
+                            <text
+                                class="arch-sub"
+                                x="840"
+                                y="270"
+                                text-anchor="middle"
+                            >
+                                shared storage
+                            </text>
+
+                            <rect
+                                class="arch-box arch-box-accent"
+                                x="264"
+                                y="380"
+                                width="280"
+                                height="70"
+                                rx="10"
+                            ></rect>
+                            <text
+                                class="arch-title"
+                                x="404"
+                                y="410"
+                                text-anchor="middle"
+                            >
+                                LUMINA
+                            </text>
+                            <text
+                                class="arch-sub"
+                                x="404"
+                                y="430"
+                                text-anchor="middle"
+                            >
+                                API + dashboard
+                            </text>
+                        </svg>
+                    </figure>
+                </div>
+            </section>
+
+            <!-- ══════════════════ By the numbers ══════════════════ -->
+            <section class="section" id="numbers">
+                <div class="container">
+                    <div class="section-head" data-reveal>
+                        <span class="eyebrow">Proof</span>
+                        <h2>Proof, not promises</h2>
+                        <p class="section-sub">
+                            Numbers from a real, self-hosted production
+                            environment — reproducible from a single Git repo.
+                        </p>
+                    </div>
+                    <div class="cards cards--stats">
+                        <article class="card" data-reveal>
+                            <span class="stat-num gradient">&lt; 1 hr</span>
+                            <p>
+                                Full platform provisioned from zero
+                                (Terraform → Ansible → K3s → Istio → FluxCD).
+                                Repeatable; <code>terraform destroy</code> tears
+                                it down.
+                            </p>
+                        </article>
+                        <article
+                            class="card"
+                            data-reveal
+                            data-reveal-delay="60"
+                        >
+                            <span class="stat-num gradient">0</span>
+                            <p>
+                                Manual deployment steps. The only path to
+                                production is a Git commit.
+                            </p>
+                        </article>
+                        <article
+                            class="card"
+                            data-reveal
+                            data-reveal-delay="120"
+                        >
+                            <span class="stat-num gradient">14</span>
+                            <p>
+                                Architecture decisions documented (ADRs) + a
+                                deployment &amp; troubleshooting runbook.
+                            </p>
+                        </article>
+                        <article
+                            class="card"
+                            data-reveal
+                            data-reveal-delay="150"
+                        >
+                            <span class="stat-num gradient">12,847</span>
+                            <p>
+                                Log events ingested daily through Vector →
+                                Quickwit.
+                            </p>
+                        </article>
+                    </div>
+                </div>
+            </section>
+
             <!-- ══════════════════ Features ══════════════════ -->
             <section class="section" id="features">
                 <div class="container">
@@ -682,6 +1130,96 @@ import Layout from "../layouts/Layout.astro";
                 </div>
             </section>
 
+            <!-- ══════════════════ About ══════════════════ -->
+            <section class="section" id="about">
+                <div class="container">
+                    <div class="section-head" data-reveal>
+                        <span class="eyebrow">About</span>
+                        <h2>Built and operated by one engineer</h2>
+                        <p class="section-sub">
+                            Traipoap Hunthong is a cloud &amp; infrastructure
+                            engineer (CKA · CKAD) with 4+ years operating
+                            national telco private cloud. This platform —
+                            cluster, pipeline, security, observability — is
+                            designed, built, and run end to end in a
+                            self-hosted production environment. No vendor, no
+                            team: one engineer, one Git repo.
+                        </p>
+                    </div>
+                    <div
+                        class="about-links"
+                        data-reveal
+                        data-reveal-delay="100"
+                    >
+                        <a
+                            href="https://github.com/traipoap"
+                            target="_blank"
+                            rel="noopener"
+                            class="btn btn-ghost"
+                        >
+                            <svg
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            >
+                                <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
+                            </svg>
+                            GitHub
+                        </a>
+                        <a
+                            href="https://www.linkedin.com/in/traipoap-hunthong"
+                            target="_blank"
+                            rel="noopener"
+                            class="btn btn-ghost"
+                        >
+                            <svg
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            >
+                                <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"></path>
+                                <rect x="2" y="9" width="4" height="12"></rect>
+                                <circle cx="4" cy="4" r="2"></circle>
+                            </svg>
+                            LinkedIn
+                        </a>
+                        <a
+                            href="mailto:traipoap@hotmail.com"
+                            class="btn btn-ghost"
+                        >
+                            <svg
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            >
+                                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                                <polyline points="22,6 12,13 2,6"></polyline>
+                            </svg>
+                            traipoap@hotmail.com
+                        </a>
+                    </div>
+                    <div
+                        class="about-badge-row"
+                        data-reveal
+                        data-reveal-delay="150"
+                    >
+                        <span class="about-badge">
+                            <span class="badge-dot"></span>
+                            Open to senior Cloud / DevOps / SRE roles
+                        </span>
+                    </div>
+                </div>
+            </section>
+
             <!-- ══════════════════ CTA ══════════════════ -->
             <section class="section">
                 <div class="container">
@@ -754,6 +1292,26 @@ import Layout from "../layouts/Layout.astro";
                         </a>
                         <a
                             href="https://github.com/traipoap/gitops-platform"
+                            target="_blank"
+                            rel="noopener"
+                        >
+                            GitHub
+                        </a>
+                    </div>
+                    <div class="footer-col">
+                        <h4>Contact</h4>
+                        <a href="mailto:traipoap@hotmail.com">
+                            traipoap@hotmail.com
+                        </a>
+                        <a
+                            href="https://www.linkedin.com/in/traipoap-hunthong"
+                            target="_blank"
+                            rel="noopener"
+                        >
+                            LinkedIn
+                        </a>
+                        <a
+                            href="https://github.com/traipoap"
                             target="_blank"
                             rel="noopener"
                         >
@@ -1856,7 +2414,7 @@ import Layout from "../layouts/Layout.astro";
 
     .footer-grid {
         display: grid;
-        grid-template-columns: 2fr 1fr 1fr;
+        grid-template-columns: 2fr 1fr 1fr 1fr;
         gap: 2.5rem;
         margin-bottom: 3rem;
     }
@@ -1918,6 +2476,141 @@ import Layout from "../layouts/Layout.astro";
         color: var(--faint);
         font-size: 0.8125rem;
         margin: 0;
+    }
+
+    /* ── Architecture diagram ────────────────────────────── */
+    .section-actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.875rem;
+        margin: -1.75rem 0 3rem;
+    }
+
+    .arch {
+        margin: 0;
+        padding: clamp(1.25rem, 3vw, 2rem);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        background: rgba(13, 20, 36, 0.5);
+    }
+
+    .arch svg {
+        display: block;
+        width: 100%;
+        height: auto;
+    }
+
+    .arch-box {
+        fill: rgba(13, 20, 36, 0.7);
+        stroke: var(--border-strong);
+        stroke-width: 1;
+    }
+
+    .arch-box-accent {
+        fill: rgba(99, 102, 241, 0.1);
+        stroke: rgba(99, 102, 241, 0.4);
+    }
+
+    .arch-title {
+        font-family:
+            "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+        font-size: 14px;
+        font-weight: 600;
+        fill: var(--text);
+    }
+
+    .arch-sub {
+        font-family: var(--mono);
+        font-size: 11px;
+        fill: var(--muted);
+    }
+
+    .arch-note {
+        font-family: var(--mono);
+        font-size: 10.5px;
+        fill: var(--faint);
+    }
+
+    .arch-line {
+        fill: none;
+        stroke: var(--faint);
+        stroke-width: 1.5;
+    }
+
+    .arch-line-ci {
+        fill: none;
+        stroke: var(--accent-2);
+        stroke-width: 1.5;
+        stroke-dasharray: 5 5;
+    }
+
+    /* ── Stat cards ──────────────────────────────────────── */
+    .cards--stats {
+        grid-template-columns: repeat(4, 1fr);
+    }
+
+    @media (max-width: 940px) {
+        .cards--stats {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    @media (max-width: 600px) {
+        .cards--stats {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .stat-num {
+        display: block;
+        font-family: var(--mono);
+        font-size: 2.125rem;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        font-variant-numeric: tabular-nums;
+        margin-bottom: 0.75rem;
+    }
+
+    .card code {
+        font-family: var(--mono);
+        font-size: 0.8125rem;
+        padding: 0.0625rem 0.375rem;
+        border-radius: 5px;
+        border: 1px solid rgba(99, 102, 241, 0.25);
+        background: rgba(99, 102, 241, 0.1);
+        color: var(--text);
+        white-space: nowrap;
+    }
+
+    /* ── About ───────────────────────────────────────────── */
+    .about-links {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.875rem;
+        margin-top: -1.75rem;
+    }
+
+    .about-badge-row {
+        display: flex;
+        justify-content: center;
+        margin-top: 1.75rem;
+    }
+
+    .about-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.375rem 0.875rem 0.375rem 0.75rem;
+        border: 1px solid rgba(52, 211, 153, 0.3);
+        border-radius: 100px;
+        background: rgba(52, 211, 153, 0.08);
+        color: var(--muted);
+        font-family: var(--mono);
+        font-size: 0.75rem;
+        font-weight: 500;
+        letter-spacing: 0.02em;
     }
 
     /* ── Keyframes ─────────────────────────────────────────── */
