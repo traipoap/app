@@ -276,8 +276,16 @@ import "../styles/main.css";
                     return false;
                 }
                 const data = await res.json();
-                if (data.access_token) {
-                    window.localStorage.setItem("authToken", data.access_token);
+                if (data.token) {
+                    window.localStorage.setItem("authToken", data.token);
+                    // Refresh tokens are rotated (single-use) — persist the
+                    // new one so the next refresh doesn't use the stale token.
+                    if (data.refresh_token) {
+                        window.localStorage.setItem(
+                            "refreshToken",
+                            data.refresh_token,
+                        );
+                    }
                     return true;
                 }
                 return false;
