@@ -48,6 +48,11 @@ func setupAuthRoutes(r *gin.Engine, jwtService *services.JWTService, db *gorm.DB
 		api.GET("/profile", controllers.HandleProfile)
 		api.GET("/admin", middleware.RoleAuth("admin"), controllers.HandleAdmin)
 		api.POST("/logout", controllers.HandleLogout)
+
+		// User administration (admin only)
+		api.GET("/users", middleware.RoleAuth("admin"), controllers.HandleUsersList(db))
+		api.DELETE("/users/:id", middleware.RoleAuth("admin"), controllers.HandleUserDelete(db))
+		api.PATCH("/users/:id/role", middleware.RoleAuth("admin"), controllers.HandleUserRoleUpdate(db))
 	}
 }
 
