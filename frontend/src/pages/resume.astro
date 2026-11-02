@@ -48,6 +48,9 @@ import Layout from "../layouts/Layout.astro";
                     Fill the form — the A4 preview updates live. Export a
                     print-perfect PDF in one click.
                 </p>
+                <a href="/portfolio" class="cv-xlink">
+                    Want the full story? → See the portfolio
+                </a>
             </div>
             <div class="cv-toolbar">
                 <div
@@ -2363,6 +2366,19 @@ import Layout from "../layouts/Layout.astro";
             font-size: 0.875rem;
             color: var(--muted);
             max-width: 42rem;
+        }
+
+        .cv-xlink {
+            display: inline-block;
+            margin-top: 0.5rem;
+            font-size: 0.8125rem;
+            font-weight: 500;
+            color: var(--accent, #6366f1);
+            text-decoration: none;
+        }
+
+        .cv-xlink:hover {
+            text-decoration: underline;
         }
 
         .cv-toolbar {

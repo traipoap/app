@@ -30,6 +30,9 @@ import Layout from "../layouts/Layout.astro";
                     <a href="#features" class="nav-link">
                         Features
                     </a>
+                    <a href="/portfolio" class="nav-link">
+                        Portfolio
+                    </a>
                     <a href="/signin" class="nav-link">
                         Sign In
                     </a>
@@ -863,10 +866,9 @@ import Layout from "../layouts/Layout.astro";
                         <article class="card" data-reveal>
                             <span class="stat-num gradient">&lt; 1 hr</span>
                             <p>
-                                Full platform provisioned from zero
-                                (Terraform → Ansible → K3s → Istio → FluxCD).
-                                Repeatable; <code>terraform destroy</code> tears
-                                it down.
+                                Full platform provisioned from zero (Terraform →
+                                Ansible → K3s → Istio → FluxCD). Repeatable;{" "}
+                                <code>terraform destroy</code> tears it down.
                             </p>
                         </article>
                         <article
@@ -1141,9 +1143,9 @@ import Layout from "../layouts/Layout.astro";
                             engineer (CKA · CKAD) with 4+ years operating
                             national telco private cloud. This platform —
                             cluster, pipeline, security, observability — is
-                            designed, built, and run end to end in a
-                            self-hosted production environment. No vendor, no
-                            team: one engineer, one Git repo.
+                            designed, built, and run end to end in a self-hosted
+                            production environment. No vendor, no team: one
+                            engineer, one Git repo.
                         </p>
                     </div>
                     <div
@@ -2514,7 +2516,11 @@ import Layout from "../layouts/Layout.astro";
 
     .arch-title {
         font-family:
-            "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+            "Inter",
+            system-ui,
+            -apple-system,
+            "Segoe UI",
+            sans-serif;
         font-size: 14px;
         font-weight: 600;
         fill: var(--text);
