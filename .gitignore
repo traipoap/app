@@ -50,3 +50,8 @@ docker-compose.yml
 .gocache/
 backend/backend/data/
 ansible/logs/
+
+# local dev binaries / smoke-test artifacts
+backend/lumina-local
+backend/lumina-local.log
+backend/test/
