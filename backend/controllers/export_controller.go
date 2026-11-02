@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strconv"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -72,6 +73,15 @@ func HandleExport(c *gin.Context) {
 	var params models.SearchParams
 	if err := c.ShouldBindQuery(&params); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid query parameters: " + err.Error()})
+		return
+	}
+
+	// Export is Quickwit-only: the paged CSV pipeline relies on Quickwit's
+	// cursor semantics. Searching Loki/Elasticsearch works; export does not.
+	eng := strings.ToLower(strings.TrimSpace(c.Query("engine")))
+	if eng == "loki" || eng == "elasticsearch" || eng == "es" ||
+		(params.IndexID != nil && strings.HasPrefix(*params.IndexID, "loki:")) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Export currently only supports the Quickwit engine"})
 		return
 	}
 

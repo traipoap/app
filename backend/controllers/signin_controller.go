@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
@@ -97,6 +98,11 @@ type refreshRequest struct {
 }
 
 // HandleRefresh validates a refresh token and issues new access + refresh tokens.
+//
+// Refresh tokens are single-use: the presented token is recorded as revoked
+// BEFORE its replacement is issued, so a stolen, stale or replayed copy can
+// never be exchanged again — and logout (which revokes the same way) is
+// authoritative.
 func HandleRefresh(db *gorm.DB, jwtService *services.JWTService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req refreshRequest
@@ -105,14 +111,26 @@ func HandleRefresh(db *gorm.DB, jwtService *services.JWTService) gin.HandlerFunc
 			return
 		}
 
-		// 1. Validate the refresh token
-		userID, err := jwtService.ValidateRefreshToken(req.RefreshToken)
+		// 1. Validate the refresh token (signing method, signature, expiry)
+		claims, err := jwtService.ParseRefreshToken(req.RefreshToken)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired refresh token"})
 			return
 		}
+		userID := claims.Subject
 
-		// 2. Look up user by ID
+		// 2. Reject tokens already revoked (rotated away or logged out)
+		var revoked int64
+		if err := db.Model(&models.RevokedToken{}).Where("jti = ?", claims.ID).Count(&revoked).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
+			return
+		}
+		if revoked > 0 {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Refresh token already used"})
+			return
+		}
+
+		// 3. Look up user by ID
 		var user models.User
 		idUint, _ := strconv.ParseUint(userID, 10, 64)
 		if err := db.First(&user, idUint).Error; err != nil {
@@ -120,7 +138,19 @@ func HandleRefresh(db *gorm.DB, jwtService *services.JWTService) gin.HandlerFunc
 			return
 		}
 
-		// 3. Issue new tokens (rotation: old refresh token is single-use by design)
+		// 4. Revoke the presented token (single-use rotation), then prune
+		//    revocation rows whose tokens have already expired.
+		expiry := time.Now()
+		if claims.ExpiresAt != nil {
+			expiry = claims.ExpiresAt.Time
+		}
+		if err := db.Create(&models.RevokedToken{JTI: claims.ID, ExpiresAt: expiry}).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to record token revocation"})
+			return
+		}
+		db.Where("expires_at < ?", time.Now()).Delete(&models.RevokedToken{}) // best-effort
+
+		// 5. Issue the replacement tokens
 		accessToken, err := jwtService.GenerateToken(userID, user.Username, user.Role)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate access token"})

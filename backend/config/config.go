@@ -12,6 +12,15 @@ type Settings struct {
 	Port        string
 	CorsOrigins []string
 	BasePath    string
+
+	// Optional search engines (selected per-request from the frontend).
+	LokiURL                string
+	LokiTenant             string
+	LokiLogQLSelector      string // default stream selector, e.g. {job=~".+"}
+	ElasticsearchURL       string
+	ElasticsearchUsername  string
+	ElasticsearchPassword  string
+	ElasticsearchTimeField string // default @timestamp
 }
 
 var AppConfig *Settings
@@ -24,6 +33,14 @@ func Load() error {
 		Port:        envOrDefault("BACKEND_PORT", "8080"),
 		CorsOrigins: envList("CORS_ORIGINS", []string{"http://localhost:4321", "http://127.0.0.1:4321"}),
 		BasePath:    envOrDefault("BASE_PATH", "./"),
+
+		LokiURL:                envOrDefault("LOKI_URL", "http://127.0.0.1:3100"),
+		LokiTenant:             envOrDefault("LOKI_TENANT", ""),
+		LokiLogQLSelector:      envOrDefault("LOKI_LOGQL_SELECTOR", `{service_name=~".+"}`),
+		ElasticsearchURL:       envOrDefault("ELASTICSEARCH_URL", "http://127.0.0.1:9200"),
+		ElasticsearchUsername:  envOrDefault("ELASTICSEARCH_USERNAME", ""),
+		ElasticsearchPassword:  envOrDefault("ELASTICSEARCH_PASSWORD", ""),
+		ElasticsearchTimeField: envOrDefault("ELASTICSEARCH_TIME_FIELD", "@timestamp"),
 	}
 	return loadJWT()
 }

@@ -24,8 +24,8 @@ func setupCORS() cors.Config {
 	return cors.Config{
 		AllowOrigins:     config.AppConfig.CorsOrigins,
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
-		ExposeHeaders:    []string{"Content-Length"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization", "traceparent"},
+		ExposeHeaders:    []string{"Content-Length", "traceparent"},
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
 	}
@@ -47,7 +47,7 @@ func setupAuthRoutes(r *gin.Engine, jwtService *services.JWTService, db *gorm.DB
 	{
 		api.GET("/profile", controllers.HandleProfile)
 		api.GET("/admin", middleware.RoleAuth("admin"), controllers.HandleAdmin)
-		api.POST("/logout", controllers.HandleLogout)
+		api.POST("/logout", controllers.HandleLogout(db, jwtService))
 
 		// User administration (admin only)
 		api.GET("/users", middleware.RoleAuth("admin"), controllers.HandleUsersList(db))
@@ -62,6 +62,7 @@ func setupAPIRoutes(r *gin.Engine, jwtService *services.JWTService) {
 	api := r.Group("/api")
 	api.Use(middleware.JWTAuth())
 	{
+		api.GET("/engines", middleware.RoleAuth("admin"), controllers.HandleEngines)
 		api.GET("/indices", middleware.RoleAuth("admin"), controllers.HandleIndices)
 		api.GET("/search", middleware.RoleAuth("admin"), controllers.HandleSearch)
 		api.GET("/export", middleware.RoleAuth("admin"), controllers.HandleExport)
@@ -76,8 +77,9 @@ func SetupRoutes(r *gin.Engine, db *gorm.DB) {
 
 	jwtService := services.NewJWTService()
 
-	// Configure middleware
-	r.Use(cors.New(setupCORS()))
+	// Configure middleware — OTel tracing first so every request (including
+	// rejected auth attempts) lands in the trace.
+	r.Use(middleware.HTTP(), cors.New(setupCORS()))
 
 	// Setup route groups
 	setupAuthRoutes(r, jwtService, db)

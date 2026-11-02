@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -15,17 +16,102 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-var quickwitClient *services.QuickwitClient
+var (
+	quickwitClient *services.QuickwitClient
+	lokiEngine     *services.LokiEngine
+	esEngine       *services.ElasticsearchEngine
+)
 
 func InitSearchController() error {
 	if err := config.Load(); err != nil {
 		return err
 	}
 	quickwitClient = services.NewQuickwitClient(config.AppConfig.QuickwitURL)
+	if u := config.AppConfig.LokiURL; u != "" {
+		lokiEngine = services.NewLokiEngine(u, config.AppConfig.LokiTenant, config.AppConfig.LokiLogQLSelector)
+	}
+	if u := config.AppConfig.ElasticsearchURL; u != "" {
+		esEngine = services.NewElasticsearchEngine(
+			u,
+			config.AppConfig.ElasticsearchUsername,
+			config.AppConfig.ElasticsearchPassword,
+			config.AppConfig.ElasticsearchTimeField,
+		)
+	}
 	return nil
 }
 
+// HandleEngines lists the available search engines for the frontend.
+func HandleEngines(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"engines": []gin.H{
+		{"id": "quickwit", "name": "Quickwit", "configured": quickwitClient != nil},
+		{"id": "loki", "name": "Loki", "configured": lokiEngine != nil},
+		{"id": "elasticsearch", "name": "Elasticsearch", "configured": esEngine != nil},
+	}})
+}
+
+// engineFor resolves the `engine` query param to a non-Quickwit Engine.
+func engineFor(c *gin.Context) (services.Engine, error) {
+	id := strings.ToLower(strings.TrimSpace(c.Query("engine")))
+	switch id {
+	case "loki":
+		if lokiEngine == nil {
+			return nil, errors.New("Loki engine is not configured (set LOKI_URL)")
+		}
+		return lokiEngine, nil
+	case "elasticsearch", "es":
+		if esEngine == nil {
+			return nil, errors.New("Elasticsearch engine is not configured (set ELASTICSEARCH_URL)")
+		}
+		return esEngine, nil
+	default:
+		return nil, fmt.Errorf("unknown engine %q (expected quickwit|loki|elasticsearch)", id)
+	}
+}
+
+// engineRequest maps the generic API params onto an engine-agnostic request.
+func engineRequest(p models.SearchParams) services.EngineRequest {
+	req := services.EngineRequest{MaxHits: 100}
+	if p.MaxHits != nil {
+		req.MaxHits = *p.MaxHits
+	}
+	// The search box (raw_query or message) is the query; source_ip becomes
+	// a fallback so a lone IP filter still finds something.
+	req.Query = firstParam(deref(p.RawQuery), deref(p.Message), deref(p.SourceIP))
+	req.Source = deref(p.IndexID)
+	if v, ok := parseMS(p.FromTimestamp); ok {
+		req.FromMS = v
+	}
+	if v, ok := parseMS(p.ToTimestamp); ok {
+		req.ToMS = v
+	}
+	return req
+}
+
+func firstParam(vals ...string) string {
+	for _, v := range vals {
+		if strings.TrimSpace(v) != "" {
+			return v
+		}
+	}
+	return ""
+}
+
 func HandleIndices(c *gin.Context) {
+	switch strings.ToLower(strings.TrimSpace(c.DefaultQuery("engine", "quickwit"))) {
+	case "loki":
+		// Loki has no index concept — one "all streams" entry.
+		c.JSON(http.StatusOK, []gin.H{{"index_config": gin.H{"index_id": "loki:all"}}})
+		return
+	case "elasticsearch", "es":
+		if esEngine == nil {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Elasticsearch engine is not configured"})
+			return
+		}
+		esListIndices(c)
+		return
+	}
+
 	// Reuse the shared keep-alive client instead of allocating a new
 	// http.Client (and a new TLS handshake) per request.
 	resp, err := quickwitClient.Get(c.Request.Context(), "/api/v1/indexes")
@@ -53,10 +139,49 @@ func HandleIndices(c *gin.Context) {
 	c.Data(http.StatusOK, "application/json; charset=utf-8", bodyBytes)
 }
 
+// esListIndices returns the ES index list in the same shape as Quickwit so
+// the frontend's index dropdown works unchanged.
+func esListIndices(c *gin.Context) {
+	names, err := esEngine.ListIndices(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
+		return
+	}
+	out := make([]gin.H, 0, len(names))
+	for _, n := range names {
+		out = append(out, gin.H{"index_config": gin.H{"index_id": n}})
+	}
+	c.JSON(http.StatusOK, out)
+}
+
 func HandleSearch(c *gin.Context) {
 	var params models.SearchParams
 	if err := c.ShouldBindQuery(&params); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid query parameters: " + err.Error()})
+		return
+	}
+
+	// Non-Quickwit engines (Loki / Elasticsearch) go through the generic
+	// Engine interface with normalized hits. Unknown engines are a hard
+	// error — never fall through to Quickwit with a wrong engine value.
+	switch eng := strings.ToLower(strings.TrimSpace(c.Query("engine"))); eng {
+	case "loki", "elasticsearch", "es":
+		engine, err := engineFor(c)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		res, err := engine.Search(c.Request.Context(), engineRequest(params))
+		if err != nil {
+			c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"hits": res.Hits, "total": res.Total})
+		return
+	case "", "quickwit":
+		// default engine below
+	default:
+		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("unknown engine %q (expected quickwit|loki|elasticsearch)", eng)})
 		return
 	}
 

@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"exporter/models"
+	"exporter/telemetry"
 	"fmt"
 	"net/http"
 	"strings"
@@ -28,7 +29,7 @@ func NewQuickwitClient(baseURL string) *QuickwitClient {
 		baseURL: baseURL,
 		httpClient: &http.Client{
 			Timeout:   30 * time.Second,
-			Transport: transport,
+			Transport: &telemetry.OTelTransport{Base: transport}, // client spans for Tempo
 		},
 	}
 }
