@@ -31,11 +31,21 @@ import "../styles/main.css";
                 </div>
                 <p>
                     Cluster log overview — totals &amp; time series come from
-                    live Quickwit count queries; level/source breakdowns are
-                    sampled from the latest 500 logs in range.
+                    live count queries (Quickwit / Loki / Elasticsearch);
+                    level/source breakdowns are sampled from the latest 500 logs
+                    in range.
                 </p>
             </div>
             <div class="dash-controls">
+                <select
+                    class="filter-select"
+                    id="dashEngine"
+                    aria-label="Engine"
+                >
+                    <option value="quickwit">Quickwit</option>
+                    <option value="loki">Loki</option>
+                    <option value="elasticsearch">Elasticsearch</option>
+                </select>
                 <select class="filter-select" id="dashIndex" aria-label="Index">
                     <option value="">Loading...</option>
                 </select>
@@ -217,6 +227,12 @@ import "../styles/main.css";
     </div>
 
     <script type="module">
+        import {
+            ENGINES,
+            savedEngine,
+            rememberEngine,
+        } from "../lib/engines.js";
+
         // ─────────────────────────────────────────────────────────────────────────────
         // LUMINA — Dashboard (stats) page script
         //
@@ -250,8 +266,10 @@ import "../styles/main.css";
         }
 
         function clearTokens() {
-            window.localStorage.removeItem("authToken");
-            window.sessionStorage.removeItem("authToken");
+            for (const key of ["authToken", "refreshToken"]) {
+                window.localStorage.removeItem(key);
+                window.sessionStorage.removeItem(key);
+            }
         }
 
         function getRefreshToken() {
@@ -349,6 +367,19 @@ import "../styles/main.css";
             return [from, to];
         }
 
+        // engine ที่เลือก (sync กับหน้า Query ผ่าน localStorage)
+        function dashEngine() {
+            const sel = document.getElementById("dashEngine");
+            return (sel && sel.value) || "quickwit";
+        }
+
+        // Sub-label ของ Total Logs — Loki นับแบบ approx (limit ≤5k/bucket), engine อื่น count จริง
+        function totalSubLabel(key) {
+            return dashEngine() === "loki"
+                ? `approximate count (≤5k/bucket) · last ${key}`
+                : `exact count · last ${key}`;
+        }
+
         // ── API calls ────────────────────────────────────────────────────────────────
         async function apiSearch(params) {
             const res = await authenticatedFetch(
@@ -364,6 +395,7 @@ import "../styles/main.css";
         }
 
         // Count query — ต้องการแค่ total (max_hits=0)
+        // Quickwit/ES ให้จำนวนที่ถูกต้อง; Loki เป็นค่าประมาณ (สูงสุด 5,000 ต่อ bucket)
         async function countQuery(from, to, rawQuery = null) {
             const params = withTenant(
                 new URLSearchParams({
@@ -373,6 +405,7 @@ import "../styles/main.css";
                     max_hits: 0,
                 }),
             );
+            params.set("engine", dashEngine());
             if (rawQuery) params.set("raw_query", rawQuery);
             const data = await apiSearch(params);
             return Number(data.total || 0);
@@ -388,6 +421,7 @@ import "../styles/main.css";
                     max_hits: 500,
                 }),
             );
+            params.set("engine", dashEngine());
             const data = await apiSearch(params);
             return (data.hits || []).map(mapHit);
         }
@@ -645,16 +679,19 @@ import "../styles/main.css";
                 .querySelectorAll(".dash-controls .fb-chips .level-btn")
                 .forEach((b) => b.classList.toggle("active", b === btn));
             const sub = document.getElementById("dashTotalSub");
-            if (sub) sub.textContent = `exact count · last ${key}`;
+            if (sub) sub.textContent = totalSubLabel(key);
             loadDashStats();
         }
 
         // ── Init ─────────────────────────────────────────────────────────────────────
-        document.addEventListener("DOMContentLoaded", async () => {
+        // โหลดรายการ index ตาม engine (shape เดิม: [{index_config:{index_id}}])
+        async function loadIndices(engineId) {
             const select = document.getElementById("dashIndex");
             if (!select) return;
             try {
-                const res = await authenticatedFetch(`${API_BASE}/api/indices`);
+                const res = await authenticatedFetch(
+                    `${API_BASE}/api/indices?engine=${encodeURIComponent(engineId)}`,
+                );
                 if (res.status === 403) {
                     clearTokens();
                     window.location.href = "/signin";
@@ -668,22 +705,50 @@ import "../styles/main.css";
                     .sort((a, b) =>
                         a === "syslogs" ? -1 : b === "syslogs" ? 1 : 0,
                     );
-                if (ids.length === 0) {
-                    select.innerHTML =
-                        '<option value="">No indexes found</option>';
-                    return;
-                }
-                select.innerHTML = ids
-                    .map((id) => `<option value="${id}">${id}</option>`)
-                    .join("");
-                select.addEventListener("change", () => loadDashStats());
-                await loadDashStats();
+                select.innerHTML =
+                    ids.length === 0
+                        ? '<option value="">No indexes found</option>'
+                        : ids
+                              .map(
+                                  (id) =>
+                                      `<option value="${id}">${id}</option>`,
+                              )
+                              .join("");
+                if (select.value) await loadDashStats();
             } catch (err) {
                 console.error("Failed to load indexes:", err);
                 select.innerHTML =
                     '<option value="">Failed to load indexes</option>';
                 showToast("Failed to load indexes", true);
             }
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const select = document.getElementById("dashIndex");
+            if (select)
+                select.addEventListener("change", () => loadDashStats());
+
+            // engine selector — จำค่าจากการเลือกครั้งก่อน (sync กับหน้า Query ผ่าน localStorage)
+            const engineSelect = document.getElementById("dashEngine");
+            if (engineSelect) {
+                const saved = savedEngine();
+                engineSelect.innerHTML = ENGINES.map(
+                    (e) =>
+                        `<option value="${e.id}" ${
+                            e.id === saved ? "selected" : ""
+                        }>${e.label}</option>`,
+                ).join("");
+                engineSelect.addEventListener("change", () => {
+                    rememberEngine(engineSelect.value);
+                    const sub = document.getElementById("dashTotalSub");
+                    if (sub) sub.textContent = totalSubLabel(rangeKey);
+                    loadIndices(engineSelect.value);
+                });
+            }
+
+            const sub = document.getElementById("dashTotalSub");
+            if (sub) sub.textContent = totalSubLabel(rangeKey);
+            loadIndices(dashEngine());
         });
 
         // Expose to inline onclick handlers

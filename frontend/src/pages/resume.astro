@@ -1,0 +1,3412 @@
+---
+import Layout from "../layouts/Layout.astro";
+---
+
+<Layout
+    title="CV Builder — LUMINA"
+    description="Build a polished, ATS-friendly CV with live A4 preview and one-click PDF export."
+>
+    <!-- Client-side route protection: admin-only page (same pattern as /dashboard) -->
+    <script>
+        (function protectAdminRoute() {
+            if (typeof window === "undefined") return;
+            const token =
+                window.sessionStorage.getItem("authToken") ||
+                window.localStorage.getItem("authToken");
+            if (!token) {
+                setTimeout(function () {
+                    window.location.href = "/signin";
+                }, 100);
+                return;
+            }
+            let role = null;
+            try {
+                const b64 = token
+                    .split(".")[1]
+                    .replace(/-/g, "+")
+                    .replace(/_/g, "/");
+                const json = window.atob(
+                    b64.padEnd(b64.length + ((4 - (b64.length % 4)) % 4), "="),
+                );
+                role = JSON.parse(json).role || null;
+            } catch {
+                role = null;
+            }
+            if (role !== "admin") {
+                setTimeout(function () {
+                    window.location.href = "/dashboard";
+                }, 100);
+            }
+        })();
+    </script>
+    <div class="cv-page">
+        <header class="cv-head">
+            <div>
+                <p class="cv-eyebrow">LUMINA · Tools</p>
+                <h1 class="cv-title">CV Builder</h1>
+                <p class="cv-sub">
+                    Fill the form — the A4 preview updates live. Export a
+                    print-perfect PDF in one click.
+                </p>
+            </div>
+            <div class="cv-toolbar">
+                <div
+                    class="cv-swatches"
+                    role="group"
+                    aria-label="CV accent color"
+                >
+                    <button
+                        type="button"
+                        class="swatch is-active"
+                        data-accent="#6366f1"
+                        style="background: #6366f1"
+                        title="Indigo"
+                    ></button>
+                    <button
+                        type="button"
+                        class="swatch"
+                        data-accent="#0e7490"
+                        style="background: #0e7490"
+                        title="Cyan"
+                    ></button>
+                    <button
+                        type="button"
+                        class="swatch"
+                        data-accent="#047857"
+                        style="background: #047857"
+                        title="Emerald"
+                    ></button>
+                    <button
+                        type="button"
+                        class="swatch"
+                        data-accent="#be123c"
+                        style="background: #be123c"
+                        title="Rose"
+                    ></button>
+                    <button
+                        type="button"
+                        class="swatch"
+                        data-accent="#334155"
+                        style="background: #334155"
+                        title="Graphite"
+                    ></button>
+                </div>
+                <div class="cv-seg" role="group" aria-label="CV template">
+                    <button
+                        type="button"
+                        class="seg-btn"
+                        data-template="classic"
+                    >
+                        Classic
+                    </button>
+                    <button
+                        type="button"
+                        class="seg-btn is-active"
+                        data-template="modern"
+                    >
+                        Modern
+                    </button>
+                    <button
+                        type="button"
+                        class="seg-btn"
+                        data-template="ats"
+                        title="Plain single-column layout — optimized for ATS parsers & AI screening"
+                    >
+                        ATS
+                    </button>
+                </div>
+                <button type="button" class="cv-btn" data-action="sample">
+                    Load my data
+                </button>
+                <button type="button" class="cv-btn" data-action="clear">
+                    New
+                </button>
+                <span class="cv-page-badge" id="pageBadge">
+                    1 page
+                </span>
+                <button
+                    type="button"
+                    class="cv-btn cv-btn-primary"
+                    data-action="export"
+                >
+                    <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                    >
+                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    Export PDF
+                </button>
+            </div>
+            <p class="cv-hint" id="draftStatus" role="status">
+                Draft auto-saves in this browser. In the print dialog choose
+                “Save as PDF”.
+            </p>
+        </header>
+
+        <div class="cv-workspace">
+            <!-- ── Form ─────────────────────────────────────────────── -->
+            <form class="cv-form" id="cvForm" autocomplete="off" novalidate>
+                <section class="cv-card">
+                    <div class="cv-card-head">
+                        <h2>Identity</h2>
+                        <p>How recruiters see you at a glance.</p>
+                    </div>
+                    <div class="cv-photo-row">
+                        <div class="cv-photo-preview" id="photoPreview"></div>
+                        <div class="cv-photo-actions">
+                            <label class="cv-btn" for="photoFile">
+                                Upload photo
+                            </label>
+                            <button
+                                type="button"
+                                class="cv-btn"
+                                data-action="photo-remove"
+                                id="photoRemove"
+                                hidden
+                            >
+                                Remove
+                            </button>
+                            <span class="cv-photo-hint">
+                                Stored only in this browser — not sent anywhere.
+                                The ATS template hides photos for parser
+                                compatibility.
+                            </span>
+                        </div>
+                        <input
+                            type="file"
+                            id="photoFile"
+                            accept="image/*"
+                            hidden
+                        />
+                    </div>
+                    <div class="cv-grid2">
+                        <div class="cv-field">
+                            <label for="fName">Full name</label>
+                            <input
+                                id="fName"
+                                data-field="name"
+                                type="text"
+                                placeholder="Karn Thanachote"
+                            />
+                        </div>
+                        <div class="cv-field">
+                            <label for="fTitle">Job title</label>
+                            <input
+                                id="fTitle"
+                                data-field="title"
+                                type="text"
+                                placeholder="Senior Site Reliability Engineer"
+                            />
+                        </div>
+                        <div class="cv-field">
+                            <label for="fEmail">Email</label>
+                            <input
+                                id="fEmail"
+                                data-field="email"
+                                type="email"
+                                placeholder="you@example.com"
+                            />
+                        </div>
+                        <div class="cv-field">
+                            <label for="fPhone">Phone</label>
+                            <input
+                                id="fPhone"
+                                data-field="phone"
+                                type="tel"
+                                placeholder="+66 89 123 4567"
+                            />
+                        </div>
+                        <div class="cv-field">
+                            <label for="fLocation">Location</label>
+                            <input
+                                id="fLocation"
+                                data-field="location"
+                                type="text"
+                                placeholder="Bangkok, Thailand"
+                            />
+                        </div>
+                        <div class="cv-field">
+                            <label for="fWebsite">Website</label>
+                            <input
+                                id="fWebsite"
+                                data-field="website"
+                                type="text"
+                                placeholder="yoursite.dev"
+                                spellcheck="false"
+                                autocapitalize="off"
+                            />
+                        </div>
+                        <div class="cv-field">
+                            <label for="fGithub">GitHub</label>
+                            <input
+                                id="fGithub"
+                                data-field="github"
+                                type="text"
+                                placeholder="github.com/you"
+                                spellcheck="false"
+                                autocapitalize="off"
+                            />
+                        </div>
+                        <div class="cv-field">
+                            <label for="fLinkedin">LinkedIn</label>
+                            <input
+                                id="fLinkedin"
+                                data-field="linkedin"
+                                type="text"
+                                placeholder="linkedin.com/in/you"
+                            />
+                        </div>
+                    </div>
+                </section>
+
+                <section class="cv-card">
+                    <div class="cv-card-head">
+                        <div>
+                            <h2>Summary</h2>
+                            <p>
+                                2–3 sentences: who you are, your edge, your
+                                impact.
+                            </p>
+                        </div>
+                        <button
+                            type="button"
+                            class="cv-pagebreak"
+                            data-break="Profile"
+                            aria-pressed="false"
+                            title="Start the Profile section on a new page"
+                        >
+                            ⏎ New page
+                        </button>
+                    </div>
+                    <div class="cv-field">
+                        <textarea
+                            id="fSummary"
+                            data-field="summary"
+                            rows="4"
+                            placeholder="SRE with 8+ years of experience… led migration of 40+ services to Kubernetes, cutting infra cost 32%…"
+                        ></textarea>
+                    </div>
+                </section>
+
+                <section class="cv-card">
+                    <div class="cv-card-head">
+                        <div>
+                            <h2>
+                                Experience
+                                <span class="cv-count" id="count-experience">
+                                    0
+                                </span>
+                            </h2>
+                            <p>
+                                One line per bullet — start with a strong verb.
+                            </p>
+                        </div>
+                        <button
+                            type="button"
+                            class="cv-pagebreak"
+                            data-break="Experience"
+                            aria-pressed="false"
+                            title="Start this section on a new page"
+                        >
+                            ⏎ New page
+                        </button>
+                    </div>
+                    <div class="cv-entries" id="experienceEntries"></div>
+                    <button type="button" class="cv-add" data-add="experience">
+                        + Add experience
+                    </button>
+                </section>
+
+                <section class="cv-card">
+                    <div class="cv-card-head">
+                        <div>
+                            <h2>
+                                Projects
+                                <span class="cv-count" id="count-projects">
+                                    0
+                                </span>
+                            </h2>
+                            <p>Side projects, OSS, or things you shipped.</p>
+                        </div>
+                        <button
+                            type="button"
+                            class="cv-pagebreak"
+                            data-break="Projects"
+                            aria-pressed="false"
+                            title="Start this section on a new page"
+                        >
+                            ⏎ New page
+                        </button>
+                    </div>
+                    <div class="cv-entries" id="projectEntries"></div>
+                    <button type="button" class="cv-add" data-add="projects">
+                        + Add project
+                    </button>
+                </section>
+
+                <section class="cv-card">
+                    <div class="cv-card-head">
+                        <div>
+                            <h2>
+                                Education
+                                <span class="cv-count" id="count-education">
+                                    0
+                                </span>
+                            </h2>
+                            <p>Degree, school and period.</p>
+                        </div>
+                        <button
+                            type="button"
+                            class="cv-pagebreak"
+                            data-break="Education"
+                            aria-pressed="false"
+                            title="Start this section on a new page"
+                        >
+                            ⏎ New page
+                        </button>
+                    </div>
+                    <div class="cv-entries" id="educationEntries"></div>
+                    <button type="button" class="cv-add" data-add="education">
+                        + Add education
+                    </button>
+                </section>
+
+                <section class="cv-card">
+                    <div class="cv-card-head">
+                        <div>
+                            <h2>
+                                Skills
+                                <span class="cv-count" id="count-skills">
+                                    0
+                                </span>
+                            </h2>
+                            <p>A short list of what you're strong at.</p>
+                        </div>
+                        <button
+                            type="button"
+                            class="cv-pagebreak"
+                            data-break="Skills"
+                            aria-pressed="false"
+                            title="Start this section on a new page"
+                        >
+                            ⏎ New page
+                        </button>
+                    </div>
+                    <div class="cv-chips-wrap">
+                        <div class="cv-chipbox" id="skillChips"></div>
+                        <input
+                            id="skillInput"
+                            type="text"
+                            placeholder="e.g. Kubernetes — then press Enter"
+                            aria-label="Add skill"
+                            autocomplete="off"
+                        />
+                    </div>
+                    <p class="cv-chip-hint">
+                        Enter or comma to add · Backspace removes the last one
+                    </p>
+                </section>
+
+                <section class="cv-card">
+                    <div class="cv-card-head">
+                        <div>
+                            <h2>
+                                Languages
+                                <span class="cv-count" id="count-languages">
+                                    0
+                                </span>
+                            </h2>
+                            <p>Language + proficiency.</p>
+                        </div>
+                        <button
+                            type="button"
+                            class="cv-pagebreak"
+                            data-break="Languages"
+                            aria-pressed="false"
+                            title="Start this section on a new page"
+                        >
+                            ⏎ New page
+                        </button>
+                    </div>
+                    <div class="cv-entries" id="languageEntries"></div>
+                    <button type="button" class="cv-add" data-add="languages">
+                        + Add language
+                    </button>
+                </section>
+
+                <section class="cv-card">
+                    <div class="cv-card-head">
+                        <div>
+                            <h2>
+                                Certifications
+                                <span
+                                    class="cv-count"
+                                    id="count-certifications"
+                                >
+                                    0
+                                </span>
+                            </h2>
+                            <p>Optional — only if they carry weight.</p>
+                        </div>
+                        <button
+                            type="button"
+                            class="cv-pagebreak"
+                            data-break="Certifications"
+                            aria-pressed="false"
+                            title="Start this section on a new page"
+                        >
+                            ⏎ New page
+                        </button>
+                    </div>
+                    <div class="cv-entries" id="certEntries"></div>
+                    <button
+                        type="button"
+                        class="cv-add"
+                        data-add="certifications"
+                    >
+                        + Add certification
+                    </button>
+                </section>
+            </form>
+
+            <!-- ── Live preview ─────────────────────────────────────── -->
+            <div class="cv-preview" id="cvPreview">
+                <div class="cv-sheet-wrap" id="sheetWrap">
+                    <article
+                        class="cv-sheet"
+                        id="cvSheet"
+                        aria-label="CV preview"
+                    ></article>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ── Types ──────────────────────────────────────────────────────
+        interface ExperienceItem {
+            id: string;
+            role: string;
+            company: string;
+            location: string;
+            start: string;
+            end: string;
+            current: boolean;
+            description: string;
+        }
+        interface ProjectItem {
+            id: string;
+            name: string;
+            link: string;
+            description: string;
+        }
+        interface EducationItem {
+            id: string;
+            degree: string;
+            school: string;
+            start: string;
+            end: string;
+        }
+        interface LanguageItem {
+            id: string;
+            name: string;
+            level: string;
+        }
+        interface CertificationItem {
+            id: string;
+            name: string;
+            issuer: string;
+            year: string;
+        }
+        interface CVData {
+            name: string;
+            title: string;
+            email: string;
+            phone: string;
+            location: string;
+            website: string;
+            github: string;
+            linkedin: string;
+            summary: string;
+            experience: ExperienceItem[];
+            projects: ProjectItem[];
+            education: EducationItem[];
+            skills: string[];
+            languages: LanguageItem[];
+            certifications: CertificationItem[];
+            accent: string;
+            photo: string | null;
+            template: "classic" | "modern" | "ats";
+            breaks: Record<string, boolean>;
+        }
+
+        // ── State ──────────────────────────────────────────────────────
+        const DRAFT_KEY = "lumina.cv.draft.v1";
+        const SHEET_W = (210 / 25.4) * 96; // A4 width @96dpi ≈ 793.7
+        const PAGE_CAP = (269 / 25.4) * 96 - 4; // A4 content height (297 − 28mm) − 4px slack
+
+        const uid = () =>
+            typeof crypto !== "undefined" && "randomUUID" in crypto
+                ? crypto.randomUUID()
+                : "id-" + Math.random().toString(36).slice(2, 10);
+
+        const blankExperience = (): ExperienceItem => ({
+            id: uid(),
+            role: "",
+            company: "",
+            location: "",
+            start: "",
+            end: "",
+            current: false,
+            description: "",
+        });
+        const blankProject = (): ProjectItem => ({
+            id: uid(),
+            name: "",
+            link: "",
+            description: "",
+        });
+        const blankEducation = (): EducationItem => ({
+            id: uid(),
+            degree: "",
+            school: "",
+            start: "",
+            end: "",
+        });
+        const blankLanguage = (): LanguageItem => ({
+            id: uid(),
+            name: "",
+            level: "Fluent",
+        });
+        const blankCert = (): CertificationItem => ({
+            id: uid(),
+            name: "",
+            issuer: "",
+            year: "",
+        });
+
+        function defaultData(): CVData {
+            return {
+                name: "",
+                title: "",
+                email: "",
+                phone: "",
+                location: "",
+                website: "",
+                github: "",
+                linkedin: "",
+                summary: "",
+                experience: [blankExperience()],
+                projects: [],
+                education: [blankEducation()],
+                skills: [],
+                languages: [blankLanguage()],
+                certifications: [],
+                accent: "#6366f1",
+                photo: null,
+                template: "modern",
+                breaks: {},
+            };
+        }
+
+        function loadDraft(): CVData | null {
+            try {
+                const raw = window.localStorage.getItem(DRAFT_KEY);
+                if (!raw) return null;
+                const d = JSON.parse(raw) as CVData;
+                if (typeof d.name !== "string" || !Array.isArray(d.experience))
+                    return null;
+                // Merge over the current shape so older drafts keep working.
+                return {
+                    ...defaultData(),
+                    ...d,
+                    summary: typeof d.summary === "string" ? d.summary : "",
+                    photo: typeof d.photo === "string" ? d.photo : null,
+                    template:
+                        d.template === "classic" || d.template === "ats"
+                            ? d.template
+                            : "modern",
+                    breaks:
+                        d.breaks && typeof d.breaks === "object"
+                            ? (d.breaks as Record<string, boolean>)
+                            : {},
+                };
+            } catch {
+                return null;
+            }
+        }
+
+        const restored = loadDraft();
+        let data: CVData = restored ?? defaultData();
+        const restoredDraft = restored !== null;
+
+        // ── DOM helpers (all user content is escaped via text nodes) ──
+        function el<K extends keyof HTMLElementTagNameMap>(
+            tag: K,
+            attrs?: Record<string, string | boolean | number | null> | null,
+            ...children: Array<Node | string | null | undefined>
+        ): HTMLElementTagNameMap[K] {
+            const node = document.createElement(tag);
+            if (attrs) {
+                for (const [key, value] of Object.entries(attrs)) {
+                    if (
+                        value === null ||
+                        value === false ||
+                        value === undefined
+                    )
+                        continue;
+                    if (key === "class") node.className = String(value);
+                    else if (value === true) node.setAttribute(key, "");
+                    else node.setAttribute(key, String(value));
+                }
+            }
+            for (const child of children) {
+                if (child === null || child === undefined) continue;
+                node.append(
+                    child instanceof Node
+                        ? child
+                        : document.createTextNode(String(child)),
+                );
+            }
+            return node;
+        }
+
+        function bullets(text: string): string[] {
+            return text
+                .split("\n")
+                .map((s) => s.trim())
+                .filter(Boolean);
+        }
+
+        function entryDate(start: string, end: string, current?: boolean) {
+            const to = current ? "Present" : end.trim();
+            if (start.trim() && to) return `${start.trim()} — ${to}`;
+            return start.trim() || to || "";
+        }
+
+        // ── Elements ───────────────────────────────────────────────────
+        const form = document.getElementById("cvForm") as HTMLFormElement;
+        const sheet = document.getElementById("cvSheet") as HTMLElement;
+        const sheetWrap = document.getElementById("sheetWrap") as HTMLElement;
+        const previewPane = document.getElementById("cvPreview") as HTMLElement;
+        const draftStatus = document.getElementById(
+            "draftStatus",
+        ) as HTMLElement;
+
+        // ── Preview rendering ──────────────────────────────────────────
+        type Sec = {
+            col: "main" | "side";
+            title: string;
+            kind: "single" | "entry" | "pair";
+            nodes: Node[];
+        };
+
+        type Unit = {
+            node: Node;
+            section: string;
+            heading: boolean;
+            kind: "heading" | "single" | "entry" | "pair";
+        };
+
+        type Measured = Unit & { h: number; t: number; b: number };
+
+        // Greedy A4 pagination with the same keep-together rules as print:
+        // headings stay with their first item, entries/pairs are not split.
+        // `used` always includes the last box's trailing margin (collapsed
+        // against the next), matching how the browser sizes a page — this
+        // keeps the final line away from the printed page edge.
+        function paginate(
+            ms: Measured[],
+            cap: number,
+            firstOffset = 0,
+            topMargin = 0,
+            forceBreak: (title: string) => boolean = () => false,
+        ): Measured[][] {
+            const pages: Measured[][] = [];
+            let cur: Measured[] = [];
+            let used = firstOffset;
+            let lastB = topMargin;
+            const cost = (m: Measured, pending: number) =>
+                Math.max(pending, m.t) - pending + m.h + m.b;
+            const add = (m: Measured) => {
+                used += cost(m, lastB);
+                cur.push(m);
+                lastB = m.b;
+            };
+            const flush = () => {
+                if (cur.length) pages.push(cur);
+                cur = [];
+                used = 0;
+                lastB = 0;
+            };
+            let i = 0;
+            while (i < ms.length) {
+                const m = ms[i];
+                // An explicit "start on new page" wins over packing heuristics.
+                if (m.heading && cur.length > 0 && forceBreak(m.section))
+                    flush();
+                const pair = m.heading && i + 1 < ms.length ? ms[i + 1] : null;
+                const unitCost = cost(m, lastB) + (pair ? cost(pair, m.b) : 0);
+                // Only force a page break if the pair actually fits a fresh page.
+                const pairFitsPage =
+                    !pair ||
+                    m.t + m.h + Math.max(m.b, pair.t) + pair.h + pair.b <=
+                        cap + 0.5;
+                if (cur.length && unitCost > cap - used && pairFitsPage)
+                    flush();
+                add(m);
+                if (pair) {
+                    add(pair);
+                    i++;
+                }
+                i++;
+            }
+            flush();
+            return pages;
+        }
+
+        // Height of a page's units (same collapse model as paginate).
+        function pageCost(ms: Measured[]): number {
+            let used = 0;
+            let lastB = 0;
+            for (const m of ms) {
+                used += Math.max(lastB, m.t) - lastB + m.h + m.b;
+                lastB = m.b;
+            }
+            return used;
+        }
+
+        // A final page carrying only a sliver of content reads as an
+        // accident — pull it back when the previous page genuinely has room.
+        function rescueOrphan(
+            pages: Measured[][],
+            cap: number,
+            forceBreak: (title: string) => boolean,
+        ): Measured[][] {
+            if (pages.length < 2) return pages;
+            const last = pages[pages.length - 1];
+            const prev = pages[pages.length - 2];
+            if (!last || !prev) return pages;
+            // Respect an explicit "start on new page" on that section.
+            const first = last[0];
+            const forced = first && first.heading && forceBreak(first.section);
+            if (
+                !forced &&
+                last.length <= 4 &&
+                pageCost(prev) + pageCost(last) <= cap + 0.5
+            ) {
+                prev.push(...last);
+                pages.pop();
+            }
+            return pages;
+        }
+
+        // Group a page's units back into <section> blocks; a section that
+        // continues onto a new page simply re-opens without its heading.
+        function renderSectioned(ms: Measured[]): Node[] {
+            const out: Node[] = [];
+            let sec: HTMLElement | null = null;
+            let curTitle = "";
+            let run: Measured[] = [];
+            const flushRun = () => {
+                const target = sec;
+                if (!run.length || !target) {
+                    run = [];
+                    return;
+                }
+                const nodes = run.map((m) => m.node);
+                if (run[0].kind === "entry")
+                    target.append(el("div", null, ...nodes));
+                else if (run[0].kind === "pair")
+                    target.append(
+                        el("div", { class: "cv-pairgrid" }, ...nodes),
+                    );
+                else nodes.forEach((n) => target.append(n));
+                run = [];
+            };
+            for (const m of ms) {
+                if (m.section !== curTitle || !sec) {
+                    flushRun();
+                    sec = el("section", { class: "cv-section" });
+                    out.push(sec);
+                    curTitle = m.section;
+                }
+                const target = sec as HTMLElement;
+                if (m.heading) {
+                    target.append(m.node);
+                    continue;
+                }
+                if (m.kind === "single") {
+                    flushRun();
+                    target.append(m.node);
+                    continue;
+                }
+                if (run.length && run[0].kind !== m.kind) flushRun();
+                run.push(m);
+            }
+            flushRun();
+            return out;
+        }
+
+        function renderSheet() {
+            sheet.style.setProperty("--cv-accent", data.accent);
+            sheet.classList.toggle("ats", data.template === "ats");
+            let headNode: HTMLElement | null = null;
+            const secs: Array<Sec> = [];
+
+            const contact = [
+                data.email,
+                data.phone,
+                data.location,
+                data.website,
+                data.github,
+                data.linkedin,
+            ].filter(Boolean);
+
+            const hasIdentity = Boolean(
+                data.name || data.title || data.summary,
+            );
+            const showPhoto = Boolean(data.photo) && data.template !== "ats";
+
+            if (hasIdentity) {
+                const head = el("header", {
+                    class: showPhoto
+                        ? "cv-sheet-head has-photo"
+                        : "cv-sheet-head",
+                });
+                const headText = el("div", { class: "cv-head-text" });
+                headText.append(el("div", { class: "cv-headbar" }));
+                if (showPhoto)
+                    head.append(
+                        el("img", {
+                            class: "cv-photo",
+                            src: data.photo,
+                            alt: "",
+                        }),
+                    );
+                if (data.name)
+                    headText.append(el("h1", { class: "cv-name" }, data.name));
+                if (data.title)
+                    headText.append(
+                        el("p", { class: "cv-roletitle" }, data.title),
+                    );
+                if (contact.length) {
+                    const line = el("p", { class: "cv-contact" });
+                    contact.forEach((c, i) => {
+                        if (i > 0)
+                            line.append(
+                                el(
+                                    "span",
+                                    { class: "sep", "aria-hidden": true },
+                                    "•",
+                                ),
+                            );
+                        line.append(document.createTextNode(String(c)));
+                    });
+                    headText.append(line);
+                }
+                head.append(headText);
+                headNode = head;
+            }
+
+            if (data.summary.trim())
+                secs.push({
+                    col: "main",
+                    title: "Profile",
+                    kind: "single",
+                    nodes: [el("p", { class: "cv-para" }, data.summary.trim())],
+                });
+
+            const expItems = data.experience.filter(
+                (e) =>
+                    e.role ||
+                    e.company ||
+                    e.location ||
+                    e.start ||
+                    e.end ||
+                    bullets(e.description).length,
+            );
+            if (expItems.length) {
+                const list: Node[] = [];
+                for (const e of expItems) {
+                    const item = el("div", { class: "cv-entry" });
+                    const headLine = el("div", { class: "cv-entry-head" });
+                    headLine.append(
+                        el(
+                            "span",
+                            { class: "cv-entry-main" },
+                            e.role &&
+                                el(
+                                    "strong",
+                                    { class: "cv-entry-role" },
+                                    e.role,
+                                ),
+                            e.company &&
+                                el(
+                                    "span",
+                                    { class: "cv-entry-company" },
+                                    (e.role ? " · " : "") + e.company,
+                                ),
+                            e.location &&
+                                el(
+                                    "span",
+                                    { class: "cv-entry-loc" },
+                                    " — " + e.location,
+                                ),
+                        ),
+                        entryDate(e.start, e.end, e.current) &&
+                            el(
+                                "span",
+                                { class: "cv-entry-date" },
+                                entryDate(e.start, e.end, e.current),
+                            ),
+                    );
+                    item.append(headLine);
+                    const lines = bullets(e.description);
+                    if (lines.length) {
+                        const ul = el("ul", { class: "cv-bullets" });
+                        for (const l of lines) ul.append(el("li", null, l));
+                        item.append(ul);
+                    }
+                    list.push(item);
+                }
+                secs.push({
+                    col: "main",
+                    title: "Experience",
+                    kind: "entry",
+                    nodes: list,
+                });
+            }
+
+            const projItems = data.projects.filter(
+                (p) => p.name || p.link || p.description,
+            );
+            if (projItems.length) {
+                const list: Node[] = [];
+                for (const p of projItems) {
+                    const item = el("div", { class: "cv-entry" });
+                    item.append(
+                        el(
+                            "span",
+                            { class: "cv-entry-main" },
+                            p.name &&
+                                el(
+                                    "strong",
+                                    { class: "cv-entry-role" },
+                                    p.name,
+                                ),
+                            p.link &&
+                                el(
+                                    "span",
+                                    { class: "cv-entry-company" },
+                                    (p.name ? " · " : "") + p.link,
+                                ),
+                        ),
+                    );
+                    if (p.description.trim()) {
+                        const pLines = bullets(p.description);
+                        if (pLines.length > 1) {
+                            const ul = el("ul", { class: "cv-bullets" });
+                            for (const l of pLines)
+                                ul.append(el("li", null, l));
+                            item.append(ul);
+                        } else {
+                            item.append(
+                                el(
+                                    "p",
+                                    { class: "cv-entry-desc" },
+                                    p.description.trim(),
+                                ),
+                            );
+                        }
+                    }
+                    list.push(item);
+                }
+                secs.push({
+                    col: "main",
+                    title: "Projects",
+                    kind: "entry",
+                    nodes: list,
+                });
+            }
+
+            const eduItems = data.education.filter(
+                (e) => e.degree || e.school || e.start || e.end,
+            );
+            if (eduItems.length) {
+                const list: Node[] = [];
+                for (const e of eduItems) {
+                    list.push(
+                        el(
+                            "div",
+                            { class: "cv-entry" },
+                            el(
+                                "div",
+                                { class: "cv-entry-head" },
+                                el(
+                                    "span",
+                                    { class: "cv-entry-main" },
+                                    e.degree &&
+                                        el(
+                                            "strong",
+                                            { class: "cv-entry-role" },
+                                            e.degree,
+                                        ),
+                                    e.school &&
+                                        el(
+                                            "span",
+                                            { class: "cv-entry-company" },
+                                            (e.degree ? " · " : "") + e.school,
+                                        ),
+                                ),
+                                entryDate(e.start, e.end) &&
+                                    el(
+                                        "span",
+                                        { class: "cv-entry-date" },
+                                        entryDate(e.start, e.end),
+                                    ),
+                            ),
+                        ),
+                    );
+                }
+                secs.push({
+                    col: "side",
+                    title: "Education",
+                    kind: "entry",
+                    nodes: list,
+                });
+            }
+
+            if (data.skills.length) {
+                const chips = el("div", { class: "cv-chips" });
+                for (const s of data.skills)
+                    chips.append(el("span", { class: "cv-chip" }, s));
+                secs.push({
+                    col: "side",
+                    title: "Skills",
+                    kind: "single",
+                    nodes: [chips],
+                });
+            }
+
+            const langItems = data.languages.filter((l) => l.name || l.level);
+            if (langItems.length) {
+                const pairs: Node[] = [];
+                for (const l of langItems)
+                    pairs.push(
+                        el(
+                            "div",
+                            { class: "cv-pair" },
+                            el(
+                                "span",
+                                { class: "cv-pair-name" },
+                                l.name || "—",
+                            ),
+                            l.level
+                                ? el("span", { class: "cv-pair-meta" }, l.level)
+                                : null,
+                        ),
+                    );
+                secs.push({
+                    col: "side",
+                    title: "Languages",
+                    kind: "pair",
+                    nodes: pairs,
+                });
+            }
+
+            const certItems = data.certifications.filter(
+                (c) => c.name || c.issuer || c.year,
+            );
+            if (certItems.length) {
+                const pairs: Node[] = [];
+                for (const c of certItems)
+                    pairs.push(
+                        el(
+                            "div",
+                            { class: "cv-pair" },
+                            el(
+                                "span",
+                                { class: "cv-pair-name" },
+                                c.name || "—",
+                            ),
+                            [c.issuer, c.year].filter(Boolean).length
+                                ? el(
+                                      "span",
+                                      { class: "cv-pair-meta" },
+                                      [c.issuer, c.year]
+                                          .filter(Boolean)
+                                          .join(" · "),
+                                  )
+                                : null,
+                        ),
+                    );
+                secs.push({
+                    col: "side",
+                    title: "Certifications",
+                    kind: "pair",
+                    nodes: pairs,
+                });
+            }
+
+            // ── Flows ──
+            if (data.template === "ats") {
+                // Canonical order ATS parsers expect.
+                const order: Record<string, number> = {
+                    Profile: 0,
+                    Experience: 1,
+                    Projects: 2,
+                    Education: 3,
+                    Skills: 4,
+                    Languages: 5,
+                    Certifications: 6,
+                };
+                secs.sort(
+                    (a, b) => (order[a.title] ?? 9) - (order[b.title] ?? 9),
+                );
+            }
+            const mainSecs = secs.filter((s) => s.col === "main");
+            const sideSecs = secs.filter((s) => s.col === "side");
+            const modern = data.template === "modern" && sideSecs.length > 0;
+
+            if (!headNode && secs.length === 0) {
+                const page = el("div", { class: "cv-a4" });
+                page.append(el("span", { class: "cv-a4-num" }, "1"));
+                page.append(
+                    el(
+                        "div",
+                        { class: "cv-sheet-empty" },
+                        el("strong", null, "Your CV preview"),
+                        el(
+                            "p",
+                            null,
+                            "Start filling the form on the left — or press “Load my data” to pre-fill your profile.",
+                        ),
+                    ),
+                );
+                sheet.replaceChildren(page);
+                fitSheet();
+                return;
+            }
+
+            const mkUnits = (s: Sec): Unit[] => [
+                {
+                    node: el("h3", null, s.title),
+                    section: s.title,
+                    heading: true,
+                    kind: "heading",
+                },
+                ...s.nodes.map((n): Unit => ({
+                    node: n,
+                    section: s.title,
+                    heading: false,
+                    kind: s.kind,
+                })),
+            ];
+            const mainUnits = mainSecs.flatMap(mkUnits);
+            const sideUnits = sideSecs.flatMap(mkUnits);
+            // Single-column templates flow every section in canonical order.
+            const singleUnits = modern ? mainUnits : secs.flatMap(mkUnits);
+
+            // ── Measure units at their final width (exact final structure) ──
+            const measureBox = el("div", { class: "cv-measure" });
+            if (headNode) measureBox.append(headNode);
+            const attach = (box: Element, ss: Sec[], units: Unit[]) => {
+                let i = 0;
+                for (const s of ss) {
+                    const sec = el("section", { class: "cv-section" });
+                    sec.append(units[i].node); // heading
+                    if (s.kind === "pair") {
+                        const grid = el("div", { class: "cv-pairgrid" });
+                        for (const n of s.nodes) grid.append(n);
+                        sec.append(grid);
+                    } else {
+                        for (const n of s.nodes) sec.append(n);
+                    }
+                    box.append(sec);
+                    i += 1 + s.nodes.length;
+                }
+            };
+            if (modern) {
+                const cols = el("div", { class: "cv-cols" });
+                const mainC = el("div", { class: "cv-col-main" });
+                const sideC = el("div", { class: "cv-col-side" });
+                attach(mainC, mainSecs, mainUnits);
+                attach(sideC, sideSecs, sideUnits);
+                cols.append(mainC, sideC);
+                measureBox.append(cols);
+            } else {
+                attach(measureBox, secs, singleUnits);
+            }
+            sheet.append(measureBox);
+
+            const toMeasured = (units: Unit[]): Measured[] =>
+                units.map((u) => {
+                    const node = u.node as HTMLElement;
+                    const cs = getComputedStyle(node);
+                    return {
+                        ...u,
+                        h: node.offsetHeight,
+                        t: u.heading
+                            ? parseFloat(
+                                  getComputedStyle(node.parentElement ?? node)
+                                      .marginTop,
+                              ) || 0
+                            : parseFloat(cs.marginTop) || 0,
+                        b: parseFloat(cs.marginBottom) || 0,
+                    };
+                });
+
+            const mainMs = toMeasured(singleUnits);
+            const sideMs = modern ? toMeasured(sideUnits) : [];
+            const headMs = headNode
+                ? (() => {
+                      const n = headNode as HTMLElement;
+                      const cs = getComputedStyle(n);
+                      return {
+                          h: n.offsetHeight,
+                          t: parseFloat(cs.marginTop) || 0,
+                          b: parseFloat(cs.marginBottom) || 0,
+                      };
+                  })()
+                : null;
+            measureBox.remove();
+
+            // ── Split into A4 pages and render one card per page ──
+            const wantsBreak = (t: string) => data.breaks[t] === true;
+            const firstOffset = headMs ? headMs.t + headMs.h + headMs.b : 0;
+            const topMargin = headMs ? headMs.b : 0;
+            const mainPages = rescueOrphan(
+                paginate(mainMs, PAGE_CAP, firstOffset, topMargin, wantsBreak),
+                PAGE_CAP,
+                wantsBreak,
+            );
+            const sidePages = rescueOrphan(
+                paginate(sideMs, PAGE_CAP, firstOffset, topMargin, wantsBreak),
+                PAGE_CAP,
+                wantsBreak,
+            );
+            const total = Math.max(mainPages.length, sidePages.length, 1);
+
+            const pageEls: HTMLElement[] = [];
+            for (let k = 0; k < total; k++) {
+                const page = el("div", { class: "cv-a4" });
+                page.append(el("span", { class: "cv-a4-num" }, String(k + 1)));
+                if (k === 0 && headNode) page.append(headNode);
+                if (modern) {
+                    const cols = el("div", { class: "cv-cols" });
+                    const mainC = el("div", { class: "cv-col-main" });
+                    mainC.append(...renderSectioned(mainPages[k] ?? []));
+                    const sideC = el("div", { class: "cv-col-side" });
+                    sideC.append(...renderSectioned(sidePages[k] ?? []));
+                    cols.append(mainC, sideC);
+                    page.append(cols);
+                } else {
+                    page.append(...renderSectioned(mainPages[k] ?? []));
+                }
+                pageEls.push(page);
+            }
+            sheet.replaceChildren(...pageEls);
+            fitSheet();
+        }
+
+        // Scale the A4 pages to fit the preview pane and update the badge.
+        function fitSheet() {
+            const avail = previewPane.clientWidth;
+            if (!avail) return;
+            const scale = Math.min(1, avail / SHEET_W);
+            sheet.style.transform = `scale(${scale})`;
+            sheetWrap.style.width = `${SHEET_W * scale}px`;
+            sheetWrap.style.height = `${sheet.offsetHeight * scale}px`;
+            const pages = sheet.querySelectorAll(".cv-a4").length || 1;
+            const badge = document.getElementById("pageBadge");
+            if (badge)
+                badge.textContent = pages === 1 ? "1 page" : `${pages} pages`;
+        }
+
+        // ── Form: list entries ─────────────────────────────────────────
+        function fieldRow(
+            labelA: string,
+            inputA: Node,
+            labelB?: string,
+            inputB?: Node,
+        ): Node {
+            const row = el("div", { class: "cv-grid2" });
+            row.append(
+                el(
+                    "div",
+                    { class: "cv-field" },
+                    el("label", null, labelA),
+                    inputA,
+                ),
+            );
+            if (labelB && inputB)
+                row.append(
+                    el(
+                        "div",
+                        { class: "cv-field" },
+                        el("label", null, labelB),
+                        inputB,
+                    ),
+                );
+            return row;
+        }
+
+        function entryShell(
+            list: string,
+            index: number,
+            ...inner: Node[]
+        ): HTMLElement {
+            return el(
+                "div",
+                {
+                    class: "entry",
+                    "data-list": list,
+                    "data-index": String(index),
+                },
+                el(
+                    "div",
+                    { class: "entry-head" },
+                    el("span", { class: "entry-num" }, String(index + 1)),
+                    el(
+                        "button",
+                        {
+                            type: "button",
+                            class: "entry-remove",
+                            "data-remove": list,
+                            "data-index": String(index),
+                        },
+                        "Remove",
+                    ),
+                ),
+                ...inner,
+            );
+        }
+
+        function textInput(
+            list: string,
+            index: number,
+            field: string,
+            placeholder: string,
+            type = "text",
+        ): HTMLInputElement {
+            const input = document.createElement("input");
+            input.type = type;
+            input.placeholder = placeholder;
+            input.dataset.list = list;
+            input.dataset.index = String(index);
+            input.dataset.field = field;
+            input.setAttribute("aria-label", `${list} ${index + 1} — ${field}`);
+            if (field === "link" || field === "github" || field === "website") {
+                input.spellcheck = false;
+                input.setAttribute("autocapitalize", "off");
+                input.setAttribute("autocorrect", "off");
+            }
+            return input;
+        }
+
+        function textareaInput(
+            list: string,
+            index: number,
+            field: string,
+            placeholder: string,
+            rows = 4,
+        ): HTMLTextAreaElement {
+            const ta = document.createElement("textarea");
+            ta.rows = rows;
+            ta.placeholder = placeholder;
+            ta.dataset.list = list;
+            ta.dataset.index = String(index);
+            ta.dataset.field = field;
+            return ta;
+        }
+
+        function checkboxInput(
+            list: string,
+            index: number,
+            field: string,
+            checked: boolean,
+            label: string,
+        ): HTMLLabelElement {
+            const input = document.createElement("input");
+            input.type = "checkbox";
+            input.checked = checked;
+            input.dataset.list = list;
+            input.dataset.index = String(index);
+            input.dataset.field = field;
+            return el("label", { class: "cv-check" }, input, label);
+        }
+
+        function renderExperience() {
+            const box = document.getElementById("experienceEntries");
+            if (!box) return;
+            box.replaceChildren(
+                ...data.experience.map((e, i) =>
+                    entryShell(
+                        "experience",
+                        i,
+                        fieldRow(
+                            "Role",
+                            Object.assign(
+                                textInput(
+                                    "experience",
+                                    i,
+                                    "role",
+                                    "Site Reliability Engineer",
+                                ),
+                                { value: e.role },
+                            ),
+                            "Company",
+                            Object.assign(
+                                textInput(
+                                    "experience",
+                                    i,
+                                    "company",
+                                    "Acme Corp",
+                                ),
+                                { value: e.company },
+                            ),
+                        ),
+                        fieldRow(
+                            "Location",
+                            Object.assign(
+                                textInput(
+                                    "experience",
+                                    i,
+                                    "location",
+                                    "Bangkok",
+                                ),
+                                { value: e.location },
+                            ),
+                        ),
+                        fieldRow(
+                            "Start",
+                            Object.assign(
+                                textInput("experience", i, "start", "Jan 2022"),
+                                { value: e.start },
+                            ),
+                            "End",
+                            Object.assign(
+                                textInput(
+                                    "experience",
+                                    i,
+                                    "end",
+                                    "Dec 2024 (leave empty if current)",
+                                ),
+                                { value: e.end, disabled: e.current },
+                            ),
+                        ),
+                        checkboxInput(
+                            "experience",
+                            i,
+                            "current",
+                            e.current,
+                            "Currently work here",
+                        ),
+                        el(
+                            "div",
+                            { class: "cv-field" },
+                            el("label", null, "Highlights (one per line)"),
+                            Object.assign(
+                                textareaInput(
+                                    "experience",
+                                    i,
+                                    "description",
+                                    "Led migration of 40+ services to Kubernetes…",
+                                ),
+                                { value: e.description },
+                            ),
+                        ),
+                    ),
+                ),
+            );
+            if (!box.childElementCount)
+                box.append(
+                    el(
+                        "p",
+                        { class: "entry-empty" },
+                        "No positions yet — add your most recent role first.",
+                    ),
+                );
+        }
+
+        function renderProjects() {
+            const box = document.getElementById("projectEntries");
+            if (!box) return;
+            box.replaceChildren(
+                ...data.projects.map((p, i) =>
+                    entryShell(
+                        "projects",
+                        i,
+                        fieldRow(
+                            "Project",
+                            Object.assign(
+                                textInput(
+                                    "projects",
+                                    i,
+                                    "name",
+                                    "LUMINA Log Platform",
+                                ),
+                                { value: p.name },
+                            ),
+                            "Link",
+                            Object.assign(
+                                textInput(
+                                    "projects",
+                                    i,
+                                    "link",
+                                    "github.com/you/project",
+                                ),
+                                { value: p.link },
+                            ),
+                        ),
+                        el(
+                            "div",
+                            { class: "cv-field" },
+                            el("label", null, "Description"),
+                            Object.assign(
+                                textareaInput(
+                                    "projects",
+                                    i,
+                                    "description",
+                                    "Open-source log analytics for K8s clusters…",
+                                ),
+                                { value: p.description },
+                            ),
+                        ),
+                    ),
+                ),
+            );
+            if (!box.childElementCount)
+                box.append(
+                    el(
+                        "p",
+                        { class: "entry-empty" },
+                        "No projects yet — OSS, side projects, or things you shipped.",
+                    ),
+                );
+        }
+
+        function renderEducation() {
+            const box = document.getElementById("educationEntries");
+            if (!box) return;
+            box.replaceChildren(
+                ...data.education.map((e, i) =>
+                    entryShell(
+                        "education",
+                        i,
+                        fieldRow(
+                            "Degree",
+                            Object.assign(
+                                textInput(
+                                    "education",
+                                    i,
+                                    "degree",
+                                    "B.Eng. Computer Engineering",
+                                ),
+                                { value: e.degree },
+                            ),
+                            "School",
+                            Object.assign(
+                                textInput("education", i, "school", "KMUTT"),
+                                { value: e.school },
+                            ),
+                        ),
+                        fieldRow(
+                            "Start",
+                            Object.assign(
+                                textInput("education", i, "start", "2014"),
+                                { value: e.start },
+                            ),
+                            "End",
+                            Object.assign(
+                                textInput("education", i, "end", "2018"),
+                                { value: e.end },
+                            ),
+                        ),
+                    ),
+                ),
+            );
+            if (!box.childElementCount)
+                box.append(
+                    el(
+                        "p",
+                        { class: "entry-empty" },
+                        "No education yet — degree, school and period.",
+                    ),
+                );
+        }
+
+        const LEVELS = [
+            "Native",
+            "Fluent",
+            "Professional",
+            "Intermediate",
+            "Basic",
+        ];
+
+        function renderLanguages() {
+            const box = document.getElementById("languageEntries");
+            if (!box) return;
+            box.replaceChildren(
+                ...data.languages.map((l, i) => {
+                    const select = document.createElement("select");
+                    for (const lv of LEVELS)
+                        select.append(el("option", { value: lv }, lv));
+                    // Preserve custom levels (e.g. "Working proficiency") from drafts.
+                    if (l.level && !LEVELS.includes(l.level))
+                        select.append(
+                            el("option", { value: l.level }, l.level),
+                        );
+                    select.value = l.level || "Fluent";
+                    select.dataset.list = "languages";
+                    select.dataset.index = String(i);
+                    select.dataset.field = "level";
+                    return entryShell(
+                        "languages",
+                        i,
+                        fieldRow(
+                            "Language",
+                            Object.assign(
+                                textInput("languages", i, "name", "Thai"),
+                                { value: l.name },
+                            ),
+                            "Level",
+                            select,
+                        ),
+                    );
+                }),
+            );
+            if (!box.childElementCount)
+                box.append(
+                    el(
+                        "p",
+                        { class: "entry-empty" },
+                        "No languages yet — add what you work in.",
+                    ),
+                );
+        }
+
+        function renderCertifications() {
+            const box = document.getElementById("certEntries");
+            if (!box) return;
+            box.replaceChildren(
+                ...data.certifications.map((c, i) =>
+                    entryShell(
+                        "certifications",
+                        i,
+                        fieldRow(
+                            "Certification",
+                            Object.assign(
+                                textInput(
+                                    "certifications",
+                                    i,
+                                    "name",
+                                    "Certified Kubernetes Administrator",
+                                ),
+                                { value: c.name },
+                            ),
+                            "Issuer",
+                            Object.assign(
+                                textInput(
+                                    "certifications",
+                                    i,
+                                    "issuer",
+                                    "CNCF",
+                                ),
+                                { value: c.issuer },
+                            ),
+                        ),
+                        fieldRow(
+                            "Year",
+                            Object.assign(
+                                textInput("certifications", i, "year", "2024"),
+                                {
+                                    value: c.year,
+                                    inputMode: "numeric",
+                                    maxLength: 4,
+                                },
+                            ),
+                        ),
+                    ),
+                ),
+            );
+            if (!box.childElementCount)
+                box.append(
+                    el(
+                        "p",
+                        { class: "entry-empty" },
+                        "No certifications yet — add the ones that carry weight.",
+                    ),
+                );
+        }
+
+        function renderSkills() {
+            const box = document.getElementById("skillChips");
+            if (!box) return;
+            box.replaceChildren(
+                ...data.skills.map((s) =>
+                    el(
+                        "span",
+                        { class: "chip" },
+                        s,
+                        el(
+                            "button",
+                            {
+                                type: "button",
+                                class: "chip-x",
+                                "data-skill-remove": s,
+                                "aria-label": `Remove ${s}`,
+                            },
+                            "×",
+                        ),
+                    ),
+                ),
+            );
+        }
+
+        function renderAllLists() {
+            renderExperience();
+            renderProjects();
+            renderEducation();
+            renderLanguages();
+            renderCertifications();
+            renderSkills();
+            renderCounts();
+            autosizeAll();
+        }
+
+        function renderCounts() {
+            const counts: Record<string, number> = {
+                experience: data.experience.length,
+                projects: data.projects.length,
+                education: data.education.length,
+                languages: data.languages.length,
+                certifications: data.certifications.length,
+                skills: data.skills.length,
+            };
+            for (const [key, value] of Object.entries(counts)) {
+                const badge = document.getElementById(`count-${key}`);
+                if (badge) badge.textContent = String(value);
+            }
+        }
+
+        function autosizeAll() {
+            form.querySelectorAll<HTMLTextAreaElement>("textarea").forEach(
+                (ta) => {
+                    ta.style.height = "auto";
+                    ta.style.height = ta.scrollHeight + "px";
+                },
+            );
+        }
+
+        // ── Form → state sync (static fields) ──────────────────────────
+        function bindStaticFields() {
+            form.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(
+                "[data-field]:not([data-list])",
+            ).forEach((input) => {
+                const field = input.dataset.field as keyof CVData;
+                input.value = String(
+                    (data as unknown as Record<string, unknown>)[field] ?? "",
+                );
+            });
+        }
+
+        // ── Autosave ───────────────────────────────────────────────────
+        let saveTimer: number | undefined;
+        function scheduleSave() {
+            window.clearTimeout(saveTimer);
+            saveTimer = window.setTimeout(() => {
+                try {
+                    window.localStorage.setItem(
+                        DRAFT_KEY,
+                        JSON.stringify(data),
+                    );
+                    draftStatus.style.color = "";
+                    const t = new Date().toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                    });
+                    draftStatus.textContent = `Draft saved at ${t}. In the print dialog choose “Save as PDF”.`;
+                } catch {
+                    // Storage full or blocked — surface it instead of losing the draft silently.
+                    draftStatus.style.color = "var(--danger)";
+                    draftStatus.textContent =
+                        "Could not save the draft — browser storage is full or blocked.";
+                }
+            }, 400);
+        }
+
+        function onStateChange() {
+            renderSheet();
+            scheduleSave();
+        }
+
+        function syncBreakButtons() {
+            form.querySelectorAll<HTMLButtonElement>("[data-break]").forEach(
+                (b) => {
+                    const key = b.dataset.break;
+                    b.setAttribute(
+                        "aria-pressed",
+                        String(key ? data.breaks[key] === true : false),
+                    );
+                },
+            );
+        }
+
+        // ── Events ─────────────────────────────────────────────────────
+        form.addEventListener("submit", (e) => e.preventDefault());
+
+        form.addEventListener("input", (e) => {
+            const t = e.target as HTMLElement;
+            if (t instanceof HTMLTextAreaElement) {
+                t.style.height = "auto";
+                t.style.height = t.scrollHeight + "px";
+            }
+            const field = t.dataset?.field;
+            if (!field) return;
+            const list = t.dataset?.list as keyof CVData | undefined;
+            const isCheck =
+                t instanceof HTMLInputElement && t.type === "checkbox";
+            const value = isCheck
+                ? t.checked
+                : (
+                      t as
+                          | HTMLInputElement
+                          | HTMLTextAreaElement
+                          | HTMLSelectElement
+                  ).value;
+            if (list && Array.isArray(data[list])) {
+                const idx = Number(t.dataset?.index);
+                const item = (
+                    data[list] as unknown as Record<string, unknown>[]
+                )[idx];
+                if (item) {
+                    item[field] = value;
+                    if (field === "current") {
+                        const entryEl = t.closest(".entry");
+                        const endInput = entryEl?.querySelector(
+                            '[data-field="end"]',
+                        ) as HTMLInputElement | null;
+                        if (endInput) endInput.disabled = Boolean(value);
+                    }
+                    onStateChange();
+                }
+            } else if (!list) {
+                (data as unknown as Record<string, unknown>)[field] = value;
+                onStateChange();
+            }
+        });
+
+        const ENTRY_BOXES: Record<string, string> = {
+            experience: "experienceEntries",
+            projects: "projectEntries",
+            education: "educationEntries",
+            languages: "languageEntries",
+            certifications: "certEntries",
+        };
+
+        function focusNewEntry(key: string) {
+            const box = document.getElementById(ENTRY_BOXES[key]);
+            const last = box?.querySelector<HTMLElement>(".entry:last-child");
+            if (!last) return;
+            last.scrollIntoView({ behavior: "smooth", block: "center" });
+            const first = last.querySelector<HTMLElement>(
+                "input:not([type=checkbox]), textarea, select",
+            );
+            first?.focus({ preventScroll: true });
+        }
+
+        form.addEventListener("click", (e) => {
+            const target = e.target as HTMLElement;
+
+            const add = target.closest<HTMLButtonElement>("[data-add]");
+            if (add) {
+                const key = add.dataset.add as keyof CVData;
+                const factories: Record<string, () => unknown> = {
+                    experience: blankExperience,
+                    projects: blankProject,
+                    education: blankEducation,
+                    languages: blankLanguage,
+                    certifications: blankCert,
+                };
+                (data[key] as unknown[]).push(factories[key]());
+                renderAllLists();
+                focusNewEntry(key);
+                onStateChange();
+                return;
+            }
+
+            const remove = target.closest<HTMLButtonElement>("[data-remove]");
+            if (remove) {
+                const key = remove.dataset.remove as keyof CVData;
+                const idx = Number(remove.dataset.index);
+                (data[key] as unknown[]).splice(idx, 1);
+                renderAllLists();
+                onStateChange();
+                return;
+            }
+
+            // Per-section "start on new page" toggles.
+            const brk = target.closest<HTMLButtonElement>("[data-break]");
+            if (brk) {
+                const key = brk.dataset.break;
+                if (key) {
+                    data.breaks[key] = !data.breaks[key];
+                    if (!data.breaks[key]) delete data.breaks[key];
+                    brk.setAttribute(
+                        "aria-pressed",
+                        String(Boolean(data.breaks[key])),
+                    );
+                }
+                onStateChange();
+                return;
+            }
+
+            // The photo remove button lives inside the form, not the toolbar.
+            if (target.closest("[data-action='photo-remove']")) {
+                data.photo = null;
+                renderPhotoPreview();
+                onStateChange();
+                return;
+            }
+
+            const chipRemove = target.closest<HTMLButtonElement>(
+                "[data-skill-remove]",
+            );
+            if (chipRemove) {
+                const skill = chipRemove.dataset.skillRemove;
+                data.skills = data.skills.filter((s) => s !== skill);
+                renderSkills();
+                onStateChange();
+            }
+        });
+
+        // Skills: Enter / comma / Tab commits the token.
+        const skillInput = document.getElementById(
+            "skillInput",
+        ) as HTMLInputElement;
+        function commitSkill() {
+            const raw = skillInput.value.trim().replace(/,+$/, "");
+            if (!raw) return;
+            for (const piece of raw.split(",")) {
+                const s = piece.trim();
+                if (
+                    s &&
+                    !data.skills.some(
+                        (x) => x.toLowerCase() === s.toLowerCase(),
+                    )
+                )
+                    data.skills.push(s);
+            }
+            skillInput.value = "";
+            renderSkills();
+            onStateChange();
+        }
+        skillInput.addEventListener("keydown", (e) => {
+            if (e.key === "Enter" || e.key === ",") {
+                e.preventDefault();
+                commitSkill();
+            } else if (
+                e.key === "Backspace" &&
+                !skillInput.value &&
+                data.skills.length
+            ) {
+                data.skills.pop();
+                renderSkills();
+                onStateChange();
+            }
+        });
+        skillInput.addEventListener("blur", () => {
+            if (skillInput.value.trim()) commitSkill();
+        });
+
+        // ── Photo ──────────────────────────────────────────────────────
+        const photoFile = document.getElementById(
+            "photoFile",
+        ) as HTMLInputElement;
+        const photoPreview = document.getElementById(
+            "photoPreview",
+        ) as HTMLElement;
+        const photoRemove = document.getElementById(
+            "photoRemove",
+        ) as HTMLElement;
+
+        function renderPhotoPreview() {
+            if (data.photo) {
+                photoPreview.replaceChildren(
+                    el("img", { src: data.photo, alt: "Profile" }),
+                );
+                photoRemove.hidden = false;
+            } else {
+                photoPreview.replaceChildren();
+                photoRemove.hidden = true;
+            }
+        }
+
+        function fileToDataUrl(file: File): Promise<string> {
+            return new Promise((resolve, reject) => {
+                const url = URL.createObjectURL(file);
+                const img = new Image();
+                img.onload = () => {
+                    URL.revokeObjectURL(url);
+                    const max = 480;
+                    const ratio = Math.min(
+                        1,
+                        max / Math.max(img.width, img.height),
+                    );
+                    const w = Math.max(1, Math.round(img.width * ratio));
+                    const h = Math.max(1, Math.round(img.height * ratio));
+                    const canvas = document.createElement("canvas");
+                    canvas.width = w;
+                    canvas.height = h;
+                    const ctx = canvas.getContext("2d");
+                    if (!ctx) {
+                        reject(new Error("Canvas is not supported"));
+                        return;
+                    }
+                    ctx.fillStyle = "#ffffff";
+                    ctx.fillRect(0, 0, w, h);
+                    ctx.drawImage(img, 0, 0, w, h);
+                    resolve(canvas.toDataURL("image/jpeg", 0.9));
+                };
+                img.onerror = () => {
+                    URL.revokeObjectURL(url);
+                    reject(new Error("Could not read the image"));
+                };
+                img.src = url;
+            });
+        }
+
+        if (photoFile) {
+            photoFile.addEventListener("change", async () => {
+                const file = photoFile.files?.[0];
+                photoFile.value = "";
+                if (!file) return;
+                if (!file.type.startsWith("image/")) {
+                    alert("Please choose an image file (JPG or PNG).");
+                    return;
+                }
+                try {
+                    data.photo = await fileToDataUrl(file);
+                    renderPhotoPreview();
+                    onStateChange();
+                } catch {
+                    alert("Sorry, that image could not be processed.");
+                }
+            });
+        }
+
+        function syncTemplateButtons() {
+            document
+                .querySelectorAll<HTMLButtonElement>(".seg-btn")
+                .forEach((b) =>
+                    b.classList.toggle(
+                        "is-active",
+                        b.dataset.template === data.template,
+                    ),
+                );
+        }
+
+        // Toolbar.
+        document
+            .querySelector<HTMLElement>(".cv-toolbar")
+            ?.addEventListener("click", (e) => {
+                const target = e.target as HTMLElement;
+
+                const templateBtn =
+                    target.closest<HTMLButtonElement>("[data-template]");
+                if (templateBtn) {
+                    const t = templateBtn.dataset.template;
+                    data.template =
+                        t === "classic" || t === "ats" ? t : "modern";
+                    syncTemplateButtons();
+                    onStateChange();
+                    return;
+                }
+
+                const swatch =
+                    target.closest<HTMLButtonElement>("[data-accent]");
+                if (swatch) {
+                    data.accent = swatch.dataset.accent!;
+                    document
+                        .querySelectorAll<HTMLButtonElement>(".swatch")
+                        .forEach((s) =>
+                            s.classList.toggle("is-active", s === swatch),
+                        );
+                    onStateChange();
+                    return;
+                }
+
+                const action =
+                    target.closest<HTMLButtonElement>("[data-action]")?.dataset
+                        .action;
+                if (action === "export") {
+                    renderSheet();
+                    window.print();
+                } else if (action === "clear") {
+                    if (
+                        confirm(
+                            "Start a new CV? Your current draft will be cleared.",
+                        )
+                    ) {
+                        data = defaultData();
+                        document
+                            .querySelectorAll<HTMLButtonElement>(".swatch")
+                            .forEach((s, i) =>
+                                s.classList.toggle("is-active", i === 0),
+                            );
+                        syncTemplateButtons();
+                        renderPhotoPreview();
+                        bindStaticFields();
+                        renderAllLists();
+                        syncBreakButtons();
+                        onStateChange();
+                    }
+                } else if (action === "sample") {
+                    if (
+                        confirm(
+                            "Replace the current form with the saved profile (Traipoap Hunthong)?",
+                        )
+                    ) {
+                        data = sampleData();
+                        syncTemplateButtons();
+                        renderPhotoPreview();
+                        bindStaticFields();
+                        renderAllLists();
+                        syncBreakButtons();
+                        onStateChange();
+                    }
+                }
+            });
+
+        // ── Preset: Traipoap Hunthong ("Load my data") ─────────────────
+        function sampleData(): CVData {
+            return {
+                name: "Traipoap Hunthong",
+                title: "DevOps Engineer",
+                email: "traipoap@hotmail.com",
+                phone: "+66 80 638 0921",
+                location: "Nonthaburi, Thailand",
+                website: "app.traipoap.com",
+                github: "github.com/traipoap",
+                linkedin: "linkedin.com/in/traipoap",
+                summary:
+                    "Network Administrator (CKA & CKAD certified) with 4+ years operating a national telco cloud. Design, build, and operate an end-to-end GitOps Kubernetes platform in a personal production environment — Terraform, Ansible, K3s, Istio, FluxCD, GitHub Actions — with a multi-region failover DR layer on AWS (CloudFront, Lambda, S3). Zero manual deployment steps; provisioning cut from hours to under an hour.",
+                experience: [
+                    {
+                        id: uid(),
+                        role: "Network Administrator — Tier-2 Support",
+                        company:
+                            "360 Bizmate Co., Ltd. (NT — National Telecom)",
+                        location: "",
+                        start: "Jan 2022",
+                        end: "",
+                        current: true,
+                        description:
+                            "Acted as Tier-2 network support engineer — resolved escalated incidents and coordinated with L1/L3/vendor teams to keep all tasks within SLA\nReduced MTTR by implementing proactive ingress traffic monitoring with Zabbix, detecting silent failures that bypass traditional node-down alerts (Telegram alerts)\nAutomated multi-node health checks, reducing daily manual inspection of network devices\nResolved IPv6 security policy conflicts by disabling unintended IPv6 auto-configuration, restoring firewall security compliance\nExecuted change/service requests (e.g., VLAN additions and modifications); kept configuration backups accurate and up to date\nTrained and upskilled Level-1 staff to improve efficiency; produced weekly reports within the assigned scope",
+                    },
+                ],
+                projects: [
+                    {
+                        id: uid(),
+                        name: "infra — K3s Platform on Proxmox",
+                        link: "github.com/traipoap/infra",
+                        description:
+                            "Automated K3s platform: Terraform (template-clone VMs, count-driven node scaling, HCP remote state) → Ansible (6 idempotent playbooks, kernel tuning) → K3s (embedded etcd, HA) → Istio (ambient) + Gateway API → FluxCD bootstrap from GitHub\nProvisions the full platform from zero in under an hour — super-node (HAProxy L7 LB, syslog relay, NFS, S3) + K3s master + worker; fully repeatable, terraform destroy tears it down\nMulti-runtime container support: crun default runtime, youki exposed as a Kubernetes RuntimeClass\nDocumented 14 architecture decisions plus deployment and troubleshooting runbook",
+                    },
+                    {
+                        id: uid(),
+                        name: "app — Go/GIN + Astro Log Platform",
+                        link: "app.traipoap.com · github.com/traipoap/app",
+                        description:
+                            "Built and run a self-hosted log-search platform in a personal production environment — Go API (JWT auth, Quickwit search, CSV export) + Astro dashboard\nCI/CD with GitHub Actions: Gitleaks + SonarQube SAST gate → path-filtered image build → Trivy CRITICAL/HIGH scan (SARIF) → GHCR → FluxCD auto-deploys",
+                    },
+                    {
+                        id: uid(),
+                        name: "gitops — FluxCD GitOps",
+                        link: "github.com/traipoap/gitops",
+                        description:
+                            "GitOps source of truth for the K3s cluster — all state in Git, continuously reconciled by FluxCD with self-healing configuration drift\nExternal Secrets Operator + AWS SecretsManager — credentials synced into the cluster, never stored in Git\nFluxCD Image Automation (semver ImagePolicy) — new images auto-detected, tags updated and auto-deployed\nKyverno policy enforcing CPU/memory requests & limits on all Pods; LimitRange defaults; flux-schema validation\nObservability: Prometheus, Grafana, Kiali, Vector → Quickwit logging pipeline; Flux Web UI in server-only mode",
+                    },
+                    {
+                        id: uid(),
+                        name: "aws — Multi-region Failover DR",
+                        link: "github.com/traipoap/infra/tree/main/aws",
+                        description:
+                            "Multi-region DR: K3s origin behind CloudFront origin groups with automatic 4xx/5xx failover to a Go/Gin Lambda (ECR) and S3 static build across ap-southeast-1/7 and us-east-1 — cross-provider continuity for app.traipoap.com\nTerraform modules (CloudFront, ECR, IAM, S3, ACM); CloudFront Function for clean-URL routing; OAC/SigV4 for private S3 access",
+                    },
+                ],
+                education: [
+                    {
+                        id: uid(),
+                        degree: "B.Sc. Computer Science",
+                        school: "Rajamangala University of Technology Phranakorn",
+                        start: "Aug 2014",
+                        end: "May 2018",
+                    },
+                ],
+                skills: [
+                    "Kubernetes",
+                    "Terraform",
+                    "Ansible",
+                    "Docker",
+                    "Istio",
+                    "FluxCD",
+                    "GitHub Actions",
+                    "AWS",
+                    "Go",
+                    "Python",
+                    "Bash",
+                    "Grafana",
+                    "Prometheus",
+                    "Kiali",
+                    "Vector",
+                    "Quickwit",
+                    "Zabbix",
+                    "Trivy",
+                    "Gitleaks",
+                    "SonarQube",
+                    "Proxmox VE",
+                    "OpenStack",
+                    "VMware vSphere",
+                    "ECR",
+                    "Huawei CCE",
+                ],
+                languages: [
+                    { id: uid(), name: "Thai", level: "Native" },
+                    {
+                        id: uid(),
+                        name: "English",
+                        level: "Working proficiency",
+                    },
+                ],
+                certifications: [
+                    {
+                        id: uid(),
+                        name: "CKA — Certified Kubernetes Administrator",
+                        issuer: "Linux Foundation",
+                        year: "2026 – 2028",
+                    },
+                    {
+                        id: uid(),
+                        name: "CKAD — Certified Kubernetes Application Developer",
+                        issuer: "Linux Foundation",
+                        year: "2026 – 2028",
+                    },
+                ],
+                accent: "#6366f1",
+                photo: null,
+                template: "modern",
+                breaks: {},
+            };
+        }
+
+        // ── Boot ───────────────────────────────────────────────────────
+        if (restoredDraft)
+            draftStatus.textContent =
+                "Restored your saved draft. In the print dialog choose “Save as PDF”.";
+        syncTemplateButtons();
+        renderPhotoPreview();
+        bindStaticFields();
+        renderAllLists();
+        syncBreakButtons();
+        renderSheet();
+
+        const ro = new ResizeObserver(() => fitSheet());
+        ro.observe(previewPane);
+        window.addEventListener("resize", fitSheet);
+    </script>
+    <style>
+        .cv-page {
+            width: 100%;
+            padding: 2.5rem 1.25rem 4rem;
+        }
+
+        .cv-head {
+            max-width: 1560px;
+            margin: 0 auto 1.5rem;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        .cv-eyebrow {
+            font-family: var(--mono);
+            font-size: 0.6875rem;
+            font-weight: 600;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: var(--faint);
+            margin-bottom: 0.5rem;
+        }
+
+        .cv-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+            color: var(--text);
+        }
+
+        .cv-sub {
+            margin-top: 0.375rem;
+            font-size: 0.875rem;
+            color: var(--muted);
+            max-width: 42rem;
+        }
+
+        .cv-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 0.625rem;
+            flex-wrap: wrap;
+        }
+
+        .cv-swatches {
+            display: flex;
+            gap: 0.375rem;
+            padding-right: 0.5rem;
+            border-right: 1px solid var(--border);
+        }
+
+        .swatch {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            border: 2px solid transparent;
+            cursor: pointer;
+            padding: 0;
+            transition: transform 0.12s ease;
+        }
+
+        .swatch:hover {
+            transform: scale(1.12);
+        }
+
+        .swatch.is-active {
+            border-color: #fff;
+            box-shadow:
+                0 0 0 2px var(--bg),
+                0 0 0 4px var(--border-strong);
+        }
+
+        .cv-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5625rem 1rem;
+            background: rgba(148, 163, 184, 0.06);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--muted);
+            font-size: 0.8125rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition:
+                color 0.15s ease,
+                border-color 0.15s ease,
+                background 0.15s ease;
+        }
+
+        /* `display` above would otherwise override the `hidden` attribute. */
+        .cv-btn[hidden] {
+            display: none;
+        }
+
+        .cv-btn svg {
+            width: 15px;
+            height: 15px;
+        }
+
+        .cv-btn:hover {
+            color: var(--text);
+            border-color: var(--border-strong);
+            background: rgba(148, 163, 184, 0.1);
+        }
+
+        .cv-btn-primary {
+            background: rgba(129, 140, 248, 0.14);
+            border-color: rgba(129, 140, 248, 0.4);
+            color: #c7d2fe;
+        }
+
+        .cv-btn-primary:hover {
+            background: rgba(129, 140, 248, 0.22);
+            color: #e0e7ff;
+            border-color: rgba(129, 140, 248, 0.6);
+        }
+
+        .cv-seg {
+            display: inline-flex;
+            padding: 3px;
+            background: rgba(148, 163, 184, 0.07);
+            border: 1px solid var(--border);
+            border-radius: 9px;
+        }
+
+        .seg-btn {
+            border: none;
+            background: transparent;
+            color: var(--muted);
+            font-size: 0.8125rem;
+            font-weight: 600;
+            padding: 0.4375rem 0.875rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition:
+                color 0.15s ease,
+                background 0.15s ease;
+        }
+
+        .seg-btn:hover {
+            color: var(--text);
+        }
+
+        .seg-btn.is-active {
+            background: rgba(129, 140, 248, 0.18);
+            color: #e0e7ff;
+        }
+
+        .cv-page-badge {
+            font-family: var(--mono);
+            font-size: 0.6875rem;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            color: var(--muted);
+            padding: 0.5rem 0.75rem;
+            border: 1px dashed var(--border-strong);
+            border-radius: 999px;
+        }
+
+        .cv-photo-row {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.875rem 1rem;
+            background: rgba(148, 163, 184, 0.04);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+        }
+
+        .cv-photo-preview {
+            width: 56px;
+            height: 56px;
+            border-radius: 8px;
+            border: 1px dashed var(--border-strong);
+            background-color: rgba(148, 163, 184, 0.08);
+            overflow: hidden;
+            flex: none;
+        }
+
+        .cv-photo-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .cv-photo-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .cv-photo-hint {
+            font-size: 0.75rem;
+            color: var(--faint);
+        }
+
+        .cv-hint {
+            width: 100%;
+            font-size: 0.75rem;
+            color: var(--faint);
+            margin-top: 0.25rem;
+        }
+
+        .cv-workspace {
+            max-width: 1560px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: minmax(360px, 44%) 1fr;
+            gap: 1.25rem;
+            align-items: start;
+        }
+
+        .cv-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .cv-card {
+            padding: 1.25rem 1.5rem 1.5rem;
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .cv-card-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 0.75rem;
+        }
+
+        .cv-card-head h2 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .cv-card-head p {
+            margin-top: 0.25rem;
+            font-size: 0.8125rem;
+            color: var(--muted);
+        }
+
+        .cv-pagebreak {
+            flex: none;
+            margin-top: 2px;
+            font-family: var(--mono);
+            font-size: 0.6875rem;
+            font-weight: 600;
+            line-height: 1;
+            color: var(--muted);
+            background: transparent;
+            border: 1px dashed var(--border);
+            border-radius: 8px;
+            padding: 5px 10px;
+            cursor: pointer;
+            transition:
+                color 0.15s ease,
+                border-color 0.15s ease,
+                background 0.15s ease;
+        }
+
+        .cv-pagebreak:hover {
+            color: var(--text);
+            border-color: var(--muted);
+        }
+
+        .cv-pagebreak:focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 1px;
+        }
+
+        .cv-pagebreak[aria-pressed="true"] {
+            color: #c7d2fe;
+            background: rgba(129, 140, 248, 0.12);
+            border: 1px solid rgba(129, 140, 248, 0.35);
+        }
+
+        .cv-count {
+            margin-left: 0.375rem;
+            font-family: var(--mono);
+            font-size: 0.6875rem;
+            font-weight: 600;
+            color: var(--muted);
+            background: rgba(148, 163, 184, 0.1);
+            border: 1px solid var(--border);
+            padding: 1px 7px;
+            border-radius: 999px;
+            vertical-align: middle;
+        }
+
+        .cv-grid2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+        }
+
+        .cv-field {
+            display: flex;
+            flex-direction: column;
+            gap: 0.375rem;
+        }
+
+        .cv-field label,
+        .cv-check {
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            color: var(--muted);
+        }
+
+        .cv-check {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+        }
+
+        .cv-check input {
+            accent-color: var(--accent);
+        }
+
+        /* Control scale (inputs · selects · textareas) lives in the
+           is:global block — it must also reach JS-created fields. */
+
+        .cv-entries {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .cv-add {
+            align-self: flex-start;
+            padding: 0.4375rem 0.875rem;
+            background: transparent;
+            border: 1px dashed var(--border-strong);
+            border-radius: 8px;
+            color: var(--muted);
+            font-size: 0.8125rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition:
+                color 0.15s ease,
+                border-color 0.15s ease,
+                background 0.15s ease;
+        }
+
+        .cv-add:hover {
+            color: var(--text);
+            border-color: var(--accent);
+            background: rgba(129, 140, 248, 0.06);
+        }
+
+        .cv-chips-wrap {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.375rem;
+            padding: 0.5rem 0.625rem;
+            background: var(--bg-elev);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            transition:
+                border-color 0.15s ease,
+                box-shadow 0.15s ease;
+        }
+
+        .cv-chips-wrap:focus-within {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.18);
+        }
+
+        .cv-chipbox {
+            display: contents;
+        }
+
+        #skillInput {
+            flex: 1;
+            min-width: 9rem;
+            padding: 0.25rem 0;
+            background: transparent;
+            border: none;
+            color: var(--text);
+            font-size: 0.875rem;
+            caret-color: var(--accent);
+        }
+
+        #skillInput::placeholder {
+            color: var(--faint);
+        }
+
+        #skillInput:focus {
+            outline: none;
+        }
+
+        .cv-chip-hint {
+            margin-top: -0.5rem;
+            font-size: 0.75rem;
+            color: var(--faint);
+        }
+
+        .cv-preview {
+            position: sticky;
+            top: 1rem;
+            min-width: 0;
+            padding: 0.5rem 0 2rem;
+        }
+
+        .cv-sheet-wrap {
+            margin: 0 auto;
+        }
+
+        @media (max-width: 1100px) {
+            .cv-workspace {
+                grid-template-columns: 1fr;
+            }
+
+            .cv-preview {
+                position: static;
+                order: -1;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .cv-grid2 {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+
+    <!-- Sheet + dynamic entry styles must be global: they target nodes
+         created at runtime (no data-astro-cid attribute). -->
+    <style is:global>
+        /* ═══════════ A4 sheet (screen) ═══════════ */
+        .cv-sheet {
+            --cv-accent: #6366f1;
+            width: 210mm;
+            color: #1f2937;
+            font-family:
+                "Inter",
+                system-ui,
+                -apple-system,
+                "Segoe UI",
+                sans-serif;
+            font-size: 13px;
+            line-height: 1.5;
+            transform-origin: top center;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+            position: relative;
+        }
+
+        /* One card per printed A4 page — the preview is the print.
+           (named .cv-a4 to avoid clashing with the outer .cv-page layout) */
+        .cv-a4 {
+            position: relative;
+            min-height: 296.8mm;
+            padding: 14mm 15mm;
+            background: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 24px 64px rgba(2, 6, 16, 0.55);
+        }
+
+        .cv-a4 + .cv-a4 {
+            margin-top: 30px;
+        }
+
+        .cv-a4-num {
+            position: absolute;
+            top: -11px;
+            right: 14px;
+            background: #4f46e5;
+            color: #ffffff;
+            font:
+                600 11px/1 "Inter",
+                system-ui,
+                sans-serif;
+            padding: 3px 9px;
+            border-radius: 999px;
+            letter-spacing: 0.02em;
+        }
+
+        /* Offscreen measurement context, same box as a page's content. */
+        .cv-measure {
+            position: absolute;
+            top: 0;
+            left: -4000px;
+            width: 100%;
+            padding: 14mm 15mm;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        .cv-sheet-head {
+            margin-bottom: 4px;
+        }
+
+        .cv-headbar {
+            width: 52px;
+            height: 4px;
+            border-radius: 2px;
+            background: var(--cv-accent);
+            margin-bottom: 16px;
+        }
+
+        .cv-name {
+            font-size: 30px;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            color: #0f172a;
+            line-height: 1.15;
+        }
+
+        .cv-roletitle {
+            margin-top: 3px;
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--cv-accent);
+        }
+
+        .cv-contact {
+            margin-top: 12px;
+            font-size: 11.5px;
+            color: #475569;
+        }
+
+        .cv-contact .sep {
+            margin: 0 8px;
+            color: #cbd5e1;
+        }
+
+        .cv-sheet-head.has-photo {
+            display: flex;
+            align-items: flex-start;
+            gap: 22px;
+        }
+
+        .cv-head-text {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .cv-photo {
+            width: 88px;
+            height: 88px;
+            object-fit: cover;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+            flex: none;
+        }
+
+        .cv-cols {
+            display: grid;
+            grid-template-columns: 1.55fr 1fr;
+            gap: 4px 36px;
+            align-items: start;
+        }
+
+        .cv-col-side .cv-chip {
+            font-size: 11px;
+            padding: 2px 10px;
+        }
+
+        .cv-col-side .cv-pairgrid {
+            grid-template-columns: 1fr;
+        }
+
+        /* Narrow side column: stack name over meta instead of one cramped row. */
+        .cv-col-side .cv-pair {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 2px;
+        }
+
+        .cv-col-side .cv-pair-meta {
+            font-size: 11px;
+        }
+
+        /* ═══════════ ATS / AI template — plain, parser-friendly ═══════════ */
+        .cv-sheet.ats {
+            --cv-accent: #111827;
+            font-size: 13.5px;
+            line-height: 1.55;
+        }
+
+        .cv-sheet.ats .cv-headbar {
+            display: none;
+        }
+
+        .cv-sheet.ats .cv-photo {
+            display: none;
+        }
+
+        .cv-sheet.ats .cv-name {
+            font-size: 32px;
+            letter-spacing: -0.01em;
+        }
+
+        .cv-sheet.ats .cv-contact {
+            font-size: 12px;
+            color: #374151;
+        }
+
+        .cv-sheet.ats .cv-section {
+            margin-top: 18px;
+        }
+
+        .cv-sheet.ats .cv-section h3 {
+            font-size: 12px;
+            letter-spacing: 0.12em;
+            color: #111827;
+            border-bottom: 1.5px solid #111827;
+            padding-bottom: 7px;
+            margin-bottom: 8px;
+        }
+
+        .cv-sheet.ats .cv-entry {
+            margin-bottom: 10px;
+        }
+
+        .cv-sheet.ats .cv-entry-role,
+        .cv-sheet.ats .cv-entry-company,
+        .cv-sheet.ats .cv-pair-name {
+            color: #111827;
+        }
+
+        .cv-sheet.ats .cv-chip {
+            background: none;
+            border: 1px solid #d1d5db;
+            color: #1f2937;
+        }
+
+        .cv-section {
+            margin-top: 22px;
+        }
+
+        .cv-section h3 {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 10.5px;
+            font-weight: 700;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: var(--cv-accent);
+        }
+
+        .cv-para {
+            color: #334155;
+        }
+
+        .cv-entry {
+            margin-bottom: 12px;
+        }
+
+        .cv-entry:last-child {
+            margin-bottom: 0;
+        }
+
+        .cv-entry-head {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .cv-entry-role {
+            font-size: 13.5px;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .cv-entry-company {
+            font-weight: 600;
+            color: var(--cv-accent);
+        }
+
+        .cv-entry-loc {
+            color: #64748b;
+            font-size: 12px;
+        }
+
+        .cv-entry-date {
+            font-family:
+                "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+            font-size: 10.5px;
+            color: #64748b;
+            white-space: nowrap;
+        }
+
+        .cv-entry-desc {
+            margin-top: 3px;
+            color: #334155;
+        }
+
+        .cv-bullets {
+            margin: 6px 0 0 16px;
+            padding: 0;
+        }
+
+        .cv-bullets li {
+            margin-bottom: 3px;
+            color: #334155;
+        }
+
+        .cv-bullets li::marker {
+            color: var(--cv-accent);
+        }
+
+        .cv-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .cv-chip {
+            padding: 3px 11px;
+            border-radius: 999px;
+            background: #eef2ff;
+            background: color-mix(in srgb, var(--cv-accent) 9%, white);
+            border: 1px solid #c7d2fe;
+            border-color: color-mix(in srgb, var(--cv-accent) 28%, white);
+            font-size: 11.5px;
+            font-weight: 500;
+            color: #1e293b;
+        }
+
+        .cv-pairgrid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+            gap: 8px 18px;
+        }
+
+        .cv-pair {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .cv-pair-name {
+            font-weight: 600;
+            color: #0f172a;
+        }
+
+        .cv-pair-meta {
+            color: #64748b;
+        }
+
+        .cv-sheet-empty {
+            min-height: 900px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            text-align: center;
+            color: #94a3b8;
+            border: 1.5px dashed #e2e8f0;
+            border-radius: 10px;
+        }
+
+        .cv-sheet-empty strong {
+            font-size: 15px;
+            color: #64748b;
+        }
+
+        /* ═══════════ Shared control scale (static + JS-created) ═══════════ */
+        .cv-form input:not([type="checkbox"]),
+        .cv-form select,
+        .cv-form textarea,
+        .entry input:not([type="checkbox"]),
+        .entry select,
+        .entry textarea {
+            width: 100%;
+            padding: 0.6875rem 0.875rem;
+            background: var(--bg-elev);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text);
+            font-size: 0.875rem;
+            line-height: 1.5;
+            caret-color: var(--accent);
+            transition:
+                border-color 0.15s ease,
+                box-shadow 0.15s ease;
+        }
+
+        .cv-form textarea,
+        .entry textarea {
+            resize: vertical;
+            min-height: 5.5rem;
+        }
+
+        .cv-form select,
+        .entry select {
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%2394a3b8' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 0.875rem center;
+            padding-right: 2.5rem;
+            cursor: pointer;
+        }
+
+        .cv-form input:not([type="checkbox"]):hover,
+        .cv-form select:hover,
+        .cv-form textarea:hover,
+        .entry input:not([type="checkbox"]):hover,
+        .entry select:hover,
+        .entry textarea:hover {
+            border-color: var(--border-strong);
+        }
+
+        .cv-form input:not([type="checkbox"]):focus,
+        .cv-form select:focus,
+        .cv-form textarea:focus,
+        .entry input:not([type="checkbox"]):focus,
+        .entry select:focus,
+        .entry textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.18);
+        }
+
+        .cv-form input::placeholder,
+        .cv-form textarea::placeholder,
+        .entry input::placeholder,
+        .entry textarea::placeholder {
+            color: var(--faint);
+        }
+
+        .entry input:disabled,
+        .entry select:disabled,
+        .entry textarea:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        /* ═══════════ Dynamic form entries (JS-created) ═══════════ */
+        .entry {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            padding: 0.875rem 1rem 1rem;
+            background: rgba(148, 163, 184, 0.04);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            transition:
+                border-color 0.15s ease,
+                box-shadow 0.15s ease;
+        }
+
+        .entry:hover {
+            border-color: var(--border-strong);
+        }
+
+        .entry:focus-within {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.15);
+        }
+
+        .entry-empty {
+            padding: 0.875rem 1rem;
+            border: 1.5px dashed var(--border-strong);
+            border-radius: 10px;
+            color: var(--faint);
+            font-size: 0.8125rem;
+            text-align: center;
+        }
+
+        .entry-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .entry-num {
+            font-family: var(--mono);
+            font-size: 0.6875rem;
+            font-weight: 600;
+            color: var(--faint);
+            background: rgba(148, 163, 184, 0.1);
+            padding: 2px 8px;
+            border-radius: 999px;
+        }
+
+        .entry-remove {
+            background: transparent;
+            border: none;
+            padding: 0.25rem 0.5rem;
+            color: var(--faint);
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: 6px;
+            transition:
+                color 0.15s ease,
+                background 0.15s ease;
+        }
+
+        .entry-remove:hover {
+            color: var(--danger);
+            background: rgba(248, 113, 113, 0.1);
+        }
+
+        .entry-remove:focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 1px;
+        }
+
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.375rem;
+            padding: 0.3125rem 0.625rem;
+            background: rgba(129, 140, 248, 0.12);
+            border: 1px solid rgba(129, 140, 248, 0.3);
+            border-radius: 999px;
+            color: #c7d2fe;
+            font-size: 0.8125rem;
+            font-weight: 500;
+        }
+
+        .chip-x {
+            background: transparent;
+            border: none;
+            padding: 0;
+            color: inherit;
+            opacity: 0.65;
+            font-size: 1rem;
+            line-height: 1;
+            cursor: pointer;
+        }
+
+        .chip-x:hover {
+            opacity: 1;
+        }
+
+        .chip-x:focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 1px;
+            border-radius: 4px;
+        }
+
+        /* ═══════════ Print: only the sheet, A4, multi-page ═══════════ */
+        @media print {
+            @page {
+                size: A4;
+                margin: 14mm 15mm;
+            }
+
+            html,
+            body {
+                background: #ffffff !important;
+            }
+
+            .app-shell,
+            .app-main {
+                display: block !important;
+            }
+
+            /* App chrome (dark rail / overlays) must never reach the PDF. */
+            .app-nav {
+                display: none !important;
+            }
+
+            .app-shell,
+            .app-main,
+            .cv-page,
+            .cv-workspace,
+            .cv-preview,
+            .cv-sheet-wrap {
+                background: transparent !important;
+                box-shadow: none !important;
+            }
+
+            .cv-page {
+                display: block !important;
+                padding: 0 !important;
+            }
+
+            .cv-head,
+            .cv-form {
+                display: none !important;
+            }
+
+            .cv-workspace {
+                display: block !important;
+            }
+
+            .cv-preview {
+                position: static !important;
+                padding: 0 !important;
+            }
+
+            .cv-sheet-wrap {
+                width: auto !important;
+                height: auto !important;
+                margin: 0 !important;
+            }
+
+            .cv-sheet {
+                width: auto !important;
+                transform: none !important;
+            }
+
+            /* Each preview page maps 1:1 onto one printed A4 page. */
+            .cv-a4 {
+                width: auto !important;
+                min-height: 0 !important;
+                padding: 0 !important;
+                border-radius: 0 !important;
+                box-shadow: none !important;
+                margin: 0 !important;
+                break-inside: avoid-page;
+                page-break-inside: avoid;
+                break-after: page;
+                page-break-after: always;
+            }
+
+            .cv-a4:last-child {
+                break-after: auto;
+                page-break-after: auto;
+            }
+
+            .cv-a4-num,
+            .cv-measure {
+                display: none !important;
+            }
+
+            /* If a single unit overflows a page, keep it intact where possible. */
+            .cv-sheet-head,
+            .cv-entry,
+            .cv-para,
+            .cv-pair,
+            .cv-chips,
+            .cv-pairgrid,
+            .cv-bullets li,
+            .cv-entry-head {
+                break-inside: avoid-page;
+                page-break-inside: avoid;
+            }
+
+            .cv-section h3,
+            .cv-entry-head {
+                break-after: avoid-page;
+                page-break-after: avoid;
+            }
+
+            .cv-entry-desc,
+            .cv-para,
+            .cv-sheet p {
+                orphans: 4;
+                widows: 4;
+            }
+
+            .cv-section {
+                margin-top: 18px;
+            }
+
+            .cv-section:first-child {
+                margin-top: 0;
+            }
+
+            .cv-sheet,
+            .cv-sheet * {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+        }
+    </style>
+</Layout>

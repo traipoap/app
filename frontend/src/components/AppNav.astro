@@ -3,7 +3,14 @@
 // top bar + slide-in drawer on mobile.
 const path = Astro.url.pathname;
 
-const links = [
+type NavLink = {
+    href: string;
+    label: string;
+    icon: string;
+    adminOnly?: boolean;
+};
+
+const links: NavLink[] = [
     //{
     //href: "/",
     //label: "Home",
@@ -18,6 +25,12 @@ const links = [
         href: "/dashboard",
         label: "Dashboard",
         icon: "M18 20V10 M12 20V4 M6 20v-6",
+    },
+    {
+        href: "/resume",
+        label: "Resume",
+        icon: "M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z M14 2v6h6 M16 13H8 M10 9H8 M16 17H8",
+        adminOnly: true,
     },
     {
         href: "/setting",
@@ -93,6 +106,8 @@ const isActive = (href: string) =>
                     title={link.label}
                     class:list={["nav-link", { active: isActive(link.href) }]}
                     aria-current={isActive(link.href) ? "page" : undefined}
+                    data-admin-only={link.adminOnly ? "" : undefined}
+                    style={link.adminOnly ? "display: none" : undefined}
                 >
                     <svg
                         viewBox="0 0 24 24"
@@ -131,12 +146,7 @@ const isActive = (href: string) =>
                 </svg>
                 <span class="nav-collapse-label">Collapse</span>
             </button>
-            <button
-                class="nav-signout"
-                type="button"
-                title="Sign out"
-                onclick="localStorage.removeItem('authToken');sessionStorage.removeItem('authToken');window.location.href='/signin'"
-            >
+            <button class="nav-signout" type="button" title="Sign out">
                 <svg
                     viewBox="0 0 24 24"
                     fill="none"
@@ -162,6 +172,53 @@ const isActive = (href: string) =>
     const nav = document.querySelector<HTMLElement>(".app-nav");
     const burger = nav?.querySelector<HTMLElement>(".nav-burger");
     const overlay = nav?.querySelector<HTMLElement>(".nav-overlay");
+
+    // ── Admin-only links: hidden by default, revealed for admin sessions ──
+    const adminLinks = Array.from(
+        nav?.querySelectorAll<HTMLElement>("[data-admin-only]") ?? [],
+    );
+    const authRole = (): string | null => {
+        try {
+            const token =
+                window.sessionStorage.getItem("authToken") ||
+                window.localStorage.getItem("authToken");
+            if (!token) return null;
+            const b64 = token
+                .split(".")[1]
+                .replace(/-/g, "+")
+                .replace(/_/g, "/");
+            const json = window.atob(
+                b64.padEnd(b64.length + ((4 - (b64.length % 4)) % 4), "="),
+            );
+            return JSON.parse(json).role ?? null;
+        } catch {
+            return null;
+        }
+    };
+    if (authRole() === "admin") {
+        adminLinks.forEach((a) => a.removeAttribute("style"));
+    }
+
+    // ── Sign out: revoke server-side (best-effort), then wipe all tokens ──
+    const signoutBtn = nav?.querySelector<HTMLElement>(".nav-signout");
+    signoutBtn?.addEventListener("click", () => {
+        const refreshToken =
+            window.sessionStorage.getItem("refreshToken") ||
+            window.localStorage.getItem("refreshToken");
+        if (refreshToken) {
+            fetch("/api/auth/logout", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ refresh_token: refreshToken }),
+                keepalive: true,
+            }).catch(() => {});
+        }
+        for (const key of ["authToken", "refreshToken"]) {
+            window.localStorage.removeItem(key);
+            window.sessionStorage.removeItem(key);
+        }
+        window.location.href = "/signin";
+    });
 
     const closeNav = () => {
         nav?.classList.remove("open");

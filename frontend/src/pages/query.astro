@@ -481,6 +481,13 @@ import "../styles/main.css";
         </span>
     </div>
     <script type="module">
+        import {
+            ENGINES,
+            savedEngine,
+            rememberEngine,
+            engineDef,
+        } from "../lib/engines.js";
+
         /* ── log-generator (inlined; was src/scripts/log-generator.js) ── */
         // ═══════════════════════════════════════════════════════════
         // LUMINA — Log Generator Module
@@ -765,48 +772,68 @@ import "../styles/main.css";
             return res;
         }
 
+        function currentEngine() {
+            const sel = document.getElementById("engineSelect");
+            return (sel && sel.value) || "quickwit";
+        }
+
+        // อัปเดต hint ของ Raw Query ตาม engine ที่เลือก
+        function setEngineHint(engine) {
+            const e = engineDef(engine);
+            const ta = document.getElementById("rawQueryInput");
+            if (ta && e) ta.placeholder = e.hint;
+            const hint = document.querySelector(".raw-hint");
+            if (hint && e)
+                hint.textContent =
+                    e.label + " — applies on top of the date range";
+        }
+
+        // โหลดรายการ index ตาม engine (shape เดิม: [{index_config:{index_id}}])
+        async function loadIndices(engineId) {
+            const res = await authenticatedFetch(
+                `${API_BASE}/api/indices?engine=${encodeURIComponent(engineId)}`,
+            );
+
+            if (res.status === 403) {
+                clearTokens();
+                window.location.href = "/signin";
+                return;
+            }
+
+            const select = document.getElementById("indexSelect");
+            if (!res.ok) {
+                const errText = await res.text().catch(() => "");
+                console.error(`API error (${res.status}):`, errText);
+                select.innerHTML =
+                    '<option value="">(unavailable — check engine URL)</option>';
+                return;
+            }
+
+            const data = await res.json();
+            select.innerHTML = data
+                .map((item) => item.index_config?.index_id)
+                .filter((id) => id)
+                .sort((a, b) =>
+                    a === "syslogs" ? -1 : b === "syslogs" ? 1 : 0,
+                )
+                .map((id) => `<option value="${id}">${id}</option>`)
+                .join("");
+        }
+
         async function loadEngine() {
             try {
-                const res = await authenticatedFetch(`${API_BASE}/api/indices`);
+                // 1. engineSelect — Quickwit / Loki / Elasticsearch (จำค่าจากการเลือกครั้งก่อน)
+                const saved = savedEngine();
+                document.getElementById("engineSelect").innerHTML = ENGINES.map(
+                    (e) =>
+                        `<option value="${e.id}" ${
+                            e.id === saved ? "selected" : ""
+                        }>${e.label}</option>`,
+                ).join("");
+                setEngineHint(currentEngine());
 
-                if (res.status === 403) {
-                    clearTokens();
-                    window.location.href = "/signin";
-                    return;
-                }
-
-                if (!res.ok) {
-                    const errText = await res.text().catch(() => "");
-                    console.error(`API error (${res.status}):`, errText);
-                    showToast(
-                        `Server error (${res.status}). Please try again.`,
-                    );
-                    return;
-                }
-
-                const data = await res.json();
-
-                // 1. จัดการ engineSelect (ลดรูปเหลือบรรทัดเดียว)
-                document.getElementById("engineSelect").innerHTML = [
-                    "gin",
-                    "axum",
-                    "auto-generate",
-                ]
-                    .map(
-                        (id) =>
-                            `<option value="${id}" ${id === "syslogs" ? "selected" : ""}>${id}</option>`,
-                    )
-                    .join("");
-
-                // 2. จัดการ indexSelect (เอา syslogs ขึ้นก่อน)
-                document.getElementById("indexSelect").innerHTML = data
-                    .map((item) => item.index_config?.index_id)
-                    .filter((id) => id) // กรองเฉพาะค่าที่มีอยู่จริง (ไม่เป็น undefined หรือ empty)
-                    .sort((a, b) =>
-                        a === "syslogs" ? -1 : b === "syslogs" ? 1 : 0,
-                    ) // ย้าย syslogs ไปไว้หน้าสุด
-                    .map((id) => `<option value="${id}">${id}</option>`)
-                    .join("");
+                // 2. indexSelect ตาม engine
+                await loadIndices(currentEngine());
 
                 // 3. ตั้งค่า dateTo เป็นเวลาปัจจุบันเมื่อโหลดหน้า (ใช้ local time โดยตรง)
                 const now = new Date();
@@ -1141,6 +1168,7 @@ import "../styles/main.css";
                 index_id: index,
                 max_hits: 100,
             });
+            params.set("engine", currentEngine());
             if (TENANT && TENANT.slug) params.set("tenant", TENANT.slug);
 
             // 3. เพิ่ม Query: ถ้ามี Raw Query ให้ส่ง raw_query (backend จะใช้แทน message/source_ip)
@@ -2334,6 +2362,25 @@ import "../styles/main.css";
                     sortDirection = "desc";
                     renderTableHead(currentSchema());
                     runSearch();
+                });
+            }
+
+            // เปลี่ยน engine: จำค่า, โหลด index ของ engine นั้น แล้ว search ใหม่
+            const engineSelect = document.getElementById("engineSelect");
+            if (engineSelect && !engineSelect.dataset.bound) {
+                engineSelect.dataset.bound = "1";
+                engineSelect.addEventListener("change", () => {
+                    rememberEngine(engineSelect.value);
+                    setEngineHint(engineSelect.value);
+                    loadIndices(engineSelect.value).then(() => {
+                        selectedIndex =
+                            document.getElementById("indexSelect").value ||
+                            selectedIndex;
+                        sortField = "timestamp";
+                        sortDirection = "desc";
+                        renderTableHead(currentSchema());
+                        runSearch();
+                    });
                 });
             }
 

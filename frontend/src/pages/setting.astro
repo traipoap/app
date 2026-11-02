@@ -6,6 +6,20 @@ import Layout from "../layouts/Layout.astro";
     title="Setting — LUMINA"
     description="Manage your LUMINA account preferences and session."
 >
+    <!-- Client-side route protection: signed-in users only (same as /dashboard) -->
+    <script>
+        (function protectRoute() {
+            if (typeof window === "undefined") return;
+            const token =
+                window.sessionStorage.getItem("authToken") ||
+                window.localStorage.getItem("authToken");
+            if (!token) {
+                setTimeout(function () {
+                    window.location.href = "/signin";
+                }, 100);
+            }
+        })();
+    </script>
     <div class="settings-page">
         <header class="page-head">
             <div>
@@ -197,6 +211,17 @@ import Layout from "../layouts/Layout.astro";
         }
 
         function signout() {
+            // Revoke the refresh token server-side (best-effort) so it can't
+            // be replayed to mint new access tokens after logout.
+            const refreshToken = getRefreshToken();
+            if (refreshToken) {
+                fetch(`${API_BASE}/api/auth/logout`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ refresh_token: refreshToken }),
+                    keepalive: true,
+                }).catch(() => {});
+            }
             clearTokens();
             window.location.href = "/signin";
         }
@@ -228,6 +253,10 @@ import Layout from "../layouts/Layout.astro";
                         saveToken("refreshToken", data.refresh_token);
                     return true;
                 } catch {
+                    // Refresh failed (offline/revoked) — drop the session
+                    // instead of leaving a dead 401 state on the page.
+                    clearTokens();
+                    signout();
                     return false;
                 } finally {
                     refreshInFlight = null;
@@ -574,15 +603,34 @@ import Layout from "../layouts/Layout.astro";
         .field input,
         .field select {
             width: 100%;
-            padding: 0.625rem 0.8125rem;
+            padding: var(--control-pad-y) var(--control-pad-x);
             background: var(--bg-elev);
             border: 1px solid var(--border);
-            border-radius: 8px;
+            border-radius: var(--control-radius);
             color: var(--text);
-            font-size: 0.875rem;
+            caret-color: var(--accent);
             transition:
                 border-color 0.15s ease,
                 box-shadow 0.15s ease;
+        }
+
+        .field select {
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%2394a3b8' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right var(--control-pad-x) center;
+            padding-right: 2.5rem;
+            cursor: pointer;
+        }
+
+        .field input:hover,
+        .field select:hover {
+            border-color: var(--border-strong);
+        }
+
+        .field input::placeholder {
+            color: var(--faint);
         }
 
         .field input[readonly] {
