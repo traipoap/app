@@ -177,7 +177,7 @@ The pipeline uses GitHub Actions (`.github/workflows/pipeline.yml`). On each pus
 3. **Trivy scan** — vulnerability scan of the local image **before** push. Fixable CRITICAL/HIGH findings block the push; the SARIF report lands in the GitHub Security tab.
 4. **Push** — the image goes to GHCR (`ghcr.io/traipoap/backend`, `ghcr.io/traipoap/frontend`, tagged `0.0.<run_number>`).
 
-> The pipeline stops at a verified, pushed image. Cluster-side deployment is driven by FluxCD in the [gitops repository](https://github.com/traipoap/gitops).
+> The pipeline stops at a verified, pushed image. Cluster-side deployment is driven by ArgoCD in the [gitops repository](https://github.com/traipoap/gitops).
 
 A `workflow_dispatch` trigger with `force_build = true` rebuilds both services on demand (e.g., after docs-only changes or SonarQube fixes).
 
@@ -194,7 +194,7 @@ flowchart LR
     T --> TG{"Trivy passed?"}
     TG -->|"yes"| D["Push image to GHCR"]
     TG -->|"no"| Y["push blocked<br/>(SARIF still uploaded)"]
-    D --> E["FluxCD picks up the new tag (gitops repo)"]
+    D --> E["ArgoCD picks up the new tag (gitops repo)"]
 ```
 
 ### Repository secrets and variables
@@ -209,7 +209,7 @@ flowchart LR
 
 ## Deployment
 
-This repository intentionally contains **no cluster manifests**. FluxCD lives in the [gitops repository](https://github.com/traipoap/gitops), whose HelmReleases reference the GHCR images this pipeline publishes. FluxCD detects the new tag and rolls the update in-cluster — the pipeline's job ends at a verified, pushed image.
+This repository intentionally contains **no cluster manifests**. ArgoCD lives in the [gitops repository](https://github.com/traipoap/gitops), whose Applications reference the GHCR images this pipeline publishes. ArgoCD detects the new tag and rolls the update in-cluster — the pipeline's job ends at a verified, pushed image.
 
 ## Security
 
@@ -227,7 +227,7 @@ This repository intentionally contains **no cluster manifests**. FluxCD lives in
 **Planned improvements:**
 
 - OIDC (workload identity) for GHCR push instead of a PAT
-- cosign image signing with Flux verification
+- cosign image signing with ArgoCD image verification
 - SBOM (syft) published as build artifacts
 
 ## Troubleshooting
@@ -266,9 +266,9 @@ curl "$QUICKWIT_URL/api/v1/indexes"
 | [traipoap/traipoap](https://github.com/traipoap) | Summary — platform overview and documentation |
 | [traipoap/infra](https://github.com/traipoap/infra) | Infrastructure — Proxmox VMs (Terraform) + K3s cluster setup (Ansible) |
 | [traipoap/app](https://github.com/traipoap/app) | Application — this repository (Go/Gin API + Astro dashboard) |
-| [traipoap/gitops](https://github.com/traipoap/gitops) | GitOps — FluxCD manifests (HelmReleases, Kustomizations) |
+| [traipoap/gitops](https://github.com/traipoap/gitops) | GitOps — ArgoCD manifests (Applications, AppProjects) |
 
-> FluxCD in the gitops repo picks up the GHCR images published by this repo's pipeline — that is the entire deployment loop.
+> ArgoCD in the gitops repo picks up the GHCR images published by this repo's pipeline — that is the entire deployment loop.
 
 ## Contributing
 
