@@ -50,7 +50,7 @@ import Layout from "../layouts/Layout.astro";
                     <div class="hero-copy" data-reveal>
                         <span class="badge">
                             <span class="badge-dot"></span>
-                            Kubernetes · FluxCD GitOps · Proxmox
+                            Kubernetes · ArgoCD GitOps · Proxmox
                         </span>
                         <h1 class="hero-title">
                             Real-time log analytics for your
@@ -138,7 +138,7 @@ import Layout from "../layouts/Layout.astro";
                                 >
                                     <polyline points="20 6 9 17 4 12"></polyline>
                                 </svg>
-                                GitOps with FluxCD
+                                GitOps with ArgoCD
                             </li>
                         </ul>
                     </div>
@@ -390,7 +390,7 @@ import Layout from "../layouts/Layout.astro";
                                             </div>
                                             <div class="src-row">
                                                 <span class="src-name">
-                                                    flux-controller
+                                                    argocd-application-controller
                                                 </span>
                                                 <span class="src-track">
                                                     <i style="width: 54%"></i>
@@ -499,7 +499,7 @@ import Layout from "../layouts/Layout.astro";
                             Terraform and Ansible provision the nodes; K3s (HA,
                             embedded etcd) runs the workloads behind Istio
                             ambient mTLS; Vector streams every node and pod into
-                            Quickwit; FluxCD reconciles it all from Git — and
+                            Quickwit; ArgoCD reconciles it all from Git — and
                             GitHub Actions builds and ships the app itself.
                         </p>
                     </div>
@@ -549,7 +549,7 @@ import Layout from "../layouts/Layout.astro";
                         <svg
                             viewBox="0 0 960 480"
                             role="img"
-                            aria-label="Architecture diagram. Proxmox VE hosts a K3s cluster (3 control-planes with HA etcd, 2 workers) provisioned by Terraform and Ansible. The cluster runs Vector into Quickwit, Istio ambient mTLS, and cert-manager, serving the LUMINA API and dashboard. Garage S3 and NFS provide shared storage. GitHub reconciles the cluster through FluxCD and ships images via GitHub Actions and GHCR."
+                            aria-label="Architecture diagram. Proxmox VE hosts a K3s cluster (3 control-planes with HA etcd, 2 workers) provisioned by Terraform and Ansible. The cluster runs Vector into Quickwit, Istio ambient mTLS, and cert-manager, serving the LUMINA API and dashboard. Garage S3 and NFS provide shared storage. GitHub reconciles the cluster through ArgoCD and ships images via GitHub Actions and GHCR."
                         >
                             <defs>
                                 <marker
@@ -657,7 +657,7 @@ import Layout from "../layouts/Layout.astro";
                                 y="44"
                                 text-anchor="middle"
                             >
-                                FluxCD reconcile
+                                ArgoCD reconcile
                             </text>
                             <text
                                 class="arch-note"
@@ -889,7 +889,7 @@ import Layout from "../layouts/Layout.astro";
                             <span class="stat-num gradient">&lt; 1 hr</span>
                             <p>
                                 Full platform provisioned from zero (Terraform →
-                                Ansible → K3s → Istio → FluxCD). Repeatable;{" "}
+                                Ansible → K3s → Istio → ArgoCD). Repeatable;{" "}
                                 <code>terraform destroy</code> tears it down.
                             </p>
                         </article>
@@ -1108,7 +1108,7 @@ import Layout from "../layouts/Layout.astro";
                                     <path d="M18 9a9 9 0 0 1-9 9"></path>
                                 </svg>
                             </span>
-                            <h3>GitOps with FluxCD</h3>
+                            <h3>GitOps with ArgoCD</h3>
                             <p>
                                 Every workload and config declared in Git and
                                 continuously reconciled — plus GitHub Actions
@@ -1140,7 +1140,7 @@ import Layout from "../layouts/Layout.astro";
                         <li>Terraform</li>
                         <li>Ansible</li>
                         <li>Kubernetes</li>
-                        <li>FluxCD</li>
+                        <li>ArgoCD</li>
                         <li>Istio</li>
                         <li>cert-manager</li>
                         <li>GitHub Actions</li>
@@ -1238,7 +1238,7 @@ import Layout from "../layouts/Layout.astro";
                     >
                         <span class="about-badge">
                             <span class="badge-dot"></span>
-                            Open to senior Cloud / DevOps / SRE roles
+                            Open to mid Cloud / DevOps roles
                         </span>
                     </div>
                 </div>
@@ -1345,7 +1345,7 @@ import Layout from "../layouts/Layout.astro";
                 </div>
                 <div class="footer-bottom">
                     <p>© 2026 · LUMINA — Kubernetes GitOps Log Platform</p>
-                    <p>Built with Terraform · Ansible · FluxCD</p>
+                    <p>Built with Terraform · Ansible · ArgoCD</p>
                 </div>
             </div>
         </footer>

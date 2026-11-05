@@ -7,7 +7,7 @@ interface Props {
 ---
 
 <Layout title="Sign In — LUMINA" bodyClass="auth">
-    <a href="/" class="back-link">
+    <a href="/app" class="back-link">
         <svg
             viewBox="0 0 24 24"
             fill="none"
@@ -453,13 +453,35 @@ interface Props {
                     localStorage.setItem("authToken", data.token);
                     localStorage.setItem("refreshToken", data.refresh_token);
 
+                    // Route by role: admins land on the dashboard, regular
+                    // user accounts on their own resume (their home page).
+                    let target = "/dashboard";
+                    try {
+                        const b64 = data.token
+                            .split(".")[1]
+                            .replace(/-/g, "+")
+                            .replace(/_/g, "/");
+                        const claims = JSON.parse(
+                            atob(
+                                b64.padEnd(
+                                    b64.length + ((4 - (b64.length % 4)) % 4),
+                                    "=",
+                                ),
+                            ),
+                        );
+                        if (claims.role && claims.role !== "admin") {
+                            target = "/resume";
+                        }
+                    } catch {
+                        // Unreadable token claims — keep the default target.
+                    }
+
                     const searchParams = new URLSearchParams();
                     if (remember) searchParams.set("remember", "true");
                     const fromParam = encodeURIComponent(
                         window.location.pathname + window.location.search,
                     );
-                    const redirect = "/dashboard";
-                    window.location.href = `${redirect}?from=${fromParam}`;
+                    window.location.href = `${target}?from=${fromParam}`;
                 } else {
                     // Handle API error response
                     let errorMessage = "Invalid email or password";

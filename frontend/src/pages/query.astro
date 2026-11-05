@@ -4,7 +4,7 @@ import "../styles/main.css";
 ---
 
 <Layout title="Query — LUMINA">
-    <!-- Client-side route protection: runs in the browser -->
+    <!-- Client-side route protection: admin-only page; user-role accounts go to /resume -->
     <script>
         (function protectRoute() {
             if (typeof window === "undefined") return;
@@ -18,6 +18,32 @@ import "../styles/main.css";
                 // small delay to avoid interfering with initial rendering
                 setTimeout(function () {
                     window.location.href = "/signin";
+                }, 100);
+                return;
+            }
+
+            // Valid session but not admin → route to their resume (keep the session)
+            let role = null;
+            try {
+                const b64 = token
+                    .split(".")[1]
+                    .replace(/-/g, "+")
+                    .replace(/_/g, "/");
+                role =
+                    JSON.parse(
+                        window.atob(
+                            b64.padEnd(
+                                b64.length + ((4 - (b64.length % 4)) % 4),
+                                "=",
+                            ),
+                        ),
+                    ).role || null;
+            } catch {
+                role = null;
+            }
+            if (role !== "admin") {
+                setTimeout(function () {
+                    window.location.href = "/resume";
                 }, 100);
             }
         })();
@@ -508,7 +534,7 @@ import "../styles/main.css";
             "kube-apiserver",
             "kubernetes",
             "etcd",
-            "flux-operator",
+            "argocd-application-controller",
             "istio-proxy",
             "quickwit",
             "garage",
@@ -531,7 +557,7 @@ import "../styles/main.css";
         const messages = {
             error: [
                 "Quickwit search timed out after 30s on index syslogs",
-                "Failed to reconcile GitRepository fleet-infra: upstream error",
+                "Failed to sync Application app: repo unreachable (upstream error)",
                 "etcd: failed to commit transaction: timeout",
                 "Istio proxy: upstream connect error or disconnect/reset before headers",
                 "Vector: component crash — batch send failed (retry 5/5)",
@@ -544,7 +570,7 @@ import "../styles/main.css";
             warn: [
                 "Node kubernetes-worker-1: memory pressure at 87% of allocatable",
                 "Certificate expires in 7 days for frontend.codezap.win",
-                "Flux: reconciliation drift detected in namespace lumina",
+                "ArgoCD: out-of-sync resources detected in namespace lumina",
                 "Quickwit: index ingestion lag at 12s for syslogs",
                 "Garage: replica sync behind on super-node-2 (45s)",
                 "Istio: mTLS handshake retries elevated on gateway",
@@ -554,7 +580,7 @@ import "../styles/main.css";
                 "kubelet: PLEG is not healthy: taking longer than 3m0s",
             ],
             info: [
-                "Flux reconciled namespace lumina (0 drifts) in 2.4s",
+                "ArgoCD synced application lumina (0 out-of-sync) in 2.4s",
                 "Vector batch flushed: 12,482 events → Quickwit syslogs",
                 "Quickwit: index syslogs refreshed, 4.2M docs",
                 "HAProxy: backend kubernetes-apiserver marked UP (L7Check OK)",
@@ -563,7 +589,7 @@ import "../styles/main.css";
                 "Istio: config pushed to 6 proxies (revision 1.24)",
                 "Kubernetes: node kubernetes-worker-2 heartbeat OK (kubelet 1.31)",
                 "GitHub Actions: image ghcr.io/traipoap/gitops-backend:latest published",
-                "Flux: HelmRelease prometheus upgraded to 1.42.0",
+                "ArgoCD: application prometheus synced chart 1.42.0",
             ],
             debug: [
                 "Lucene query: message:(kubernetes AND warning) time range 15m",
@@ -574,7 +600,7 @@ import "../styles/main.css";
                 "Garage: GET bucket=logs key=export/any_20260525.csv (200 OK)",
                 "HAProxy: frontend vLan16 sessions=142 rate=12/s",
                 "kubelet: syncing kubernetes.io/nfs volume for pod quickwit-indexer-0",
-                "Flux: source reconciliation completed in 380ms",
+                "ArgoCD: git fetch completed for gitops repo in 380ms",
                 "Kernel: NFS: server 10.10.16.5 ready; waiting for first request",
             ],
             critical: [
@@ -585,7 +611,7 @@ import "../styles/main.css";
                 "Garage: data loss risk — 2/3 shards offline for bucket logs",
                 "HAProxy: no healthy backends for vserver kubernetes-apiserver",
                 "Kernel: Out of memory: killed process 1421 (vector)",
-                "Flux: reconciliation failing for 30 min — all namespaces",
+                "ArgoCD: sync failing for 30 min — all applications",
                 "Istio: sidecar crashloop detected in 4 pods (lumina)",
                 "NFS: server 10.10.16.5 not responding — mounts stale",
             ],
@@ -795,8 +821,8 @@ import "../styles/main.css";
             );
 
             if (res.status === 403) {
-                clearTokens();
-                window.location.href = "/signin";
+                // 403 = valid session without the admin role — keep the session.
+                window.location.href = "/resume";
                 return;
             }
 
@@ -1207,8 +1233,8 @@ import "../styles/main.css";
                 );
 
                 if (res.status === 403) {
-                    clearTokens();
-                    window.location.href = "/signin";
+                    // 403 = valid session without the admin role — keep the session.
+                    window.location.href = "/resume";
                     return;
                 }
 

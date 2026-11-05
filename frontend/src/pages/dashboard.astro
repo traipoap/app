@@ -4,7 +4,7 @@ import "../styles/main.css";
 ---
 
 <Layout title="Dashboard — LUMINA">
-    <!-- Client-side route protection: runs in the browser -->
+    <!-- Client-side route protection: admin-only page; user-role accounts go to /resume -->
     <script>
         (function protectRoute() {
             if (typeof window === "undefined") return;
@@ -18,6 +18,32 @@ import "../styles/main.css";
                 // small delay to avoid interfering with initial rendering
                 setTimeout(function () {
                     window.location.href = "/signin";
+                }, 100);
+                return;
+            }
+
+            // Valid session but not admin → route to their resume (keep the session)
+            let role = null;
+            try {
+                const b64 = token
+                    .split(".")[1]
+                    .replace(/-/g, "+")
+                    .replace(/_/g, "/");
+                role =
+                    JSON.parse(
+                        window.atob(
+                            b64.padEnd(
+                                b64.length + ((4 - (b64.length % 4)) % 4),
+                                "=",
+                            ),
+                        ),
+                    ).role || null;
+            } catch {
+                role = null;
+            }
+            if (role !== "admin") {
+                setTimeout(function () {
+                    window.location.href = "/resume";
                 }, 100);
             }
         })();
@@ -386,9 +412,10 @@ import "../styles/main.css";
                 `${API_BASE}/api/search?${params.toString()}`,
             );
             if (res.status === 403) {
-                clearTokens();
-                window.location.href = "/signin";
-                throw new Error("unauthorized");
+                // 403 = valid session without the admin role — keep the session,
+                // don't wipe it (that was the "bounced back to login" bug).
+                window.location.href = "/resume";
+                throw new Error("forbidden");
             }
             if (!res.ok) throw new Error(`Server error ${res.status}`);
             return res.json();
@@ -693,8 +720,7 @@ import "../styles/main.css";
                     `${API_BASE}/api/indices?engine=${encodeURIComponent(engineId)}`,
                 );
                 if (res.status === 403) {
-                    clearTokens();
-                    window.location.href = "/signin";
+                    window.location.href = "/resume";
                     return;
                 }
                 if (!res.ok) throw new Error(`Server error ${res.status}`);

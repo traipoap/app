@@ -6,9 +6,9 @@ import Layout from "../layouts/Layout.astro";
     title="CV Builder — LUMINA"
     description="Build a polished, ATS-friendly CV with live A4 preview and one-click PDF export."
 >
-    <!-- Client-side route protection: admin-only page (same pattern as /dashboard) -->
+    <!-- Client-side route protection: any authenticated role sees their own CV -->
     <script>
-        (function protectAdminRoute() {
+        (function protectRoute() {
             if (typeof window === "undefined") return;
             const token =
                 window.sessionStorage.getItem("authToken") ||
@@ -16,25 +16,6 @@ import Layout from "../layouts/Layout.astro";
             if (!token) {
                 setTimeout(function () {
                     window.location.href = "/signin";
-                }, 100);
-                return;
-            }
-            let role = null;
-            try {
-                const b64 = token
-                    .split(".")[1]
-                    .replace(/-/g, "+")
-                    .replace(/_/g, "/");
-                const json = window.atob(
-                    b64.padEnd(b64.length + ((4 - (b64.length % 4)) % 4), "="),
-                );
-                role = JSON.parse(json).role || null;
-            } catch {
-                role = null;
-            }
-            if (role !== "admin") {
-                setTimeout(function () {
-                    window.location.href = "/dashboard";
                 }, 100);
             }
         })();
@@ -620,28 +601,33 @@ import Layout from "../layouts/Layout.astro";
             };
         }
 
+        function normalizeDraft(d: unknown): CVData | null {
+            if (!d || typeof d !== "object") return null;
+            const obj = d as CVData;
+            if (typeof obj.name !== "string" || !Array.isArray(obj.experience))
+                return null;
+            // Merge over the current shape so older drafts keep working.
+            return {
+                ...defaultData(),
+                ...obj,
+                summary: typeof obj.summary === "string" ? obj.summary : "",
+                photo: typeof obj.photo === "string" ? obj.photo : null,
+                template:
+                    obj.template === "classic" || obj.template === "ats"
+                        ? obj.template
+                        : "modern",
+                breaks:
+                    obj.breaks && typeof obj.breaks === "object"
+                        ? (obj.breaks as Record<string, boolean>)
+                        : {},
+            };
+        }
+
         function loadDraft(): CVData | null {
             try {
                 const raw = window.localStorage.getItem(DRAFT_KEY);
                 if (!raw) return null;
-                const d = JSON.parse(raw) as CVData;
-                if (typeof d.name !== "string" || !Array.isArray(d.experience))
-                    return null;
-                // Merge over the current shape so older drafts keep working.
-                return {
-                    ...defaultData(),
-                    ...d,
-                    summary: typeof d.summary === "string" ? d.summary : "",
-                    photo: typeof d.photo === "string" ? d.photo : null,
-                    template:
-                        d.template === "classic" || d.template === "ats"
-                            ? d.template
-                            : "modern",
-                    breaks:
-                        d.breaks && typeof d.breaks === "object"
-                            ? (d.breaks as Record<string, boolean>)
-                            : {},
-                };
+                return normalizeDraft(JSON.parse(raw));
             } catch {
                 return null;
             }
@@ -1823,27 +1809,159 @@ import Layout from "../layouts/Layout.astro";
             });
         }
 
-        // ── Autosave ───────────────────────────────────────────────────
-        let saveTimer: number | undefined;
-        function scheduleSave() {
-            window.clearTimeout(saveTimer);
-            saveTimer = window.setTimeout(() => {
+        // ── Account sync (per-account CV stored via the backend) ──────
+        function getToken() {
+            return (
+                window.sessionStorage.getItem("authToken") ||
+                window.localStorage.getItem("authToken")
+            );
+        }
+
+        function getRefreshToken() {
+            return (
+                window.sessionStorage.getItem("refreshToken") ||
+                window.localStorage.getItem("refreshToken")
+            );
+        }
+
+        async function tryRefreshToken() {
+            const refreshToken = getRefreshToken();
+            if (!refreshToken) return false;
+            try {
+                const res = await fetch("/api/auth/refresh", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ refresh_token: refreshToken }),
+                });
+                if (!res.ok) return false;
+                const body = await res.json();
+                if (body.token) {
+                    window.localStorage.setItem("authToken", body.token);
+                    // Refresh tokens are rotated (single-use) — persist the
+                    // new one so the next refresh doesn't use the stale token.
+                    if (body.refresh_token)
+                        window.localStorage.setItem(
+                            "refreshToken",
+                            body.refresh_token,
+                        );
+                    return true;
+                }
+                return false;
+            } catch {
+                return false;
+            }
+        }
+
+        async function authenticatedFetch(
+            url: string,
+            options: RequestInit = {},
+        ) {
+            const res = await fetch(url, {
+                ...options,
+                headers: {
+                    ...(options.headers || {}),
+                    Authorization: `Bearer ${getToken()}`,
+                },
+            });
+            if (res.status === 401) {
+                const refreshed = await tryRefreshToken();
+                if (refreshed) {
+                    return await fetch(url, {
+                        ...options,
+                        headers: {
+                            ...(options.headers || {}),
+                            Authorization: `Bearer ${getToken()}`,
+                        },
+                    });
+                }
+            }
+            return res;
+        }
+
+        async function pushToAccount(): Promise<boolean> {
+            try {
+                const res = await authenticatedFetch("/api/resume", {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ data }),
+                });
+                return res.ok;
+            } catch {
+                return false;
+            }
+        }
+
+        function applyData(next: CVData) {
+            data = next;
+            form.querySelectorAll<HTMLButtonElement>(".swatch").forEach((s) =>
+                s.classList.toggle(
+                    "is-active",
+                    s.dataset.accent === data.accent,
+                ),
+            );
+            syncTemplateButtons();
+            renderPhotoPreview();
+            bindStaticFields();
+            renderAllLists();
+            syncBreakButtons();
+            renderSheet();
+        }
+
+        async function loadAccountResume(): Promise<boolean> {
+            try {
+                const res = await authenticatedFetch("/api/resume");
+                if (!res.ok) return false;
+                const body = await res.json();
+                const restored = normalizeDraft(body.data);
+                if (!restored) return false;
+                applyData(restored);
+                // Keep a local offline cache of the account copy.
                 try {
                     window.localStorage.setItem(
                         DRAFT_KEY,
                         JSON.stringify(data),
                     );
-                    draftStatus.style.color = "";
-                    const t = new Date().toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                    });
-                    draftStatus.textContent = `Draft saved at ${t}. In the print dialog choose “Save as PDF”.`;
                 } catch {
-                    // Storage full or blocked — surface it instead of losing the draft silently.
+                    // Offline cache is best-effort.
+                }
+                return true;
+            } catch {
+                return false;
+            }
+        }
+
+        // ── Autosave ───────────────────────────────────────────────
+        let saveTimer: number | undefined;
+        function scheduleSave() {
+            window.clearTimeout(saveTimer);
+            saveTimer = window.setTimeout(async () => {
+                const t = new Date().toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                });
+                let localOk = false;
+                try {
+                    window.localStorage.setItem(
+                        DRAFT_KEY,
+                        JSON.stringify(data),
+                    );
+                    localOk = true;
+                } catch {
+                    // Storage full or blocked — the account copy below still saves.
+                }
+                draftStatus.style.color = "";
+                draftStatus.textContent = "Saving to your account…";
+                const synced = await pushToAccount();
+                if (synced) {
+                    draftStatus.style.color = "";
+                    draftStatus.textContent = `Saved to your account at ${t}. In the print dialog choose “Save as PDF”.`;
+                } else if (localOk) {
+                    draftStatus.style.color = "";
+                    draftStatus.textContent = `Saved locally at ${t} — couldn't reach your account (check connection).`;
+                } else {
                     draftStatus.style.color = "var(--danger)";
                     draftStatus.textContent =
-                        "Could not save the draft — browser storage is full or blocked.";
+                        "Could not save the draft — storage blocked and account sync failed.";
                 }
             }, 400);
         }
@@ -2203,7 +2321,7 @@ import Layout from "../layouts/Layout.astro";
                 github: "github.com/traipoap",
                 linkedin: "linkedin.com/in/traipoap",
                 summary:
-                    "Network Administrator (CKA & CKAD certified) with 4+ years operating a national telco cloud. Design, build, and operate an end-to-end GitOps Kubernetes platform in a personal production environment — Terraform, Ansible, K3s, Istio, FluxCD, GitHub Actions — with a multi-region failover DR layer on AWS (CloudFront, Lambda, S3). Zero manual deployment steps; provisioning cut from hours to under an hour.",
+                    "Network Administrator (CKA & CKAD certified) with 4+ years operating a national telco cloud. Design, build, and operate an end-to-end GitOps Kubernetes platform in a personal production environment — Terraform, Ansible, K3s, Istio, ArgoCD, GitHub Actions — with a multi-region failover DR layer on AWS (CloudFront, Lambda, S3). Zero manual deployment steps; provisioning cut from hours to under an hour.",
                 experience: [
                     {
                         id: uid(),
@@ -2224,21 +2342,21 @@ import Layout from "../layouts/Layout.astro";
                         name: "infra — K3s Platform on Proxmox",
                         link: "github.com/traipoap/infra",
                         description:
-                            "Automated K3s platform: Terraform (template-clone VMs, count-driven node scaling, HCP remote state) → Ansible (6 idempotent playbooks, kernel tuning) → K3s (embedded etcd, HA) → Istio (ambient) + Gateway API → FluxCD bootstrap from GitHub\nProvisions the full platform from zero in under an hour — super-node (HAProxy L7 LB, syslog relay, NFS, S3) + K3s 3 control-planes (etcd quorum) + 2 workers; fully repeatable, terraform destroy tears it down\nMulti-runtime container support: crun default runtime, youki exposed as a Kubernetes RuntimeClass\nDocumented 14 architecture decisions plus deployment and troubleshooting runbook",
+                            "Automated K3s platform: Terraform (template-clone VMs, count-driven node scaling, HCP remote state) → Ansible (6 idempotent playbooks, kernel tuning) → K3s (embedded etcd, HA) → Istio (ambient) + Gateway API → ArgoCD GitOps (Helm install)\nProvisions the full platform from zero in under an hour — super-node (HAProxy L7 LB, syslog relay, NFS, S3) + K3s 3 control-planes (etcd quorum) + 2 workers; fully repeatable, terraform destroy tears it down\nMulti-runtime container support: crun default runtime, youki exposed as a Kubernetes RuntimeClass\nDocumented 14 architecture decisions plus deployment and troubleshooting runbook",
                     },
                     {
                         id: uid(),
                         name: "app — Go/GIN + Astro Log Platform",
                         link: "app.traipoap.com · github.com/traipoap/app",
                         description:
-                            "Built and run a self-hosted log-search platform in a personal production environment — Go API (JWT auth, Quickwit search, CSV export) + Astro dashboard\nCI/CD with GitHub Actions: Gitleaks + SonarQube SAST gate → path-filtered image build → Trivy CRITICAL/HIGH scan (SARIF) → GHCR → FluxCD auto-deploys",
+                            "Built and run a self-hosted log-search platform in a personal production environment — Go API (JWT auth, Quickwit search, CSV export) + Astro dashboard\nCI/CD with GitHub Actions: Gitleaks + SonarQube SAST gate → path-filtered image build → Trivy CRITICAL/HIGH scan (SARIF) → GHCR → ArgoCD auto-deploys",
                     },
                     {
                         id: uid(),
-                        name: "gitops — FluxCD GitOps",
+                        name: "gitops — ArgoCD GitOps",
                         link: "github.com/traipoap/gitops",
                         description:
-                            "GitOps source of truth for the K3s cluster — all state in Git, continuously reconciled by FluxCD with self-healing configuration drift\nExternal Secrets Operator + AWS SecretsManager — credentials synced into the cluster, never stored in Git\nFluxCD Image Automation (semver ImagePolicy) — new images auto-detected, tags updated and auto-deployed\nKyverno policy enforcing CPU/memory requests & limits on all Pods; LimitRange defaults; flux-schema validation\nObservability: Prometheus, Grafana, Kiali, Vector → Quickwit logging pipeline; Flux Web UI in server-only mode",
+                            "GitOps source of truth for the K3s cluster — all state in Git, continuously reconciled by ArgoCD with self-healing configuration drift\nExternal Secrets Operator + AWS SecretsManager — credentials synced into the cluster, never stored in Git\nArgoCD image updaters (semver) — new images auto-detected, tags updated and auto-deployed\nKyverno policy enforcing CPU/memory requests & limits on all Pods; LimitRange defaults; ArgoCD Application schema validation\nObservability: Prometheus, Grafana, Kiali, Vector → Quickwit logging pipeline; ArgoCD UI for application visibility",
                     },
                     {
                         id: uid(),
@@ -2263,7 +2381,7 @@ import Layout from "../layouts/Layout.astro";
                     "Ansible",
                     "Docker",
                     "Istio",
-                    "FluxCD",
+                    "ArgoCD",
                     "GitHub Actions",
                     "AWS",
                     "Go",
@@ -2313,7 +2431,7 @@ import Layout from "../layouts/Layout.astro";
             };
         }
 
-        // ── Boot ───────────────────────────────────────────────────────
+        // ── Boot ─────────────────────────────────────────────────────────────
         if (restoredDraft)
             draftStatus.textContent =
                 "Restored your saved draft. In the print dialog choose “Save as PDF”.";
@@ -2323,6 +2441,31 @@ import Layout from "../layouts/Layout.astro";
         renderAllLists();
         syncBreakButtons();
         renderSheet();
+
+        // Sync with the account copy: the backend is the source of truth;
+        // a local draft is only a fallback and gets migrated to the account.
+        void (async () => {
+            const fromAccount = await loadAccountResume();
+            if (fromAccount) {
+                draftStatus.style.color = "";
+                draftStatus.textContent =
+                    "Loaded your CV from your account. In the print dialog choose “Save as PDF”.";
+                return;
+            }
+            if (!restoredDraft) return;
+            const hasContent =
+                data.name.trim() !== "" ||
+                data.summary.trim() !== "" ||
+                data.experience.some(
+                    (e) => e.role.trim() !== "" || e.company.trim() !== "",
+                ) ||
+                data.projects.length > 0;
+            if (hasContent && (await pushToAccount())) {
+                draftStatus.style.color = "";
+                draftStatus.textContent =
+                    "Migrated your saved draft to your account.";
+            }
+        })();
 
         const ro = new ResizeObserver(() => fitSheet());
         ro.observe(previewPane);

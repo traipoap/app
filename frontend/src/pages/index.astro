@@ -158,7 +158,7 @@ import Layout from "../layouts/Layout.astro";
         <div class="mq-track" id="mq">
             <span>
                 PROXMOX VE<b>◆</b>TERRAFORM<b>◆</b>ANSIBLE<b>◆</b>K3S<b>◆</b>
-                ISTIO<b>◆</b>FLUXCD<b>◆</b>GITHUB ACTIONS<b>◆</b>QUICKWIT
+                ISTIO<b>◆</b>ARGOCD<b>◆</b>GITHUB ACTIONS<b>◆</b>QUICKWIT
                 <b>◆</b>
                 VECTOR<b>◆</b>TRIVY<b>◆</b>SONARQUBE<b>◆</b>GITLEAKS<b>◆</b>
                 ZABBIX
@@ -166,7 +166,7 @@ import Layout from "../layouts/Layout.astro";
             </span>
             <span>
                 PROXMOX VE<b>◆</b>TERRAFORM<b>◆</b>ANSIBLE<b>◆</b>K3S<b>◆</b>
-                ISTIO<b>◆</b>FLUXCD<b>◆</b>GITHUB ACTIONS<b>◆</b>QUICKWIT
+                ISTIO<b>◆</b>ARGOCD<b>◆</b>GITHUB ACTIONS<b>◆</b>QUICKWIT
                 <b>◆</b>
                 VECTOR<b>◆</b>TRIVY<b>◆</b>SONARQUBE<b>◆</b>GITLEAKS<b>◆</b>
                 ZABBIX
@@ -279,7 +279,7 @@ import Layout from "../layouts/Layout.astro";
                                 x="372"
                                 y="182"
                             >
-                                multi-region · ap-southeast-1/7 + us-east-1
+                                multi-region · ap-southeast-1/7
                             </text>
                             <g data-part="gateway">
                                 <rect
@@ -642,7 +642,7 @@ import Layout from "../layouts/Layout.astro";
                                 และ Vector → Quickwit เก็บ log
                             </li>
                             <li>
-                                <b>FluxCD</b> reconcile จาก Git ต่อเนื่อง —
+                                <b>ArgoCD</b> reconcile จาก Git ต่อเนื่อง —
                                 drift auto-heal, deploy ด้วยมือ 0 ขั้นตอน
                             </li>
                         </ul>
@@ -892,9 +892,9 @@ import Layout from "../layouts/Layout.astro";
                         <li>
                             <span class="n">03</span>
                             <div>
-                                <b>FluxCD — แอปและคอนฟิกทั้งหมดอยู่ใน Git</b>
+                                <b>ArgoCD — แอปและคอนฟิกทั้งหมดอยู่ใน Git</b>
                                 <p>
-                                    ทุก state อยู่ใน Git — FluxCD reconcile
+                                    ทุก state อยู่ใน Git — ArgoCD reconcile
                                     ต่อเนื่อง drift เมื่อไหร่ ระบบ heal
                                     เองโดยอัตโนมัติ
                                 </p>
@@ -976,19 +976,24 @@ import Layout from "../layouts/Layout.astro";
           traipoap.local/tier: <span class="s">"&#123;&#123; node_tier &#125;&#125;"</span></pre>
                         </div>
                         <div class="codep" data-p="hm">
-                            <pre><span class="c"># gitops/policies — FluxCD Image Automation: อัปเดต semver อัตโนมัติ</span>
-<span class="k">apiVersion</span>: <span class="s">source.toolkit.fluxcd.io/v1</span>
-<span class="k">kind</span>: <span class="s">ImagePolicy</span>
+                            <pre><span class="c"># gitops/apps — ArgoCD Application: sync จาก Git ต่อเนื่อง</span>
+<span class="k">apiVersion</span>: <span class="s">argoproj.io/v1alpha1</span>
+<span class="k">kind</span>: <span class="s">Application</span>
 <span class="k">metadata</span>:
   name: <span class="s">app</span>
+  namespace: <span class="s">argocd</span>
 <span class="k">spec</span>:
-  imageRepositoryRef:
-    name: <span class="s">app</span>
-  policy:
-    semver: <span class="s">"v2.x"</span>       <span class="c"># image ใหม่ → update tag → auto deploy</span>
-  updateAutomation:
-    branch: <span class="s">main</span>
-    commit: <span class="s">"auto: update image &#123;&#123; new_digest &#125;&#125;"</span></pre>
+  project: <span class="s">default</span>
+  source:
+    repoURL: <span class="s">https://github.com/traipoap/gitops</span>
+    targetRevision: <span class="s">main</span>
+  destination:
+    server: <span class="s">https://kubernetes.default.svc</span>
+    namespace: <span class="s">lumina</span>
+  syncPolicy:
+    automated:
+      prune: <span class="v">true</span>
+      selfHeal: <span class="v">true</span>  <span class="c"># drift ถูก sync กลับจาก Git อัตโนมัติ</span></pre>
                         </div>
                     </div>
                 </div>
@@ -1065,7 +1070,7 @@ import Layout from "../layouts/Layout.astro";
                     </div>
                     <div class="step">
                         <span class="dot">⟳</span>
-                        <b>FluxCD Deploy</b>
+                        <b>ArgoCD Deploy</b>
                         <small>auto-reconcile</small>
                         <em>รอ</em>
                     </div>
@@ -1088,7 +1093,7 @@ import Layout from "../layouts/Layout.astro";
                 <div class="pn rv" style="--d:1">
                     <b>Rollback กี่วินาที?</b>
                     <p>
-                        git revert หนึ่ง commit → FluxCD sync กลับเวอร์ชันเดิม
+                        git revert หนึ่ง commit → ArgoCD sync กลับเวอร์ชันเดิม
                         ทั้งกระบวนการไม่เกิน 60 วินาที
                     </p>
                 </div>
@@ -1110,12 +1115,12 @@ import Layout from "../layouts/Layout.astro";
             <div class="sec-head rv">
                 <span class="sec-idx">05</span>
                 <div>
-                    <span class="sec-tag">FLUXCD · GITOPS</span>
+                    <span class="sec-tag">ARGOCD · GITOPS</span>
                     <h2 class="lm">
                         <span>สถานะแอปในคลัสเตอร์ตอนนี้</span>
                     </h2>
                     <p class="sub">
-                        แอปที่รันจริง — app · flux-web · grafana · kiali ·
+                        แอปที่รันจริง — app · argocd · grafana · kiali ·
                         sonarqube
                     </p>
                 </div>
@@ -1151,7 +1156,7 @@ import Layout from "../layouts/Layout.astro";
                                 <td></td>
                             </tr>
                             <tr>
-                                <td>flux-web</td>
+                                <td>argocd</td>
                                 <td>
                                     <span class="badge sync">SYNCED</span>
                                 </td>
@@ -1222,7 +1227,7 @@ import Layout from "../layouts/Layout.astro";
                 <div class="vs rv" style="--d:1">
                     <div class="vs-row head">
                         <div>PUSH-BASED (kubectl apply)</div>
-                        <div>GITOPS (FluxCD)</div>
+                        <div>GITOPS (ArgoCD)</div>
                     </div>
                     <div class="vs-row">
                         <div class="no">✗ ดรืฟต์ได้เรื่อย ๆ ไม่มีใครรู้</div>
@@ -1486,10 +1491,10 @@ import Layout from "../layouts/Layout.astro";
                     <div>
                         <div class="num">04</div>
                         <h3>Ship แบบไม่ต้องลุ้น</h3>
-                        <div class="tool">GITHUB ACTIONS → FLUXCD</div>
+                        <div class="tool">GITHUB ACTIONS → ARGOCD</div>
                         <p>
                             ทุกการเปลี่ยนแปลงผ่าน pipeline เดียว: Gitleaks +
-                            SonarQube → build → Trivy gate → GHCR → FluxCD
+                            SonarQube → build → Trivy gate → GHCR → ArgoCD
                             auto-deploy — deploy ด้วยมือ 0 ขั้นตอน
                             คืนวันศุกร์ก็ไม่ต่างจากคืนไหน
                         </p>
@@ -1580,7 +1585,7 @@ import Layout from "../layouts/Layout.astro";
                     </div>
                     <div class="skill">
                         <label>
-                            <b>CI/CD (GitHub Actions, FluxCD)</b>
+                            <b>CI/CD (GitHub Actions, ArgoCD)</b>
                             <span>88%</span>
                         </label>
                         <div class="bar">
@@ -1626,7 +1631,7 @@ import Layout from "../layouts/Layout.astro";
                     <div class="chips">
                         <span class="chip">Proxmox VE</span>
                         <span class="chip">Istio</span>
-                        <span class="chip">FluxCD</span>
+                        <span class="chip">ArgoCD</span>
                         <span class="chip">Ansible</span>
                         <span class="chip">Docker</span>
                         <span class="chip">Zabbix</span>
@@ -1659,12 +1664,12 @@ import Layout from "../layouts/Layout.astro";
                                 DevOps Engineer · Personal Production Platform
                             </b>
                             <div class="org">
-                                app.traipoap.com · K3s + FluxCD + AWS DR
+                                app.traipoap.com · K3s + ArgoCD + AWS DR
                             </div>
                             <p>
                                 ออกแบบและรัน GitOps Kubernetes platform ใน
                                 production ของตัวเอง — Terraform, Ansible, K3s,
-                                Istio, FluxCD, GitHub Actions + multi-region
+                                Istio, ArgoCD, GitHub Actions + multi-region
                                 failover บน AWS deploy ด้วยมือ 0 ขั้นตอน
                             </p>
                         </div>
@@ -3940,7 +3945,7 @@ import Layout from "../layouts/Layout.astro";
                     {
                         dur: 2400,
                         logs: [
-                            "flux: imagepolicy/app detected new tag a3f9c21",
+                            "argocd: application/app synced new revision a3f9c21",
                             "reconciled 4 resources in 4.2s",
                             "✓ rollout สมบูรณ์ — app.traipoap.com ออนไลน์แล้ว",
                         ],
