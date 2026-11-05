@@ -49,6 +49,11 @@ func setupAuthRoutes(r *gin.Engine, jwtService *services.JWTService, db *gorm.DB
 		api.GET("/admin", middleware.RoleAuth("admin"), controllers.HandleAdmin)
 		api.POST("/logout", controllers.HandleLogout(db, jwtService))
 
+		// Per-account CV document — every authenticated role gets their own
+		// copy; the backend scopes the data to the caller's user id.
+		api.GET("/resume", controllers.HandleResumeGet(db))
+		api.PUT("/resume", controllers.HandleResumePut(db))
+
 		// User administration (admin only)
 		api.GET("/users", middleware.RoleAuth("admin"), controllers.HandleUsersList(db))
 		api.DELETE("/users/:id", middleware.RoleAuth("admin"), controllers.HandleUserDelete(db))

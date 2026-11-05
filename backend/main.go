@@ -50,8 +50,8 @@ func main() {
 		log.Fatalf("failed to connect database: %v", err)
 	}
 
-	// Auto-migrate the User and RevokedToken tables
-	if err := db.AutoMigrate(&models.User{}, &models.RevokedToken{}); err != nil {
+	// Auto-migrate the User, RevokedToken and Resume tables
+	if err := db.AutoMigrate(&models.User{}, &models.RevokedToken{}, &models.Resume{}); err != nil {
 		log.Fatalf("failed to migrate database: %v", err)
 	}
 
