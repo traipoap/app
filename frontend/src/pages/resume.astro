@@ -48,7 +48,7 @@ import Layout from "../layouts/Layout.astro";
                     Fill the form — the A4 preview updates live. Export a
                     print-perfect PDF in one click.
                 </p>
-                <a href="/portfolio" class="cv-xlink">
+                <a href="/" class="cv-xlink">
                     Want the full story? → See the portfolio
                 </a>
             </div>
@@ -2224,7 +2224,7 @@ import Layout from "../layouts/Layout.astro";
                         name: "infra — K3s Platform on Proxmox",
                         link: "github.com/traipoap/infra",
                         description:
-                            "Automated K3s platform: Terraform (template-clone VMs, count-driven node scaling, HCP remote state) → Ansible (6 idempotent playbooks, kernel tuning) → K3s (embedded etcd, HA) → Istio (ambient) + Gateway API → FluxCD bootstrap from GitHub\nProvisions the full platform from zero in under an hour — super-node (HAProxy L7 LB, syslog relay, NFS, S3) + K3s master + worker; fully repeatable, terraform destroy tears it down\nMulti-runtime container support: crun default runtime, youki exposed as a Kubernetes RuntimeClass\nDocumented 14 architecture decisions plus deployment and troubleshooting runbook",
+                            "Automated K3s platform: Terraform (template-clone VMs, count-driven node scaling, HCP remote state) → Ansible (6 idempotent playbooks, kernel tuning) → K3s (embedded etcd, HA) → Istio (ambient) + Gateway API → FluxCD bootstrap from GitHub\nProvisions the full platform from zero in under an hour — super-node (HAProxy L7 LB, syslog relay, NFS, S3) + K3s 3 control-planes (etcd quorum) + 2 workers; fully repeatable, terraform destroy tears it down\nMulti-runtime container support: crun default runtime, youki exposed as a Kubernetes RuntimeClass\nDocumented 14 architecture decisions plus deployment and troubleshooting runbook",
                     },
                     {
                         id: uid(),
