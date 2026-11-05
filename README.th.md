@@ -2,7 +2,7 @@
 
 [![Pipeline](https://github.com/traipoap/gitops-platform/actions/workflows/pipeline.yml/badge.svg)](https://github.com/traipoap/gitops-platform/actions/workflows/pipeline.yml)
 ![Kubernetes](https://img.shields.io/badge/Kubernetes-K3s-326ce5)
-![GitOps](https://img.shields.io/badge/GitOps-FluxCD-5468ff)
+![GitOps](https://img.shields.io/badge/GitOps-ArgoCD-EF7B4D)
 ![IaC](https://img.shields.io/badge/IaC-Terraform%20%7C%20Ansible-7b42bc)
 ![Trivy](https://img.shields.io/badge/Security-Trivy%20%7C%20Gitleaks%20%7C%20SonarQube-13773d)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
@@ -16,7 +16,7 @@ Repository นี้แสดงวิธีรันแพลตฟอร์ม
 - สร้าง virtual machines บน Proxmox ด้วย Terraform
 - ตั้งค่าข้อกำหนดก่อนเริ่มและ tune kernel ด้วย Ansible
 - ติดตั้ง K3s Kubernetes cluster (พร้อม high availability)
-- จัดการ workloads ด้วย GitOps โดยใช้ FluxCD
+- จัดการ workloads ด้วย GitOps โดยใช้ ArgoCD
 - Deploy components ด้วย Kustomize และ Helm
 - สร้างและ publish images ด้วย GitHub Actions
 - อัปเดต GitOps repository อัตโนมัติเมื่อสร้าง image ใหม่
@@ -39,7 +39,7 @@ Repository นี้แสดงวิธีรันแพลตฟอร์ม
 | 3 | Super-node ตัวเดียวสำหรับ LB + NFS + S3 | Lab มี VM จำกัด edge services จึงแชร์ VM เดียวเพื่อประหยัด RAM และดิสก์ |
 | 4 | Terraform สำหรับ VM, Ansible สำหรับซอฟต์แวร์ | Terraform ดูแล infrastructure state, Ansible ดูแล software state ทั้งสองทำซ้ำได้จาก repo |
 | 5 | ขยายแบบ count-based | เปลี่ยนตัวเลข 3 ตัวเพื่อขยาย cluster ชื่อ, vm_id และ IP ถูกสร้างตาม role |
-| 6 | GitOps ด้วย FluxCD | การเปลี่ยนแปลงทั้งหมดผ่าน Git Drift ถูกซ่อมอัตโนมัติ และ history อยู่ git |
+| 6 | GitOps ด้วย ArgoCD | การเปลี่ยนแปลงทั้งหมดผ่าน Git Drift ถูกซ่อมอัตโนมัติ และ history อยู่ git |
 | 7 | Istio พร้อม Gateway API | Ingress มาตรฐานพร้อม mTLS และ traffic policies Kiali แสดงให้เห็น traffic |
 | 8 | Storage 2 ชั้น: NFS + Garage | NFS สำหรับ shared state, Garage สำหรับ S3 objects ทั้งสองรันที่จุดที่ข้อมูลอยู่ |
 | 9 | Clone จาก template VM | เร็ว (~3 นาที) และสม่ำเสมอ Cloud-init ตั้งแค่ hostname, user และ IP |
@@ -58,7 +58,7 @@ Repository นี้แสดงวิธีรันแพลตฟอร์ม
 | หมวด | เครื่องมือ |
 |---|---|
 | Infrastructure | Proxmox VE, Terraform, Ansible, NFS |
-| Kubernetes | K3s, kubectl, Helm, Kustomize, FluxCD, Istio, cert-manager |
+| Kubernetes | K3s, kubectl, Helm, Kustomize, ArgoCD, Istio, cert-manager |
 | CI/CD | GitHub Actions, Docker, GHCR |
 | Security | Trivy, Gitleaks, SonarQube, Kyverno, External Secrets Operator |
 | Observability | Prometheus, Grafana, Kiali, Vector, Quickwit |
@@ -138,7 +138,7 @@ flowchart TD
 |---|---|
 | Terraform provision (สร้าง VM) | ~3 นาที |
 | Ansible prerequisites + ติดตั้ง K3s | ~6 นาที |
-| ตั้งค่า Istio + storage + S3 + FluxCD | ~4 นาที |
+| ตั้งค่า Istio + storage + S3 + ArgoCD | ~4 นาที |
 | Reconcile ครั้งแรกทั้งหมด | ~25 นาที |
 | **รวม** | **~40 นาที** |
 
@@ -164,7 +164,7 @@ flowchart TD
 | Terraform | ≥ 1.5 |
 | Ansible | ≥ 2.15 |
 | kubectl | — |
-| flux | ≥ 2.3 |
+| argocd CLI | ≥ 2.12 |
 | helm | ≥ 3.12 |
 | Proxmox VE | 8.x / 9.x พร้อม base VM template ที่เตรียมไว้แล้ว |
 
@@ -213,7 +213,7 @@ export ADMIN_TOKEN="$(openssl rand -base64 32)"
 # ข้อมูลรับรองของ Garage S3-compatible object storage
 export GARAGE_DEFAULT_ACCESS_KEY="GK$(openssl rand -hex 16)"
 export GARAGE_DEFAULT_SECRET_KEY="$(openssl rand -hex 32)"
-# GitHub PAT สำหรับ FluxCD bootstrap
+# GitHub PAT สำหรับ ArgoCD (repo access)
 export APP_GIT_SECRET="xxx"
 ```
 
@@ -245,23 +245,22 @@ ansible-playbook -i inventory/hosts playbooks/05-gitops-bootstrap.yml
 
 ## กระบวนการ GitOps
 
-FluxCD จะเฝ้า Git repository และ sync สถานะของ cluster โดยใช้ `GitRepository`, `Kustomization`, `HelmRepository` และ `HelmRelease`
+ArgoCD จะเฝ้า Git repository และ sync สถานะของ cluster โดยใช้ manifests `Application` และ `AppProject` (argoproj.io/v1alpha1)
 
-Bootstrap FluxCD:
+ติดตั้ง ArgoCD:
 
 ```bash
-flux bootstrap github \
-      --owner=traipoap \
-      --repository=fleet-infra \
-      --branch=main \
-      --path=./clusters/staging \
-      --personal
+helm repo add argocd https://argoproj.github.io/argocd
+helm install argocd argocd/argocd \
+      --namespace argocd \
+      --create-namespace
+# จากนั้น apply ArgoCD Applications จาก gitops repo (traipoap/gitops)
 ```
 
 ดูสถานะ:
 
 ```bash
-flux get all -A
+kubectl get applications -n argocd
 kubectl get nodes
 kubectl get pods -A
 ```
@@ -274,9 +273,9 @@ Pipeline ใช้ GitHub Actions (`.github/workflows/pipeline.yml`) ทุก�
 2. **Build** — เฉพาะ service ที่ path เปลี่ยนเท่านั้น
 3. **Trivy scan** — สแกนช่องโหว่ **ก่อน** push CRITICAL/HIGH จะ block push และ SARIF report เข้า GitHub Security tab
 4. **Push** — image ไปที่ GHCR (private registry, fine-grained PAT — ไม่มี credentials แบบ hardcode)
-5. **Deploy** — FluxCD พบ tag ใหม่และอัปเดต cluster
+5. **Deploy** — ArgoCD พบ tag ใหม่และอัปเดต cluster
 
-> การอัปเดต image tag ใน GitOps repository จัดการโดย FluxCD; pipeline หยุดที่ image ที่ผ่านการตรวจสอบและถูก push แล้ว
+> การอัปเดต image tag ใน GitOps repository จัดการโดย ArgoCD; pipeline หยุดที่ image ที่ผ่านการตรวจสอบและถูก push แล้ว
 
 ตัวอย่าง workflow:
 
@@ -291,7 +290,7 @@ flowchart LR
     G -->|"no"| X["build skipped"]
     C --> T["Trivy scan (gate)"]
     T --> D["Push image to registry"]
-    D --> E["FluxCD sync"]
+    D --> E["ArgoCD sync"]
     E --> H["Application updated"]
 ```
 
@@ -408,13 +407,13 @@ kubectl logs <pod-name> -n <namespace>
 kubectl logs <pod-name> -n <namespace> --previous
 ```
 
-**FluxCD:**
+**ArgoCD:**
 
 ```bash
-flux get all -A
-flux get kustomizations -A
-flux reconcile source git flux-system -n flux-system
-flux reconcile kustomization <name> -n <namespace> --with-source
+kubectl get applications -n argocd
+kubectl get application <name> -n argocd -o yaml
+kubectl logs deploy/argocd-application-controller -n argocd
+kubectl argo cd app get <name>
 ```
 
 **Helm:**
@@ -431,7 +430,7 @@ kubectl get events -n <namespace> --sort-by=.metadata.creationTimestamp
 - เพิ่มความสม่ำเสมอของ environment โดยกำหนด workloads ทั้งหมดใน Git
 - สร้าง cluster ใหม่ทำซ้ำได้ (repeatable) จาก Git และสคริปต์ automation
 - เพิ่ม observability ด้วย Prometheus, Grafana, Kiali และ centralized logging
-- ลด configuration drift ด้วย continuous reconciliation ของ FluxCD
+- ลด configuration drift ด้วย continuous reconciliation ของ ArgoCD
 
 ## บทเรียนที่ได้รับ
 
@@ -454,7 +453,7 @@ kubectl get events -n <namespace> --sort-by=.metadata.creationTimestamp
 - Reliability และ disaster recovery: Velero backup พร้อมทดสอบ restore เป็นประจำ, DR runbook พร้อมวัด RTO/RPO จริง และ Ceph แทน NFS
 - Policy as code: Kyverno policies (required labels, resource quotas, ห้าม privileged containers), NetworkPolicies แบบ default-deny และรักษา secrets ให้อยู่นอก GitOps repository ทั้งหมดด้วย External Secrets Operator
 - Multi-environment promotion: dev → staging → production พร้อม gate ต่อ environment
-- Supply chain: OIDC (workload identity) สำหรับ push GHCR, manifest validation gate (kubeconform + `kubectl apply --dry-run=server`), ลงลายเซ็น image ด้วย cosign พร้อม Flux verification และ SBOM (syft) เผยแพร่เป็น build artifacts
+- Supply chain: OIDC (workload identity) สำหรับ push GHCR, manifest validation gate (kubeconform + `kubectl apply --dry-run=server`), ลงลายเซ็น image ด้วย cosign พร้อม ArgoCD image verification และ SBOM (syft) เผยแพร่เป็น build artifacts
 - Observability: end-to-end tracing, Prometheus alert rules และ SLO dashboards สำหรับตัวแพลตฟอร์มเอง
 
 ## การมีส่วนร่วม
