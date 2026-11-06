@@ -1,5 +1,14 @@
 ---
 import Layout from "../layouts/Layout.astro";
+
+// เวลา build จริงสำหรับแสดงใน footer — หน้า static ถูก generate ตอนรัน
+// build/dev ดังนั้น new Date() ใน frontmatter คือเวลาตอน generate พอดี
+const buildStamp = new Date().toLocaleString("th-TH", {
+    hour12: false,
+    timeZone: "Asia/Bangkok",
+    dateStyle: "medium",
+    timeStyle: "short",
+});
 ---
 
 <Layout
@@ -838,14 +847,12 @@ import Layout from "../layouts/Layout.astro";
             <div class="wrap foot-row">
                 <span>
                     page <span class="grn">/methodology</span> · build{" "}
-                    <span class="grn">v2.4.1</span> · commit{" "}
-                    <span class="grn">a3f9c21</span>
+                    {buildStamp} น.
                 </span>
                 <span>
-                    rendered by <span class="grn">k3s @ home</span> ผ่าน
-                    Cloudflare Tunnel
+                    rendered by <span class="grn">k3s @ home</span>
                 </span>
-                <span>ทำมือ 100% · © 2569 ณกร วีรวัฒน์</span>
+                <span>ผลิตโดย Traipoap Hunthong + AI · © 2569</span>
             </div>
         </footer>
     </div>

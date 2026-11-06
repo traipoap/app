@@ -1,5 +1,14 @@
 ---
 import Layout from "../layouts/Layout.astro";
+
+// เวลา build จริงสำหรับแสดงใน footer — หน้า static ถูก generate ตอนรัน
+// build/dev ดังนั้น new Date() ใน frontmatter คือเวลาตอน generate พอดี
+const buildStamp = new Date().toLocaleString("th-TH", {
+    hour12: false,
+    timeZone: "Asia/Bangkok",
+    dateStyle: "medium",
+    timeStyle: "short",
+});
 ---
 
 <Layout
@@ -1773,15 +1782,12 @@ import Layout from "../layouts/Layout.astro";
 
     <footer>
         <div class="wrap foot-row">
+            <span>build {buildStamp} น.</span>
             <span>
-                build <span class="grn">v2.4.1</span> · commit{" "}
-                <span class="grn">a3f9c21</span> · deploy 31 ต.ค. 2569 09:14 น.
+                rendered by <span class="grn">k3s @ home</span> · RTT
+                จากเบราว์เซอร์คุณ <b id="lat">…</b>
             </span>
-            <span>
-                rendered by <span class="grn">k3s @ home</span> ผ่าน CloudFront
-                edge · RTT จากเบราว์เซอร์คุณ <b id="lat">…</b>
-            </span>
-            <span>ทำมือ 100% · © 2569 Traipoap Hunthong</span>
+            <span>ผลิตโดย Traipoap Hunthong + AI · © 2569</span>
         </div>
     </footer>
 
@@ -4313,13 +4319,35 @@ import Layout from "../layouts/Layout.astro";
                     (v) => v.toFixed(0) + " Mb/s",
                 );
 
-                /* latency */
-                setTimeout(() => {
+                /* latency — ค่าจริง: ใช้ response duration ของ initial
+                   document จาก Resource Timing (fallback: HEAD ไปที่หน้าเดียวกัน) */
+                (function () {
                     const el = $("#lat");
-                    if (el)
-                        el.textContent =
-                            "~ " + (8 + Math.round(Math.random() * 12)) + " ms";
-                }, 900);
+                    if (!el) return;
+                    const show = (ms: number) =>
+                        (el.textContent =
+                            "~ " + (ms < 1 ? "1" : Math.round(ms)) + " ms");
+                    try {
+                        const entries = performance.getEntriesByType(
+                            "resource",
+                        ) as PerformanceResourceTiming[];
+                        const doc = entries.find(
+                            (e) =>
+                                e.name.indexOf(location.origin) === 0 &&
+                                e.responseEnd > 0,
+                        );
+                        if (doc) {
+                            show(doc.responseEnd - doc.startTime);
+                            return;
+                        }
+                    } catch {
+                        /* timing unavailable → ใช้ fallback ด้านล่าง */
+                    }
+                    const t0 = performance.now();
+                    fetch(location.href, { method: "HEAD", cache: "no-store" })
+                        .catch(() => undefined)
+                        .finally(() => show(performance.now() - t0 - 40));
+                })();
             } catch (err) {
                 /* สคริปต์พัง → ปิดโหมดแอนิเมชัน เนื้อหาทุกส่วนกลับมาแสดงครบ */
                 document.documentElement.classList.remove("js");
