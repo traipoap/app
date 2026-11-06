@@ -32,6 +32,7 @@ import Layout from "../layouts/Layout.astro";
                 <a href="#gitops">GitOps</a>
                 <a href="#obs">Observability</a>
                 <a href="#process">กระบวนการ</a>
+                <a href="/methodology">Mindset</a>
                 <a href="#resume">เรซูเม่</a>
                 <a href="#contact">ติดต่อ</a>
                 <a href="/app" style="color:var(--grn)">
@@ -69,6 +70,9 @@ import Layout from "../layouts/Layout.astro";
                     </a>
                     <a class="btn" href="#pipeline">
                         ▶ ดู Pipeline จริง
+                    </a>
+                    <a class="btn" href="methodology.html">
+                        อ่านวิธีคิดของผม
                     </a>
                 </div>
                 <div class="hero-stats">
@@ -1010,75 +1014,78 @@ import Layout from "../layouts/Layout.astro";
             <div class="sec-head rv">
                 <span class="sec-idx">04</span>
                 <div>
-                    <span class="sec-tag">CI/CD · DEMO INTERACTIVE</span>
+                    <span class="sec-tag">CI/CD · LIVE FROM GITHUB</span>
                     <h2 class="lm">
                         <span>แก้โค้ดหนึ่งบรรทัด — ดูระบบวิ่งจนจบ</span>
                     </h2>
                     <p class="sub">
-                        กดปุ่มรันเดโม แล้วดูว่าตั้งแต่{" "}
+                        ข้อมูลจริงจาก GitHub Actions ของ{" "}
                         <code class="mono" style="color:var(--grn)">
-                            git push
+                            traipoap/app
                         </code>{" "}
-                        จนถึงหน้าเว็บอัปเดต ระบบผ่านอะไรบ้าง
+                        — commit ล่าสุด ผลของแต่ละ job และเวลาที่ใช้จริง
                     </p>
                 </div>
             </div>
             <div class="pipe-panel rv">
                 <div class="pipe-top">
-                    <span class="commit">
-                        commit <span class="hash">a3f9c21</span> ·{" "}
-                        <b>fix: ปรับสีปุ่มให้คอนทราสต์ขึ้น</b> · traipoap → main
+                    <span class="commit" id="pipeCommit">
+                        commit <span class="hash">—</span> ·{" "}
+                        <b>กำลังโหลดข้อมูลจริงจาก GitHub…</b>
                     </span>
                     <span class="pipe-total">
-                        เวลาทั้งหมด <b id="pipeTime">0m 00s</b>
+                        เวลาทั้งหมด <b id="pipeTime">—</b>
                     </span>
+                    <a
+                        class="btn"
+                        id="pipeRunLink"
+                        href="https://github.com/traipoap/app/actions/workflows/pipeline.yml"
+                        target="_blank"
+                        rel="noopener"
+                    >
+                        run บน GitHub ↗
+                    </a>
                     <button class="btn prime" id="btnPipe" type="button">
-                        ▶ รันเดโม
+                        ⟳ รีเฟรช
                     </button>
                 </div>
                 <div class="steps" id="steps">
                     <i id="pipeFill"></i>
                     <div class="step">
                         <span class="dot">⇪</span>
-                        <b>git push</b>
-                        <small>local → github</small>
-                        <em>รอ</em>
+                        <b>Detect changed service</b>
+                        <small>dorny/paths-filter</small>
+                        <em>กำลังโหลด…</em>
                     </div>
                     <div class="step">
                         <span class="dot">✓</span>
-                        <b>Security Gate</b>
-                        <small>Gitleaks + SonarQube</small>
-                        <em>รอ</em>
+                        <b>Gitleaks — secret scan</b>
+                        <small>full history · SARIF</small>
+                        <em>กำลังโหลด…</em>
+                    </div>
+                    <div class="step">
+                        <span class="dot">✓</span>
+                        <b>SonarQube — quality &amp; security</b>
+                        <small>quality gate</small>
+                        <em>กำลังโหลด…</em>
                     </div>
                     <div class="step">
                         <span class="dot">▣</span>
-                        <b>Build Image</b>
-                        <small>path-filtered buildx</small>
-                        <em>รอ</em>
+                        <b>Backend — build, Trivy, push</b>
+                        <small>GHCR + ECR</small>
+                        <em>กำลังโหลด…</em>
                     </div>
                     <div class="step">
-                        <span class="dot">✚</span>
-                        <b>Trivy Scan</b>
-                        <small>CRITICAL/HIGH gate</small>
-                        <em>รอ</em>
-                    </div>
-                    <div class="step">
-                        <span class="dot">⇧</span>
-                        <b>Push → GHCR</b>
-                        <small>registry</small>
-                        <em>รอ</em>
-                    </div>
-                    <div class="step">
-                        <span class="dot">⟳</span>
-                        <b>ArgoCD Deploy</b>
-                        <small>auto-reconcile</small>
-                        <em>รอ</em>
+                        <span class="dot">▣</span>
+                        <b>Frontend — build, Trivy, push</b>
+                        <small>GHCR + S3</small>
+                        <em>กำลังโหลด…</em>
                     </div>
                 </div>
                 <div class="pipe-log" id="pipeLog">
                     <div>
-                        <span class="lt">[--:--:--]</span>พร้อมรัน —
-                        กดปุ่มด้านบน หรือรอระบบเริ่มอัตโนมัติเมื่อเลื่อนมาถึง…
+                        <span class="lt">[--:--:--]</span>กำลังโหลดข้อมูลจริงจาก
+                        GitHub Actions…
                     </div>
                 </div>
             </div>
@@ -2872,6 +2879,35 @@ import Layout from "../layouts/Layout.astro";
         .step.ok em {
             color: var(--grn);
         }
+        .step.bad .dot {
+            border-color: var(--red);
+            background: rgba(255, 92, 87, 0.12);
+            color: var(--red);
+        }
+        .step.bad b {
+            color: var(--red);
+        }
+        .step.bad em {
+            color: var(--red);
+        }
+        .step.skip .dot {
+            border-color: var(--line2);
+            border-style: dashed;
+            color: var(--dim);
+        }
+        .step.skip b {
+            color: var(--dim);
+        }
+        .step.skip em {
+            color: var(--dim);
+        }
+        .pipe-log .err {
+            color: var(--red);
+        }
+        .pipe-log a {
+            color: var(--cyn);
+            text-decoration: underline;
+        }
         .pipe-log {
             border-top: 1px solid var(--line);
             background: #050b09;
@@ -3903,148 +3939,257 @@ import Layout from "../layouts/Layout.astro";
                     }),
                 );
 
-                /* pipeline demo */
-                const STAGES = [
-                    {
-                        dur: 700,
-                        logs: [
-                            "→ git push origin main",
-                            "remote: ✓ branch 'main' up to date → triggering workflow #142",
-                        ],
-                    },
-                    {
-                        dur: 2600,
-                        logs: [
-                            "gitleaks: scanning 483 files… no secrets found",
-                            "sonarqube: quality gate passed — 0 new issues",
-                            "✓ security gate ผ่าน",
-                        ],
-                    },
-                    {
-                        dur: 3200,
-                        logs: [
-                            "path filter: frontend/**, api/** → build",
-                            "[1/6] FROM golang:1.24-alpine AS api",
-                            "[6/6] exporting image ghcr.io/traipoap/app:a3f9c21",
-                        ],
-                    },
-                    {
-                        dur: 2400,
-                        logs: [
-                            "trivy image — CRITICAL 0 · HIGH 0 · MEDIUM 12",
-                            "✓ SARIF report — gate ผ่าน",
-                        ],
-                    },
-                    {
-                        dur: 1800,
-                        logs: [
-                            "pushing layer sha256:4d9c…",
-                            "✓ digest: sha256:9f2c1e7a (GHCR)",
-                        ],
-                    },
-                    {
-                        dur: 2400,
-                        logs: [
-                            "argocd: application/app synced new revision a3f9c21",
-                            "reconciled 4 resources in 4.2s",
-                            "✓ rollout สมบูรณ์ — app.traipoap.com ออนไลน์แล้ว",
-                        ],
-                    },
-                ];
-                const steps = $$("#steps .step"),
-                    fill = $("#pipeFill"),
+                /* pipeline — live data from GitHub (public repo traipoap/app) */
+                const GH = "https://api.github.com/repos/traipoap/app";
+                let pipeBusy = false,
+                    pipeLoaded = false;
+                const btnPipe = $("#btnPipe"),
                     logBox = $("#pipeLog"),
                     timeEl = $("#pipeTime"),
-                    btn = $("#btnPipe");
-                let running = false;
-                function stamp(s) {
-                    return '<span class="lt">[' + nowT() + "]</span>" + s;
+                    commitEl = $("#pipeCommit"),
+                    runLink = $("#pipeRunLink");
+                function esc(s) {
+                    return String(s ?? "").replace(
+                        /[&<>"']/g,
+                        (c) =>
+                            ({
+                                "&": "&amp;",
+                                "<": "&lt;",
+                                ">": "&gt;",
+                                '"': "&quot;",
+                                "'": "&#39;",
+                            })[c],
+                    );
                 }
-                async function runPipe() {
-                    if (running || !btn) return;
-                    running = true;
-                    btn.disabled = true;
-                    btn.textContent = "⟳ กำลังรัน…";
-                    steps.forEach((s) => {
-                        s.classList.remove("run", "ok");
-                        s.querySelector("em").textContent = "รอ";
+                function durMS(a, b) {
+                    const d = Date.parse(b) - Date.parse(a);
+                    return d > 0 ? d : 0;
+                }
+                function fmtDur(ms) {
+                    const s = Math.round(ms / 1000);
+                    return Math.floor(s / 60) + "m " + pad(s % 60) + "s";
+                }
+                function clock(iso) {
+                    return new Date(iso).toLocaleTimeString("th-TH", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        second: "2-digit",
                     });
-                    logBox.innerHTML = "";
-                    fill.style.width = "0";
-                    let elapsed = 0;
-                    const total = STAGES.reduce((a, s) => a + s.dur, 0),
-                        REAL = 222;
-                    for (let i = 0; i < STAGES.length; i++) {
-                        const st = STAGES[i],
-                            el = steps[i];
-                        el.classList.add("run");
-                        el.querySelector("em").textContent = "กำลังทำงาน…";
-                        for (const ln of st.logs) {
-                            logBox.insertAdjacentHTML(
-                                "beforeend",
-                                "<div>" +
-                                    stamp(
-                                        ln.startsWith("✓") ||
-                                            ln.indexOf("→ 200") > -1
-                                            ? '<span class="ok">' +
-                                                  ln +
-                                                  "</span>"
-                                            : ln,
-                                    ) +
-                                    "</div>",
-                            );
-                            logBox.scrollTop = logBox.scrollHeight;
-                            await wait(st.dur / st.logs.length);
-                        }
-                        elapsed += st.dur;
-                        el.classList.remove("run");
-                        el.classList.add("ok");
-                        const s = Math.round((elapsed / total) * REAL);
-                        el.querySelector("em").textContent =
-                            "✓ " +
-                            Math.floor(s / 60) +
-                            "m " +
-                            pad(s % 60) +
-                            "s";
-                        fill.style.width = ((i + 1) / STAGES.length) * 84 + "%";
-                        timeEl.textContent =
-                            Math.floor(s / 60) + "m " + pad(s % 60) + "s";
-                    }
+                }
+                function logLine(text, cls) {
+                    const t = new Date().toLocaleTimeString("th-TH", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        second: "2-digit",
+                    });
                     logBox.insertAdjacentHTML(
                         "beforeend",
-                        "<div>" +
-                            stamp(
-                                '<span class="ok">★ deploy #142 สำเร็จ — commit a3f9c21 ทำงานอยู่บนคลัสเตอร์แล้ว</span>',
-                            ) +
+                        '<div><span class="lt">[' +
+                            t +
+                            "]</span>" +
+                            (cls
+                                ? '<span class="' +
+                                  cls +
+                                  '">' +
+                                  text +
+                                  "</span>"
+                                : text) +
                             "</div>",
                     );
                     logBox.scrollTop = logBox.scrollHeight;
-                    const pf = $("#pfSync");
-                    if (pf) pf.textContent = "เมื่อสักครู่";
-                    toast(
-                        "✓ pipeline #142 สำเร็จใน 3m 42s — synced ลงคลัสเตอร์แล้ว",
-                    );
-                    btn.disabled = false;
-                    btn.textContent = "▶ รันเดโมอีกครั้ง";
-                    running = false;
                 }
-                if (btn) {
-                    btn.addEventListener("click", runPipe);
-                    let pipeAuto = false;
-                    new IntersectionObserver(
-                        (es) => {
-                            es.forEach((e) => {
-                                if (e.isIntersecting && !pipeAuto) {
-                                    pipeAuto = true;
-                                    REDUCED
-                                        ? runPipe()
-                                        : setTimeout(runPipe, 700);
-                                }
-                            });
-                        },
-                        { threshold: 0.3 },
-                    ).observe($(".pipe-panel"));
+                async function gh(path) {
+                    const res = await fetch(GH + path, {
+                        headers: { Accept: "application/vnd.github+json" },
+                    });
+                    if (res.status === 403 || res.status === 429)
+                        throw new Error(
+                            "ถูก rate limit ของ GitHub — ลองใหม่ในสักครู่",
+                        );
+                    if (!res.ok) throw new Error("HTTP " + res.status);
+                    return res.json();
                 }
+                async function loadLivePipeline() {
+                    if (pipeBusy) return;
+                    pipeBusy = true;
+                    if (btnPipe) {
+                        btnPipe.disabled = true;
+                        btnPipe.textContent = "⟳ กำลังโหลด…";
+                    }
+                    try {
+                        // 1) run ล่าสุดของ pipeline (security → build → trivy → push)
+                        const runs = await gh("/actions/runs?per_page=30");
+                        const all = runs.workflow_runs || [];
+                        const run =
+                            all.find((r) =>
+                                String(r.name || "").startsWith("Pipeline"),
+                            ) || all[0];
+                        if (!run)
+                            throw new Error(
+                                "ยังไม่มี run ของ pipeline ใน repo",
+                            );
+                        if (runLink) runLink.href = run.html_url;
+
+                        // 2) jobs + commit ของ run นั้น
+                        const jobs =
+                            (
+                                await gh(
+                                    `/actions/runs/${run.id}/jobs?per_page=30`,
+                                )
+                            ).jobs || [];
+                        let commit = null;
+                        try {
+                            commit = await gh(`/commits/${run.head_sha}`);
+                        } catch {
+                            commit = null;
+                        }
+
+                        // header: commit จริง + เวลาทั้งหมดจริง
+                        const sha = String(run.head_sha || "").slice(0, 7);
+                        const msg =
+                            (commit && commit.commit.message) ||
+                            (run.head_commit && run.head_commit.message) ||
+                            "";
+                        const author =
+                            (commit && commit.author && commit.author.login) ||
+                            (run.actor && run.actor.login) ||
+                            "—";
+                        if (commitEl)
+                            commitEl.innerHTML =
+                                'commit <span class="hash">' +
+                                esc(sha) +
+                                "</span> · <b>" +
+                                esc(String(msg).split("\n")[0]) +
+                                "</b> · " +
+                                esc(author) +
+                                " → " +
+                                esc(run.head_branch || "main");
+                        const total = durMS(run.created_at, run.updated_at);
+                        if (timeEl) timeEl.textContent = fmtDur(total);
+
+                        // steps: status จริงของแต่ละ job
+                        const done = jobs.filter((j) => j.conclusion).length;
+                        const dots = ["⇪", "✓", "✓", "▣", "▣", "▣", "⟳", "⇧"];
+                        const stepsBox = $("#steps");
+                        if (stepsBox) {
+                            stepsBox.innerHTML =
+                                '<i id="pipeFill"></i>' +
+                                jobs
+                                    .map((j, i) => {
+                                        const c = j.conclusion || "pending";
+                                        const cls =
+                                            c === "success"
+                                                ? "ok"
+                                                : c === "failure"
+                                                  ? "bad"
+                                                  : c === "skipped"
+                                                    ? "skip"
+                                                    : "run";
+                                        const label =
+                                            c === "success"
+                                                ? "✓ " +
+                                                  fmtDur(
+                                                      durMS(
+                                                          j.started_at,
+                                                          j.completed_at,
+                                                      ),
+                                                  )
+                                                : c === "failure"
+                                                  ? "✗ failed"
+                                                  : c === "skipped"
+                                                    ? "⊘ skipped"
+                                                    : "กำลังทำงาน…";
+                                        return (
+                                            '<div class="step ' +
+                                            cls +
+                                            '"><span class="dot">' +
+                                            (dots[i] || "·") +
+                                            "</span><b>" +
+                                            esc(j.name) +
+                                            "</b><em>" +
+                                            label +
+                                            "</em></div>"
+                                        );
+                                    })
+                                    .join("");
+                            const fillEl = document.getElementById("pipeFill");
+                            if (fillEl)
+                                fillEl.style.width = jobs.length
+                                    ? Math.round((done / jobs.length) * 84) +
+                                      "%"
+                                    : "0";
+                        }
+
+                        // log: job-by-job + ลิงก์ run
+                        logBox.innerHTML = "";
+                        logLine(
+                            "workflow #" +
+                                run.run_number +
+                                " · " +
+                                esc(run.event) +
+                                " · เริ่ม " +
+                                clock(run.created_at),
+                        );
+                        for (const j of jobs) {
+                            const d = fmtDur(
+                                durMS(j.started_at, j.completed_at),
+                            );
+                            if (j.conclusion === "success")
+                                logLine(
+                                    esc(j.name) + " → ✓ ผ่าน (" + d + ")",
+                                    "ok",
+                                );
+                            else if (j.conclusion === "failure")
+                                logLine(
+                                    esc(j.name) + " → ✗ failed (" + d + ")",
+                                    "err",
+                                );
+                            else if (j.conclusion === "skipped")
+                                logLine(
+                                    esc(j.name) +
+                                        " → ⊘ skipped (path ไม่เปลี่ยน)",
+                                );
+                            else logLine(esc(j.name) + " → กำลังทำงาน…");
+                        }
+                        const ok = run.conclusion === "success";
+                        logLine(
+                            "pipeline " +
+                                (ok ? "สำเร็จ" : run.conclusion || "กำลังรัน") +
+                                " · เวลาทั้งหมด " +
+                                fmtDur(total) +
+                                ' · <a href="' +
+                                esc(run.html_url) +
+                                '" target="_blank" rel="noopener">ดู run บน GitHub ↗</a>',
+                            ok ? "ok" : "err",
+                        );
+                        pipeLoaded = true;
+                    } catch (err) {
+                        logBox.innerHTML = "";
+                        logLine(
+                            "โหลดข้อมูลจาก GitHub ไม่สำเร็จ — " +
+                                (err && err.message ? err.message : ""),
+                            "err",
+                        );
+                        logLine("กด ⟳ รีเฟรช เพื่อลองอีกครั้ง");
+                    } finally {
+                        pipeBusy = false;
+                        if (btnPipe) {
+                            btnPipe.disabled = false;
+                            btnPipe.textContent = "⟳ รีเฟรช";
+                        }
+                    }
+                }
+                if (btnPipe)
+                    btnPipe.addEventListener("click", loadLivePipeline);
+                new IntersectionObserver(
+                    (es) => {
+                        es.forEach((e) => {
+                            if (e.isIntersecting && !pipeLoaded)
+                                loadLivePipeline();
+                        });
+                    },
+                    { threshold: 0.3 },
+                ).observe($(".pipe-panel"));
 
                 /* gitops sync demo */
                 const btnSync = $("#btnSync");
