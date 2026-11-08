@@ -69,9 +69,9 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                 <p class="lead">
                     ผมไม่ได้แค่ "ใช้" ระบบคลาวด์ — ผม
                     <strong>สร้างมันขึ้นเองกับมือ</strong>
-                    ตั้งแต่เหล็กจนไปถึงหน้าเว็บ และแพลตฟอร์ม Log-Search
-                    ที่คุณกำลังจะเห็น ก็รันอยู่บน K3s Platform ที่ผม Provision
-                    เอง <strong>สด ๆ ในวินาทีนี้</strong>
+                    ตั้งแต่ประกอบ Server และแพลตฟอร์ม Web Application
+                    นี้ก็รันอยู่บน Kubernetes Platform ที่ผม Provision เอง{" "}
+                    <strong>สด ๆ ในวินาทีนี้</strong>
                 </p>
                 <div class="hero-cta">
                     <a class="btn prime" href="#arch">
@@ -155,9 +155,7 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                     <div class="tl-cmd">
                         curl -s https://app.traipoap.com/healthz
                     </div>
-                    <div class="tl-ok">
-                        &#123;"status":"ok","uptime":"99.98%"&#125;
-                    </div>
+                    <div class="tl-ok">&#123;"status":"ok"&#125;</div>
                     <div class="tl-dim">
                         ────────────────────────────────────────────
                         แพลตฟอร์มที่คุณกำลังดู คือผลลัพธ์ของคำสั่งด้านบน ✓
@@ -211,7 +209,7 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                             class="arch"
                             id="archSvg"
                             data-active="edge"
-                            viewBox="0 0 720 530"
+                            viewBox="0 0 720 620"
                             role="img"
                             aria-label="ไดอะแกรมสถาปัตยกรรมระบบ"
                         >
@@ -251,22 +249,55 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                             </g>
                             <path
                                 class="flow hot"
-                                d="M360 56 V96"
+                                d="M360 56 V76"
                                 data-part="edge"
+                                marker-end="url(#arw)"
                             />
                             <g data-part="edge">
                                 <rect
                                     class="node"
-                                    x="245"
-                                    y="96"
-                                    width="230"
+                                    x="230"
+                                    y="76"
+                                    width="260"
                                     height="52"
                                     rx="6"
                                 />
                                 <text
                                     class="lbl"
                                     x="360"
-                                    y="118"
+                                    y="98"
+                                    text-anchor="middle"
+                                >
+                                    CLOUDFLARE DNS
+                                </text>
+                                <text
+                                    class="sub"
+                                    x="360"
+                                    y="116"
+                                    text-anchor="middle"
+                                >
+                                    resolves app.traipoap.com
+                                </text>
+                            </g>
+                            <path
+                                class="flow hot"
+                                d="M360 128 V152"
+                                data-part="edge"
+                                marker-end="url(#arw)"
+                            />
+                            <g data-part="edge">
+                                <rect
+                                    class="node"
+                                    x="180"
+                                    y="152"
+                                    width="360"
+                                    height="52"
+                                    rx="6"
+                                />
+                                <text
+                                    class="lbl"
+                                    x="360"
+                                    y="174"
                                     text-anchor="middle"
                                 >
                                     AWS CLOUDFRONT
@@ -274,31 +305,93 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                                 <text
                                     class="sub"
                                     x="360"
-                                    y="136"
+                                    y="192"
                                     text-anchor="middle"
                                 >
-                                    origin groups · 4xx/5xx failover
+                                    behaviors · main → k3s-origin · DR → S3
+                                </text>
+                            </g>
+                            <path
+                                class="flow hot"
+                                data-part="edge"
+                                d="M270 204 L205 246"
+                                marker-end="url(#arw)"
+                            />
+                            <path
+                                class="flow hot"
+                                data-part="edge"
+                                d="M450 204 L515 246"
+                                marker-end="url(#arw)"
+                            />
+                            <text class="tag" data-part="edge" x="218" y="228">
+                                MAIN
+                            </text>
+                            <text class="tag" data-part="edge" x="470" y="228">
+                                DR
+                            </text>
+                            <g data-part="edge">
+                                <rect
+                                    class="node"
+                                    x="60"
+                                    y="246"
+                                    width="260"
+                                    height="52"
+                                    rx="6"
+                                />
+                                <text
+                                    class="lbl"
+                                    x="190"
+                                    y="268"
+                                    text-anchor="middle"
+                                >
+                                    CLOUDFLARE TUNNEL
+                                </text>
+                                <text
+                                    class="sub"
+                                    x="190"
+                                    y="286"
+                                    text-anchor="middle"
+                                >
+                                    k3s-origin.traipoap.com · main
+                                </text>
+                            </g>
+                            <g data-part="edge">
+                                <rect
+                                    class="node"
+                                    x="400"
+                                    y="246"
+                                    width="260"
+                                    height="52"
+                                    rx="6"
+                                />
+                                <text
+                                    class="lbl"
+                                    x="530"
+                                    y="268"
+                                    text-anchor="middle"
+                                >
+                                    S3 WEB STATIC + LAMBDA
+                                </text>
+                                <text
+                                    class="sub"
+                                    x="530"
+                                    y="286"
+                                    text-anchor="middle"
+                                >
+                                    disaster recovery · static site
                                 </text>
                             </g>
                             <path
                                 class="flow hot"
                                 data-part="edge gateway"
-                                d="M360 148 V206"
+                                d="M190 298 L335 306"
                                 marker-end="url(#arw)"
                             />
-                            <text
-                                class="tag"
-                                data-part="edge gateway"
-                                x="372"
-                                y="182"
-                            >
-                                multi-region · ap-southeast-1/7
-                            </text>
                             <g data-part="gateway">
                                 <rect
                                     class="node"
                                     x="230"
-                                    y="206"
+                                    y="306"
                                     width="260"
                                     height="56"
                                     rx="6"
@@ -306,7 +399,7 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                                 <text
                                     class="lbl"
                                     x="360"
-                                    y="229"
+                                    y="329"
                                     text-anchor="middle"
                                 >
                                     SUPER-NODE · GATEWAY
@@ -314,7 +407,7 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                                 <text
                                     class="sub"
                                     x="360"
-                                    y="247"
+                                    y="347"
                                     text-anchor="middle"
                                 >
                                     HAProxy L7 · syslog relay · NFS
@@ -323,25 +416,25 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                             <path
                                 class="flow hot"
                                 data-part="gateway compute"
-                                d="M360 262 V310"
+                                d="M360 362 V400"
                                 marker-end="url(#arw)"
                             />
                             <g data-part="compute">
                                 <rect
                                     class="node"
                                     x="55"
-                                    y="310"
+                                    y="400"
                                     width="475"
                                     height="205"
                                     rx="9"
                                 />
-                                <text class="sub" x="76" y="334">
+                                <text class="sub" x="76" y="424">
                                     K3S CLUSTER — 3 CP (ETCD QUORUM) + 2 WORKERS
                                 </text>
                                 <rect
                                     class="node"
                                     x="76"
-                                    y="348"
+                                    y="438"
                                     width="80"
                                     height="56"
                                     rx="5"
@@ -349,7 +442,7 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                                 <text
                                     class="lbl"
                                     x="116"
-                                    y="370"
+                                    y="460"
                                     text-anchor="middle"
                                     font-size="10"
                                 >
@@ -358,7 +451,7 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                                 <text
                                     class="sub"
                                     x="116"
-                                    y="386"
+                                    y="476"
                                     text-anchor="middle"
                                 >
                                     cp + etcd
@@ -366,7 +459,7 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                                 <rect
                                     class="node"
                                     x="164"
-                                    y="348"
+                                    y="438"
                                     width="80"
                                     height="56"
                                     rx="5"
@@ -374,7 +467,7 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                                 <text
                                     class="lbl"
                                     x="204"
-                                    y="370"
+                                    y="460"
                                     text-anchor="middle"
                                     font-size="10"
                                 >
@@ -383,7 +476,7 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                                 <text
                                     class="sub"
                                     x="204"
-                                    y="386"
+                                    y="476"
                                     text-anchor="middle"
                                 >
                                     cp + etcd
@@ -391,7 +484,7 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                                 <rect
                                     class="node"
                                     x="252"
-                                    y="348"
+                                    y="438"
                                     width="80"
                                     height="56"
                                     rx="5"
@@ -399,7 +492,7 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                                 <text
                                     class="lbl"
                                     x="292"
-                                    y="370"
+                                    y="460"
                                     text-anchor="middle"
                                     font-size="10"
                                 >
@@ -408,7 +501,7 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                                 <text
                                     class="sub"
                                     x="292"
-                                    y="386"
+                                    y="476"
                                     text-anchor="middle"
                                 >
                                     cp + etcd
@@ -416,7 +509,7 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                                 <rect
                                     class="node"
                                     x="340"
-                                    y="348"
+                                    y="438"
                                     width="80"
                                     height="56"
                                     rx="5"
@@ -424,7 +517,7 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                                 <text
                                     class="lbl"
                                     x="380"
-                                    y="370"
+                                    y="460"
                                     text-anchor="middle"
                                     font-size="10"
                                 >
@@ -433,7 +526,7 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                                 <text
                                     class="sub"
                                     x="380"
-                                    y="386"
+                                    y="476"
                                     text-anchor="middle"
                                 >
                                     crun+youki
@@ -441,7 +534,7 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                                 <rect
                                     class="node"
                                     x="428"
-                                    y="348"
+                                    y="438"
                                     width="80"
                                     height="56"
                                     rx="5"
@@ -449,7 +542,7 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                                 <text
                                     class="lbl"
                                     x="468"
-                                    y="370"
+                                    y="460"
                                     text-anchor="middle"
                                     font-size="10"
                                 >
@@ -458,7 +551,7 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                                 <text
                                     class="sub"
                                     x="468"
-                                    y="386"
+                                    y="476"
                                     text-anchor="middle"
                                 >
                                     crun+youki
@@ -468,7 +561,7 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                                 <rect
                                     class="pod"
                                     x="88"
-                                    y="416"
+                                    y="506"
                                     width="112"
                                     height="22"
                                     rx="4"
@@ -476,7 +569,7 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                                 <text
                                     class="podlbl"
                                     x="144"
-                                    y="431"
+                                    y="521"
                                     text-anchor="middle"
                                 >
                                     app ✓
@@ -484,7 +577,7 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                                 <rect
                                     class="pod"
                                     x="235"
-                                    y="416"
+                                    y="506"
                                     width="112"
                                     height="22"
                                     rx="4"
@@ -492,7 +585,7 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                                 <text
                                     class="podlbl"
                                     x="291"
-                                    y="431"
+                                    y="521"
                                     text-anchor="middle"
                                 >
                                     argocd ✓
@@ -500,7 +593,7 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                                 <rect
                                     class="pod"
                                     x="382"
-                                    y="416"
+                                    y="506"
                                     width="112"
                                     height="22"
                                     rx="4"
@@ -508,7 +601,7 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                                 <text
                                     class="podlbl"
                                     x="438"
-                                    y="431"
+                                    y="521"
                                     text-anchor="middle"
                                 >
                                     grafana ✓
@@ -517,13 +610,13 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                             <path
                                 class="flow"
                                 data-part="compute observe"
-                                d="M530 420 H562"
+                                d="M530 510 H562"
                             />
                             <g data-part="observe">
                                 <rect
                                     class="node"
                                     x="562"
-                                    y="352"
+                                    y="400"
                                     width="142"
                                     height="128"
                                     rx="8"
@@ -531,7 +624,7 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                                 <text
                                     class="lbl"
                                     x="633"
-                                    y="380"
+                                    y="428"
                                     text-anchor="middle"
                                     font-size="12"
                                 >
@@ -540,7 +633,7 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                                 <text
                                     class="sub"
                                     x="633"
-                                    y="404"
+                                    y="452"
                                     text-anchor="middle"
                                 >
                                     Prometheus
@@ -548,7 +641,7 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                                 <text
                                     class="sub"
                                     x="633"
-                                    y="422"
+                                    y="470"
                                     text-anchor="middle"
                                 >
                                     Grafana · tempo
@@ -556,7 +649,7 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                                 <text
                                     class="sub"
                                     x="633"
-                                    y="440"
+                                    y="488"
                                     text-anchor="middle"
                                 >
                                     otel → loki
@@ -572,20 +665,29 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                             <span class="mono">LAYER 01</span>
                         </h3>
                         <p>
-                            จุดเข้าไม่ใช่ Public IP — CloudFront origin groups
-                            บน AWS failover อัตโนมัติ เมื่อเจอ 4xx/5xx
+                            DNS ของ Cloudflare resolve app.traipoap.com → เข้า
+                            CloudFront ตัวเดียว — behaviors เป็นตัวกำหนด
+                            condition: main → k3s-origin.traipoap.com ผ่าน
+                            Cloudflare Tunnel เข้า lab และ DR → S3 web static +
+                            Lambda
                         </p>
                         <ul>
                             <li>
-                                <b>CloudFront origin groups</b>
-                                failover ไป Go API (Lambda) + S3 static
-                                อัตโนมัติ
+                                <b>AWS CloudFront · behaviors</b> — single entry
+                                ของทั้งระบบ behaviors เลือก origin ตาม condition
+                                lab ไม่มี public IP เปิดไว้เลย
                             </li>
                             <li>
-                                <b>CloudFront Function</b> รับ Astro clean-URL
-                                routing พร้อม OAC/SigV4 เข้า private S3
+                                <b>Main — k3s-origin.traipoap.com</b> →
+                                Cloudflare Tunnel เข้า super-node ไม่เปิดพอร์ต
+                                สาธารณะ ตัวเดียว edge ทำ TLS/protect ให้
                             </li>
-                            <li>2 ภูมิภาค — ap-southeast-1, ap-southeast-7</li>
+                            <li>
+                                <b>DR — S3 web static + Lambda</b> — เมื่อ
+                                origin หลักล่ม CloudFront failover ไป static
+                                site บน S3 (Lambda จัดการ routing/fallback)
+                            </li>
+                            <li>2 Regional — ap-southeast-1, ap-southeast-7</li>
                         </ul>
                     </article>
                     <article class="layer-card rv" data-layer="gateway">
@@ -652,7 +754,7 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                             </li>
                             <li>
                                 <b>Prometheus + Grafana + Kiali</b> เฝ้า metric
-                                และ Vector → Quickwit เก็บ log
+                                และ Otel → Loki เก็บ log
                             </li>
                             <li>
                                 <b>ArgoCD</b> reconcile จาก Git ต่อเนื่อง —
@@ -736,7 +838,7 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                             CPU <b>2C</b>
                         </div>
                         <div>
-                            RAM <b>8 GB</b>
+                            RAM <b>4 GB</b>
                         </div>
                         <div>
                             DISK <b>32 GB</b>
@@ -779,7 +881,7 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                             CPU <b>2C</b>
                         </div>
                         <div>
-                            RAM <b>4 GB</b>
+                            RAM <b>8 GB</b>
                         </div>
                         <div>
                             DISK <b>32 GB</b>
@@ -1581,112 +1683,42 @@ const buildStamp = new Date().toLocaleString("th-TH", {
             </div>
             <div class="res-grid">
                 <div class="rv">
-                    <div class="skill">
-                        <label>
-                            <b>Kubernetes / K3s</b>
-                            <span>90%</span>
-                        </label>
-                        <div class="bar">
-                            <i style="--w:90%"></i>
-                        </div>
-                    </div>
-                    <div class="skill">
-                        <label>
-                            <b>Linux &amp; System Admin</b>
-                            <span>92%</span>
-                        </label>
-                        <div class="bar">
-                            <i style="--w:92%"></i>
-                        </div>
-                    </div>
-                    <div class="skill">
-                        <label>
-                            <b>CI/CD (GitHub Actions, ArgoCD)</b>
-                            <span>88%</span>
-                        </label>
-                        <div class="bar">
-                            <i style="--w:88%"></i>
-                        </div>
-                    </div>
-                    <div class="skill">
-                        <label>
-                            <b>Terraform</b>
-                            <span>85%</span>
-                        </label>
-                        <div class="bar">
-                            <i style="--w:85%"></i>
-                        </div>
-                    </div>
-                    <div class="skill">
-                        <label>
-                            <b>Observability (Prom/Grafana/Kiali)</b>
-                            <span>82%</span>
-                        </label>
-                        <div class="bar">
-                            <i style="--w:82%"></i>
-                        </div>
-                    </div>
-                    <div class="skill">
-                        <label>
-                            <b>Networking &amp; Security</b>
-                            <span>76%</span>
-                        </label>
-                        <div class="bar">
-                            <i style="--w:76%"></i>
-                        </div>
-                    </div>
-                    <div class="skill">
-                        <label>
-                            <b>Python / Go / Bash</b>
-                            <span>72%</span>
-                        </label>
-                        <div class="bar">
-                            <i style="--w:72%"></i>
-                        </div>
-                    </div>
                     <div class="chips">
-                        <span class="chip">Proxmox VE</span>
-                        <span class="chip">Istio</span>
-                        <span class="chip">ArgoCD</span>
-                        <span class="chip">Ansible</span>
-                        <span class="chip">Docker</span>
-                        <span class="chip">Zabbix</span>
-                        <span class="chip">Trivy</span>
-                        <span class="chip">Gitleaks</span>
-                        <span class="chip">SonarQube</span>
-                        <span class="chip">AWS</span>
-                        <span class="chip">Quickwit</span>
-                        <span class="chip">VMware vSphere</span>
+                        <span class="chip">
+                            Kubernetes / K3s / etcd / kubectl
+                        </span>
+                        <span class="chip">Helm / Kustomize / ArgoCD</span>
+                        <span class="chip">
+                            Istio / Cilium / Kiali / Gateway API
+                        </span>
+                        <span class="chip">
+                            cert-manager / Kyverno / External Secrets
+                        </span>
+                        <span class="chip">Terraform / Ansible</span>
+                        <span class="chip">GitHub Actions / Docker / GHCR</span>
+                        <span class="chip">Vector / Quickwit / Loki</span>
+                        <span class="chip">
+                            OpenTelemetry / Prometheus / Grafana / Zabbix
+                        </span>
+                        <span class="chip">Trivy / Gitleaks / SonarQube</span>
+                        <span class="chip">nginx / HAProxy / Keepalived</span>
+                        <span class="chip">Proxmox VE / AWS / Huawei CCE</span>
+                        <span class="chip">Go / Python / Bash / Linux</span>
                     </div>
                 </div>
                 <div class="rv" style="--d:1">
                     <div class="xp">
                         <div class="xp-item">
                             <time>Jan 2022 — ปัจจุบัน</time>
-                            <b>Tier-2 Network Support Engineer</b>
+                            <b>Tier-2 Network Administrator</b>
                             <div class="org">
                                 360 Bizmate Co., Ltd. — NT (National Telecom)
                             </div>
                             <p>
-                                4+ ปีดูแล cloud ของ telco ระดับประเทศ —
+                                5 ปีดูแล cloud ของ telco ระดับประเทศ —
                                 ทำงานร่วมกับ L1/L3 และ vendor ใต้ SLA ใช้ Zabbix
                                 เฝ้า ingress traffic ชี้เจอ silent failures ที่
                                 node-down alert ตรวจไม่เจอ ลด MTTR ลงจริง
-                            </p>
-                        </div>
-                        <div class="xp-item">
-                            <time>2023 — ปัจจุบัน</time>
-                            <b>
-                                DevOps Engineer · Personal Production Platform
-                            </b>
-                            <div class="org">
-                                app.traipoap.com · K3s + ArgoCD + AWS DR
-                            </div>
-                            <p>
-                                ออกแบบและรัน GitOps Kubernetes platform ใน
-                                production ของตัวเอง — Terraform, Ansible, K3s,
-                                Istio, ArgoCD, GitHub Actions + multi-region
-                                failover บน AWS deploy ด้วยมือ 0 ขั้นตอน
                             </p>
                         </div>
                     </div>
@@ -1694,7 +1726,8 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                         <div class="ec">
                             <b>การศึกษา</b>
                             <p>
-                                วิทยาศาสตร์และเทคโนโลยี สาขาวิทยาการคอมพิวเตอร์
+                                คณะวิทยาศาสตร์และเทคโนโลยี
+                                สาขาวิทยาการคอมพิวเตอร์
                             </p>
                             <small>
                                 มหาวิทยาลัยเทคโนโลยีราชมงคลพระนคร · ส.ค. 2014 —
@@ -3365,27 +3398,10 @@ const buildStamp = new Date().toLocaleString("th-TH", {
             gap: 56px;
             align-items: start;
         }
-        .skill {
-            margin-bottom: 18px;
-        }
-        .skill label {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.9rem;
-        }
-        .skill label b {
-            font-weight: 600;
-        }
-        .skill label span {
-            font-family: var(--mono);
-            font-size: 12px;
-            color: var(--grn);
-        }
         .chips {
             display: flex;
             flex-wrap: wrap;
             gap: 8px;
-            margin-top: 26px;
         }
         .chip {
             font-family: var(--mono);
@@ -3864,7 +3880,7 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                         ],
                         ["out", "14"],
                         ["cmd", "curl -s https://app.traipoap.com/healthz"],
-                        ["ok", '{"status":"ok","uptime":"99.98%"}'],
+                        ["ok", '{"status":"ok"}'],
                         ["dim", "────────────────────────────────────────────"],
                         [
                             "dim",
@@ -3907,28 +3923,45 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                     })();
                 })();
 
-                /* arch layer sync */
+                /* arch layer sync — เลือก card ที่ center ใกล้เคียงกับกลางจอที่สุด
+                   (ใช้ scroll handler แทน IntersectionObserver: band แคบ 16% +
+                   event batching ของ IO ทำให้ card สั้น ๆ อย่าง LAYER 02 โดนข้าม
+                   ตอนไถเร็ว ตอนนี้ลำดับ 01→02→03→04 ติดกันเสมอ) */
                 const archSvg = $("#archSvg"),
                     cards = $$(".layer-card");
-                if (archSvg) {
-                    const lObs = new IntersectionObserver(
-                        (es) => {
-                            es.forEach((e) => {
-                                if (e.isIntersecting) {
-                                    archSvg.dataset.active =
-                                        e.target.dataset.layer;
-                                    cards.forEach((c) =>
-                                        c.classList.toggle(
-                                            "on",
-                                            c === e.target,
-                                        ),
-                                    );
-                                }
-                            });
+                if (archSvg && cards.length) {
+                    let ticking = false;
+                    const sync = () => {
+                        ticking = false;
+                        const mid = innerHeight / 2;
+                        let best = null,
+                            bestD = Infinity;
+                        for (const c of cards) {
+                            const r = c.getBoundingClientRect();
+                            if (r.bottom < 0 || r.top > innerHeight) continue;
+                            const d = Math.abs((r.top + r.bottom) / 2 - mid);
+                            if (d < bestD) {
+                                bestD = d;
+                                best = c;
+                            }
+                        }
+                        if (!best) return; // ไม่มี card ในจอ — คงสถานะเดิม
+                        archSvg.dataset.active = best.dataset.layer;
+                        cards.forEach((c) =>
+                            c.classList.toggle("on", c === best),
+                        );
+                    };
+                    addEventListener(
+                        "scroll",
+                        () => {
+                            if (!ticking) {
+                                ticking = true;
+                                requestAnimationFrame(sync);
+                            }
                         },
-                        { rootMargin: "-42% 0px -42% 0px" },
+                        { passive: true },
                     );
-                    cards.forEach((c) => lObs.observe(c));
+                    sync();
                 }
 
                 /* tabs */
