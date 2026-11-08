@@ -2722,7 +2722,7 @@ import Layout from "../layouts/Layout.astro";
                         name: "gitops — ArgoCD GitOps",
                         link: "github.com/traipoap/gitops",
                         description:
-                            "Maintained Git as the source of truth for the K3s cluster, with Argo CD continuously reconciling cluster state and correcting configuration drift.\nIntegrated External Secrets Operator with AWS Secrets Manager to sync credentials into the cluster without storing them in Git.\nConfigured Argo CD Image Updater to detect new image versions, update tags according to semantic versioning, and deploy automatically.\nConfigured LimitRange defaults and schema validation for Argo CD Applications.\nImplemented observability with Prometheus, Grafana, and Kiali, and routed logs through Vector to Quickwit; used the Argo CD UI for application visibility.",
+                            "Maintained Git as the source of truth for the K3s cluster, with Argo CD continuously reconciling cluster state and correcting configuration drift.\nIntegrated External Secrets Operator with AWS Secrets Manager to sync credentials into the cluster without storing them in Git.\nConfigured Argo CD Image Updater to detect new image versions, update tags according to semantic versioning, and deploy automatically.\nConfigured LimitRange defaults and schema validation for Argo CD Applications.\nImplemented observability with Prometheus, Grafana, and Kiali, and routed logs through Otel to Loki; used the Argo CD UI for application visibility.",
                     },
                     {
                         id: uid(),
@@ -2764,7 +2764,7 @@ import Layout from "../layouts/Layout.astro";
                 experience: [
                     {
                         id: uid(),
-                        role: "ผู้ดูแลระบบเครือข่าย (Tier-2)",
+                        role: "Network Administrator (Tier-2)",
                         company:
                             "บริษัท 360 Bizmate จำกัด (NT — กสท โทรคมนาคม)",
                         location: "นนทบุรี",
@@ -2785,7 +2785,7 @@ import Layout from "../layouts/Layout.astro";
                     },
                     {
                         id: uid(),
-                        name: "app — แพลตฟอร์มค้นหา Log (Go/GIN + Astro)",
+                        name: "app — Go/GIN + Astro Log Platform",
                         link: "app.traipoap.com · github.com/traipoap/app",
                         description:
                             "พัฒนาและดูแลแพลตฟอร์มค้นหา log แบบ self-hosted ในสภาพแวดล้อมใช้งานจริง ประกอบด้วย Go API (ยืนยันตัวตนด้วย JWT ค้นหาด้วย Quickwit และส่งออก CSV) กับ Astro dashboard\nสร้าง CI/CD ด้วย GitHub Actions: สแกน secret ที่รั่วไหลด้วย Gitleaks ตรวจ SAST ด้วย SonarQube สร้าง image เฉพาะส่วนที่เปลี่ยน สแกนช่องโหว่ระดับ CRITICAL/HIGH ด้วย Trivy (SARIF) ส่ง image ไปยัง GHCR และให้ ArgoCD deploy อัตโนมัติ",
@@ -2795,11 +2795,11 @@ import Layout from "../layouts/Layout.astro";
                         name: "gitops — ArgoCD GitOps",
                         link: "github.com/traipoap/gitops",
                         description:
-                            "ใช้ Git เป็นแหล่งข้อมูลหลัก (source of truth) ของคลัสเตอร์ K3s โดย ArgoCD จะซิงก์สถานะกับ Git อย่างต่อเนื่องและแก้ไข configuration drift โดยอัตโนมัติ (self-healing)\nเชื่อม External Secrets Operator กับ AWS Secrets Manager เพื่อซิงก์ credentials เข้าคลัสเตอร์โดยไม่จัดเก็บไว้ใน Git\nตั้งค่า ArgoCD Image Updater ให้ตรวจพบ image รุ่นใหม่ อัปเดต tag ตาม semver และ deploy โดยอัตโนมัติ\nกำหนดค่าเริ่มต้นของ LimitRange และตรวจสอบ schema ของ ArgoCD Application\nติดตั้งระบบ observability ด้วย Prometheus, Grafana และ Kiali พร้อมส่ง log ผ่าน Vector ไปยัง Quickwit และติดตามสถานะแอปผ่าน ArgoCD UI",
+                            "ใช้ Git เป็นแหล่งข้อมูลหลัก (source of truth) ของคลัสเตอร์ K3s โดย ArgoCD จะซิงก์สถานะกับ Git อย่างต่อเนื่องและแก้ไข configuration drift โดยอัตโนมัติ (self-healing)\nเชื่อม External Secrets Operator กับ AWS Secrets Manager เพื่อซิงก์ credentials เข้าคลัสเตอร์โดยไม่จัดเก็บไว้ใน Git\nตั้งค่า ArgoCD Image Updater ให้ตรวจพบ image รุ่นใหม่ อัปเดต tag ตาม semver และ deploy โดยอัตโนมัติ\nกำหนดค่าเริ่มต้นของ LimitRange และตรวจสอบ schema ของ ArgoCD Application\nติดตั้งระบบ observability ด้วย Prometheus, Grafana และ Kiali พร้อมส่ง log ผ่าน Otel ไปยัง Loki และติดตามสถานะแอปผ่าน ArgoCD UI",
                     },
                     {
                         id: uid(),
-                        name: "aws — ระบบสำรองความต่อเนื่องข้าม region",
+                        name: "aws — Multi-region Failover DR",
                         link: "github.com/traipoap/infra/tree/main/aws",
                         description:
                             "สร้างระบบ Disaster Recovery (DR) ข้าม region โดยใช้ K3s เป็น origin หลักของ CloudFront เมื่อได้รับสถานะ 4xx/5xx จะ failover ไปยัง Lambda (Go/Gin บน ECR) และ static build บน S3 ใน ap-southeast-1 และ ap-southeast-7 เพื่อให้ app.traipoap.com ทำงานต่อได้เมื่อระบบหลักขัดข้อง\nสร้าง Terraform module สำหรับ CloudFront, ECR, IAM, S3 และ ACM พร้อม CloudFront Function สำหรับ clean-URL routing และ OAC/SigV4 เพื่อเข้าถึง S3 แบบส่วนตัว",
