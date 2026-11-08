@@ -53,6 +53,7 @@ func setupAuthRoutes(r *gin.Engine, jwtService *services.JWTService, db *gorm.DB
 		// copy; the backend scopes the data to the caller's user id.
 		api.GET("/resume", controllers.HandleResumeGet(db))
 		api.PUT("/resume", controllers.HandleResumePut(db))
+		api.DELETE("/resume", controllers.HandleResumeDelete(db))
 
 		// User administration (admin only)
 		api.GET("/users", middleware.RoleAuth("admin"), controllers.HandleUsersList(db))

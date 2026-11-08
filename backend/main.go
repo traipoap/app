@@ -56,16 +56,22 @@ func main() {
 	}
 
 	var count int64
-	db.Model(&models.User{}).Where("username = ?", "admin@example.com").Count(&count)
+	db.Model(&models.User{}).Where("username = ?", "admin@traipoap.com").Count(&count)
 	if count == 0 {
-		hash, err := bcrypt.GenerateFromPassword([]byte("admin123"), 10)
+		hash, err := bcrypt.GenerateFromPassword([]byte("secure-password-admin"), 10)
+		userhash, err := bcrypt.GenerateFromPassword([]byte("for-download-my-resume"), 10)
 		if err != nil {
 			log.Fatalf("failed to hash password: %v", err)
 		}
 		db.Create(&models.User{
-			Username:     "admin@example.com",
+			Username:     "admin@traipoap.com",
 			PasswordHash: string(hash),
 			Role:         "admin",
+		})
+		db.Create(&models.User{
+			Username:     "user@traipoap.com",
+			PasswordHash: string(userhash),
+			Role:         "user",
 		})
 		log.Println("Seeded demo admin user")
 	}

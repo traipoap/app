@@ -105,3 +105,27 @@ func HandleResumePut(db *gorm.DB) gin.HandlerFunc {
 		c.JSON(http.StatusOK, gin.H{"message": "Resume saved"})
 	}
 }
+
+// HandleResumeDelete removes the CV document saved for the authenticated
+// account; 404 when the account has no saved copy.
+func HandleResumeDelete(db *gorm.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		id, ok := actorUserID(c)
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+			return
+		}
+
+		res := db.Where("user_id = ?", id).Delete(&models.Resume{})
+		if res.Error != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete resume"})
+			return
+		}
+		if res.RowsAffected == 0 {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Resume not found"})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"message": "Resume deleted"})
+	}
+}
