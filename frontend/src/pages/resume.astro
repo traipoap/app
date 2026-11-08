@@ -99,11 +99,54 @@ import Layout from "../layouts/Layout.astro";
                         ATS
                     </button>
                 </div>
-                <button type="button" class="cv-btn" data-action="sample">
-                    Load my data
+                <select
+                    id="cvVersions"
+                    class="cv-select"
+                    title="เวอร์ชัน resume ที่บันทึกไว้ในบัญชี — เลือกเพื่อโหลด"
+                    aria-label="เลือกเวอร์ชัน resume"
+                ></select>
+                <button
+                    type="button"
+                    class="cv-btn"
+                    data-action="sample-en"
+                    title="โหลดโปรไฟล์เป็นภาษาอังกฤษ"
+                >
+                    Load my data · EN
+                </button>
+                <button
+                    type="button"
+                    class="cv-btn"
+                    data-action="sample-th"
+                    title="โหลดโปรไฟล์เป็นภาษาไทย"
+                >
+                    โหลดข้อมูลของฉัน · TH
                 </button>
                 <button type="button" class="cv-btn" data-action="clear">
                     New
+                </button>
+                <button
+                    type="button"
+                    class="cv-btn"
+                    data-action="save"
+                    title="บันทึกข้อมูลปัจจุบันไว้ในบัญชีของคุณ"
+                >
+                    บันทึก
+                </button>
+                <button
+                    type="button"
+                    class="cv-btn"
+                    data-action="load"
+                    title="โหลดข้อมูลที่บันทึกไว้ในบัญชีของคุณ"
+                >
+                    โหลด
+                </button>
+                <button
+                    type="button"
+                    class="cv-btn cv-btn-danger"
+                    data-action="delete"
+                    title="ลบข้อมูล resume ที่บันทึกไว้ในบัญชี (ล้างฟอร์มปัจจุบันด้วย)"
+                >
+                    ลบ
                 </button>
                 <span class="cv-page-badge" id="pageBadge">
                     1 page
@@ -798,6 +841,26 @@ import Layout from "../layouts/Layout.astro";
             return pages;
         }
 
+        // A section split across pages so that only its last item lands on
+        // the new page reads as an accident — move the whole section there
+        // (heading + items stay together).
+        function pullSplitSection(pages: Measured[][]): Measured[][] {
+            for (let p = pages.length - 1; p >= 1; p--) {
+                const page = pages[p];
+                const prev = pages[p - 1];
+                if (!page.length || !prev.length) continue;
+                const first = page[0];
+                if (first.heading) continue; // section starts fresh — fine
+                if (page.length !== 1) continue; // more content follows
+                const idx = prev.findIndex((u) => u.section === first.section);
+                if (idx === -1) continue;
+                // A split section is always the last one on the previous page.
+                const moved = prev.splice(idx);
+                page.unshift(...moved);
+            }
+            return pages;
+        }
+
         // Group a page's units back into <section> blocks; a section that
         // continues onto a new page simply re-opens without its heading.
         function renderSectioned(ms: Measured[]): Node[] {
@@ -1273,15 +1336,31 @@ import Layout from "../layouts/Layout.astro";
             const wantsBreak = (t: string) => data.breaks[t] === true;
             const firstOffset = headMs ? headMs.t + headMs.h + headMs.b : 0;
             const topMargin = headMs ? headMs.b : 0;
-            const mainPages = rescueOrphan(
-                paginate(mainMs, PAGE_CAP, firstOffset, topMargin, wantsBreak),
-                PAGE_CAP,
-                wantsBreak,
+            const mainPages = pullSplitSection(
+                rescueOrphan(
+                    paginate(
+                        mainMs,
+                        PAGE_CAP,
+                        firstOffset,
+                        topMargin,
+                        wantsBreak,
+                    ),
+                    PAGE_CAP,
+                    wantsBreak,
+                ),
             );
-            const sidePages = rescueOrphan(
-                paginate(sideMs, PAGE_CAP, firstOffset, topMargin, wantsBreak),
-                PAGE_CAP,
-                wantsBreak,
+            const sidePages = pullSplitSection(
+                rescueOrphan(
+                    paginate(
+                        sideMs,
+                        PAGE_CAP,
+                        firstOffset,
+                        topMargin,
+                        wantsBreak,
+                    ),
+                    PAGE_CAP,
+                    wantsBreak,
+                ),
             );
             const total = Math.max(mainPages.length, sidePages.length, 1);
 
@@ -1878,17 +1957,46 @@ import Layout from "../layouts/Layout.astro";
             return res;
         }
 
-        async function pushToAccount(): Promise<boolean> {
+        // ── Versioned CV store ─────────────────────────────────────────
+        // The account blob holds every named version of the CV:
+        //   { v: 2, active: "DevOps", versions: { "DevOps": CV, ... } }
+        // `versions` mirrors the blob in memory; `activeName` is the
+        // version the form currently works on (null = new, unsaved).
+        const clone = <T,>(x: T): T => JSON.parse(JSON.stringify(x)) as T;
+        let versions: Record<string, CVData> = {};
+        let activeName: string | null = null;
+
+        function toBlob(): unknown {
+            const all: Record<string, CVData> = {};
+            for (const [k, v] of Object.entries(versions)) all[k] = clone(v);
+            if (activeName) all[activeName] = clone(data);
+            return { v: 2, active: activeName, versions: all };
+        }
+
+        async function persist(): Promise<boolean> {
             try {
+                if (!Object.keys(versions).length && !activeName) {
+                    const res = await authenticatedFetch("/api/resume", {
+                        method: "DELETE",
+                    });
+                    return res.ok || res.status === 404;
+                }
                 const res = await authenticatedFetch("/api/resume", {
                     method: "PUT",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ data }),
+                    body: JSON.stringify({ data: toBlob() }),
                 });
                 return res.ok;
             } catch {
                 return false;
             }
+        }
+
+        // Autosave path: only sync when the form is attached to a named
+        // version — a brand-new draft must not create ghost versions.
+        async function pushToAccount(): Promise<boolean> {
+            if (!activeName) return false;
+            return persist();
         }
 
         function applyData(next: CVData) {
@@ -1907,14 +2015,42 @@ import Layout from "../layouts/Layout.astro";
             renderSheet();
         }
 
-        async function loadAccountResume(): Promise<boolean> {
+        // Fetch the account blob and adopt every stored version.
+        async function loadAccountStore(): Promise<boolean> {
             try {
                 const res = await authenticatedFetch("/api/resume");
                 if (!res.ok) return false;
                 const body = await res.json();
-                const restored = normalizeDraft(body.data);
-                if (!restored) return false;
-                applyData(restored);
+                const blob = body.data as {
+                    v?: unknown;
+                    active?: unknown;
+                    versions?: unknown;
+                } | null;
+                if (!blob || typeof blob !== "object") return false;
+                versions = {};
+                if (
+                    blob.v === 2 &&
+                    blob.versions &&
+                    typeof blob.versions === "object"
+                ) {
+                    for (const [k, cv] of Object.entries(
+                        blob.versions as Record<string, unknown>,
+                    )) {
+                        const n = normalizeDraft(cv);
+                        if (n) versions[k] = n;
+                    }
+                } else {
+                    // Legacy single-CV blob — adopt it as version "Resume".
+                    const n = normalizeDraft(blob);
+                    if (n) versions.Resume = n;
+                }
+                let name: string | null = null;
+                if (typeof blob.active === "string" && versions[blob.active])
+                    name = blob.active;
+                if (!name) name = Object.keys(versions)[0] ?? null;
+                if (!name || !versions[name]) return false;
+                activeName = name;
+                applyData(clone(versions[name]));
                 // Keep a local offline cache of the account copy.
                 try {
                     window.localStorage.setItem(
@@ -1930,9 +2066,39 @@ import Layout from "../layouts/Layout.astro";
             }
         }
 
-        // ── Autosave ───────────────────────────────────────────────
+        function loadVersion(name: string): boolean {
+            if (!versions[name]) return false;
+            activeName = name;
+            applyData(clone(versions[name]));
+            syncVersionUI();
+            return true;
+        }
+
+        function syncVersionUI() {
+            const sel = document.getElementById(
+                "cvVersions",
+            ) as HTMLSelectElement | null;
+            if (!sel) return;
+            const keys = Object.keys(versions);
+            sel.length = 0;
+            for (const k of keys) sel.add(new Option(k, k));
+            sel.value = activeName && versions[activeName] ? activeName : "";
+            const del = document.querySelector<HTMLButtonElement>(
+                '[data-action="delete"]',
+            );
+            if (del) del.disabled = !activeName;
+        }
+
+        // ── Autosave ───────────────────────────────────────
         let saveTimer: number | undefined;
+        // Skip the next autosave — used right after an explicit "delete" so
+        // the cleared form doesn't get re-pushed to the account.
+        let suppressAutosave = false;
         function scheduleSave() {
+            if (suppressAutosave) {
+                suppressAutosave = false;
+                return;
+            }
             window.clearTimeout(saveTimer);
             saveTimer = window.setTimeout(async () => {
                 const t = new Date().toLocaleTimeString([], {
@@ -1949,12 +2115,17 @@ import Layout from "../layouts/Layout.astro";
                 } catch {
                     // Storage full or blocked — the account copy below still saves.
                 }
+                if (!activeName) {
+                    draftStatus.style.color = "";
+                    draftStatus.textContent = `Saved locally at ${t} — new version: press "บันทึก" to store it in your account.`;
+                    return;
+                }
                 draftStatus.style.color = "";
                 draftStatus.textContent = "Saving to your account…";
                 const synced = await pushToAccount();
                 if (synced) {
                     draftStatus.style.color = "";
-                    draftStatus.textContent = `Saved to your account at ${t}. In the print dialog choose “Save as PDF”.`;
+                    draftStatus.textContent = `Saved to your account as "${activeName}" at ${t}. In the print dialog choose “Save as PDF”.`;
                 } else if (localOk) {
                     draftStatus.style.color = "";
                     draftStatus.textContent = `Saved locally at ${t} — couldn't reach your account (check connection).`;
@@ -2046,7 +2217,7 @@ import Layout from "../layouts/Layout.astro";
             first?.focus({ preventScroll: true });
         }
 
-        form.addEventListener("click", (e) => {
+        form.addEventListener("click", async (e) => {
             const target = e.target as HTMLElement;
 
             const add = target.closest<HTMLButtonElement>("[data-add]");
@@ -2240,7 +2411,7 @@ import Layout from "../layouts/Layout.astro";
         // Toolbar.
         document
             .querySelector<HTMLElement>(".cv-toolbar")
-            ?.addEventListener("click", (e) => {
+            ?.addEventListener("click", async (e) => {
                 const target = e.target as HTMLElement;
 
                 const templateBtn =
@@ -2291,14 +2462,142 @@ import Layout from "../layouts/Layout.astro";
                         renderAllLists();
                         syncBreakButtons();
                         onStateChange();
+                        activeName = null; // cleared form = fresh, unsaved version
+                        syncVersionUI();
                     }
-                } else if (action === "sample") {
+                } else if (action === "save") {
+                    const raw = window.prompt(
+                        "ตั้งชื่อเวอร์ชันนี้ (เช่น DevOps, General, Thai)",
+                        activeName ?? "",
+                    );
+                    if (raw === null) return;
+                    const name = raw.trim();
+                    if (!name) {
+                        draftStatus.style.color = "var(--danger)";
+                        draftStatus.textContent =
+                            "ต้องตั้งชื่อเวอร์ชันก่อนบันทึก";
+                        return;
+                    }
                     if (
-                        confirm(
-                            "Replace the current form with the saved profile (Traipoap Hunthong)?",
+                        versions[name] &&
+                        activeName !== name &&
+                        !window.confirm(
+                            `มีเวอร์ชัน "${name}" อยู่แล้ว — ต้องการเขียนทับไหม?`,
                         )
+                    )
+                        return;
+                    draftStatus.style.color = "";
+                    draftStatus.textContent = "กำลังบันทึก…";
+                    versions[name] = clone(data);
+                    activeName = name;
+                    const ok = await persist();
+                    syncVersionUI();
+                    if (ok) {
+                        const t = new Date().toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                        });
+                        draftStatus.style.color = "";
+                        draftStatus.textContent = `บันทึกเป็นเวอร์ชัน "${name}" แล้ว เมื่อ ${t}`;
+                    } else {
+                        draftStatus.style.color = "var(--danger)";
+                        draftStatus.textContent =
+                            "บันทึกไม่สำเร็จ — ลองอีกครั้ง";
+                    }
+                } else if (action === "load") {
+                    const keys = Object.keys(versions);
+                    if (!keys.length) {
+                        draftStatus.style.color = "var(--danger)";
+                        draftStatus.textContent =
+                            'ยังไม่มีเวอร์ชันที่บันทึกไว้ — กด "บันทึก" ก่อน';
+                        return;
+                    }
+                    let name =
+                        activeName && versions[activeName]
+                            ? activeName
+                            : keys[0];
+                    if (keys.length > 1) {
+                        const answer = window.prompt(
+                            "โหลดเวอร์ชันไหน?\n" +
+                                keys
+                                    .map(
+                                        (k, i) =>
+                                            `${i + 1}. ${k}${k === name ? " (ปัจจุบัน)" : ""}`,
+                                    )
+                                    .join("\n"),
+                            String(keys.indexOf(name) + 1),
+                        );
+                        if (answer === null) return;
+                        const idx = Number(answer) - 1;
+                        if (
+                            !Number.isInteger(idx) ||
+                            idx < 0 ||
+                            idx >= keys.length
+                        )
+                            return;
+                        name = keys[idx];
+                    }
+                    if (loadVersion(name)) {
+                        draftStatus.style.color = "";
+                        draftStatus.textContent = `โหลดเวอร์ชัน "${name}" แล้ว`;
+                    }
+                } else if (action === "delete") {
+                    const keys = Object.keys(versions);
+                    if (!keys.length) {
+                        draftStatus.style.color = "var(--danger)";
+                        draftStatus.textContent =
+                            "ยังไม่มีเวอร์ชันที่บันทึกไว้";
+                        return;
+                    }
+                    const target =
+                        activeName && versions[activeName]
+                            ? activeName
+                            : keys[0];
+                    if (
+                        !window.confirm(`ลบเวอร์ชัน "${target}" ออก khỏiบัญชี?`)
+                    )
+                        return;
+                    delete versions[target];
+                    if (activeName === target) activeName = null;
+                    draftStatus.style.color = "";
+                    draftStatus.textContent = "กำลังลบ…";
+                    const ok = await persist();
+                    if (ok) {
+                        if (
+                            activeName === null &&
+                            !Object.keys(versions).length
+                        ) {
+                            // No versions left — drop the offline cache too so a
+                            // stale local draft can't resurrect on next boot.
+                            try {
+                                window.localStorage.removeItem(DRAFT_KEY);
+                            } catch {
+                                // best-effort
+                            }
+                            applyData(defaultData());
+                        }
+                        syncVersionUI();
+                        draftStatus.style.color = "";
+                        draftStatus.textContent = `ลบเวอร์ชัน "${target}" แล้ว`;
+                    } else {
+                        syncVersionUI();
+                        draftStatus.style.color = "var(--danger)";
+                        draftStatus.textContent = "ลบไม่สำเร็จ — ลองอีกครั้ง";
+                    }
+                } else if (action === "sample-en" || action === "sample-th") {
+                    const isTH = action === "sample-th";
+                    if (
+                        isTH
+                            ? confirm(
+                                  "แทนที่ข้อมูลปัจจุบันด้วยโปรไฟล์ (เวอร์ชันภาษาไทย)?",
+                              )
+                            : confirm(
+                                  "Replace the current form with the saved profile (Traipoap Hunthong)?",
+                              )
                     ) {
-                        data = sampleData();
+                        data = isTH ? sampleDataTH() : sampleDataEN();
+                        activeName = null; // sample = fresh working copy
+                        syncVersionUI();
                         syncTemplateButtons();
                         renderPhotoPreview();
                         bindStaticFields();
@@ -2309,31 +2608,100 @@ import Layout from "../layouts/Layout.astro";
                 }
             });
 
-        // ── Preset: Traipoap Hunthong ("Load my data") ─────────────────
-        function sampleData(): CVData {
+        // Picking a version from the toolbar menu loads it into the form.
+        document
+            .getElementById("cvVersions")
+            ?.addEventListener("change", (e) => {
+                const name = (e.target as HTMLSelectElement).value;
+                if (name && versions[name]) {
+                    loadVersion(name);
+                    draftStatus.style.color = "";
+                    draftStatus.textContent = `โหลดเวอร์ชัน "${name}" แล้ว`;
+                }
+            });
+
+        // ── Preset: Traipoap Hunthong ("Load my data") — EN / TH versions ──
+        function presetShared(): Pick<
+            CVData,
+            | "email"
+            | "phone"
+            | "website"
+            | "github"
+            | "linkedin"
+            | "skills"
+            | "certifications"
+            | "accent"
+            | "photo"
+            | "template"
+            | "breaks"
+        > {
             return {
-                name: "Traipoap Hunthong",
-                title: "DevOps Engineer",
                 email: "traipoap@hotmail.com",
                 phone: "+66 80 638 0921",
-                location: "Nonthaburi, Thailand",
                 website: "app.traipoap.com",
                 github: "github.com/traipoap",
                 linkedin: "linkedin.com/in/traipoap",
+                skills: [
+                    "Kubernetes / K8s / K3s / etcd / kubectl",
+                    "Helm / Kustomize / ArgoCD / FluxCD",
+                    "Istio / Cilium / Kiali / Gateway API",
+                    "cert-manager / Kyverno / External Secrets Operator",
+                    "Terraform / Ansible",
+                    "Proxmox VE / OpenStack",
+                    "AWS / ECR / GHCR / Huawei Cloud Container Engine",
+                    "GitHub Actions / Gitlab / Docker / Docker-compose",
+                    "Vector / Quickwit / Loki",
+                    "OpenTelemetry / OTel Collector / Grafana Tempo",
+                    "Prometheus / Grafana / Zabbix",
+                    "Trivy / Gitleaks / SonarQube",
+                    "nginx / HAProxy / Keepalived",
+                    "NFS / Garage (S3)",
+                    "Cloudflare Tunnel / Tailscale",
+                    "Go / Python / Bash",
+                    "Investigate / Troubleshooting",
+                    "Linux / Debian / Ubuntu",
+                ],
+                certifications: [
+                    {
+                        id: uid(),
+                        name: "CKA — Certified Kubernetes Administrator",
+                        issuer: "Linux Foundation",
+                        year: "2026 – 2028",
+                    },
+                    {
+                        id: uid(),
+                        name: "CKAD — Certified Kubernetes Application Developer",
+                        issuer: "Linux Foundation",
+                        year: "2026 – 2028",
+                    },
+                ],
+                accent: "#6366f1",
+                photo: null,
+                template: "classic",
+                breaks: {},
+            };
+        }
+
+        function sampleDataEN(): CVData {
+            return {
+                name: "Traipoap Hunthong",
+                title: "DevOps Engineer",
+                location: "Nonthaburi, Thailand",
+                ...presetShared(),
                 summary:
-                    "Network Administrator (CKA & CKAD certified) with 4+ years operating a national telco cloud. Design, build, and operate an end-to-end GitOps Kubernetes platform in a personal production environment — Terraform, Ansible, K3s, Istio, ArgoCD, GitHub Actions — with a multi-region failover DR layer on AWS (CloudFront, Lambda, S3). Zero manual deployment steps; provisioning cut from hours to under an hour.",
+                    "Hello, my name is Traipoap. I currently work as a Network Administrator and am expanding my experience in Networking, Infrastructure, and Cloud Computing into a DevOps Engineer role. I am certified as a Kubernetes Administrator (CKA) and a Certified Kubernetes Application Developer (CKAD). I have further developed my skills through hands-on personal projects, designing and developing web applications that run on on-premises infrastructure (home lab) and designing a Disaster Recovery (DR) site on the AWS cloud. I am committed to developing my skills in Kubernetes, CI/CD, GitOps, and Infrastructure Automation to leverage my knowledge and experience to develop efficient, stable infrastructure ready to handle production workloads.",
                 experience: [
                     {
                         id: uid(),
                         role: "Network Administrator — Tier-2 Support",
                         company:
                             "360 Bizmate Co., Ltd. (NT — National Telecom)",
-                        location: "",
+                        location: "Nonthaburi",
                         start: "Jan 2022",
                         end: "",
                         current: true,
                         description:
-                            "Acted as Tier-2 network support engineer — resolved escalated incidents and coordinated with L1/L3/vendor teams to keep all tasks within SLA\nReduced MTTR by implementing proactive ingress traffic monitoring with Zabbix, detecting silent failures that bypass traditional node-down alerts (Telegram alerts)\nAutomated multi-node health checks, reducing daily manual inspection of network devices\nResolved IPv6 security policy conflicts by disabling unintended IPv6 auto-configuration, restoring firewall security compliance\nExecuted change/service requests (e.g., VLAN additions and modifications); kept configuration backups accurate and up to date\nTrained and upskilled Level-1 staff to improve efficiency; produced weekly reports within the assigned scope",
+                            "Acted as Tier-2 network administrator — resolved escalated incidents and coordinated with L1/L3/vendor teams to keep all tasks within SLA.\nExecuted change/service requests (e.g., VLAN additions and modifications); kept configuration backups accurate and up to date.\nTrained and upskilled Level-1 staff to improve efficiency; produced monthly reports within the assigned scope.\nReduced MTTR by implementing proactive ingress traffic monitoring with Zabbix, detecting silent failures that bypass traditional node-down alerts (Telegram alerts).\nAutomated multi-node health checks, reducing daily manual inspection of network devices.\nResolved IPv6 security policy conflicts by disabling unintended IPv6 auto-configuration, restoring firewall security compliance.\nTroubleshoot load-balancing issues by identifying backend port/listening and Docker Compose exposure problems, guiding the customer to restore successful traffic forwarding.",
                     },
                 ],
                 projects: [
@@ -2356,14 +2724,14 @@ import Layout from "../layouts/Layout.astro";
                         name: "gitops — ArgoCD GitOps",
                         link: "github.com/traipoap/gitops",
                         description:
-                            "GitOps source of truth for the K3s cluster — all state in Git, continuously reconciled by ArgoCD with self-healing configuration drift\nExternal Secrets Operator + AWS SecretsManager — credentials synced into the cluster, never stored in Git\nArgoCD image updaters (semver) — new images auto-detected, tags updated and auto-deployed\nKyverno policy enforcing CPU/memory requests & limits on all Pods; LimitRange defaults; ArgoCD Application schema validation\nObservability: Prometheus, Grafana, Kiali, Vector → Quickwit logging pipeline; ArgoCD UI for application visibility",
+                            "GitOps source of truth for the K3s cluster — all state in Git, continuously reconciled by ArgoCD with self-healing configuration drift\nExternal Secrets Operator + AWS SecretsManager — credentials synced into the cluster, never stored in Git\nArgoCD image updaters (semver) — new images auto-detected, tags updated and auto-deployed\nLimitRange defaults; ArgoCD Application schema validation\nObservability: Prometheus, Grafana, Kiali, Vector → Quickwit logging pipeline; ArgoCD UI for application visibility",
                     },
                     {
                         id: uid(),
                         name: "aws — Multi-region Failover DR",
                         link: "github.com/traipoap/infra/tree/main/aws",
                         description:
-                            "Multi-region DR: K3s origin behind CloudFront origin groups with automatic 4xx/5xx failover to a Go/Gin Lambda (ECR) and S3 static build across ap-southeast-1/7 and us-east-1 — cross-provider continuity for app.traipoap.com\nTerraform modules (CloudFront, ECR, IAM, S3, ACM); CloudFront Function for clean-URL routing; OAC/SigV4 for private S3 access",
+                            "Multi-region DR: K3s origin behind CloudFront origin groups with automatic 4xx/5xx failover to a Go/Gin Lambda (ECR) and S3 static build across ap-southeast-1/7 — cross-provider continuity for app.traipoap.com\nTerraform modules (CloudFront, ECR, IAM, S3, ACM); CloudFront Function for clean-URL routing; OAC/SigV4 for private S3 access",
                     },
                 ],
                 education: [
@@ -2375,33 +2743,6 @@ import Layout from "../layouts/Layout.astro";
                         end: "May 2018",
                     },
                 ],
-                skills: [
-                    "Kubernetes",
-                    "Terraform",
-                    "Ansible",
-                    "Docker",
-                    "Istio",
-                    "ArgoCD",
-                    "GitHub Actions",
-                    "AWS",
-                    "Go",
-                    "Python",
-                    "Bash",
-                    "Grafana",
-                    "Prometheus",
-                    "Kiali",
-                    "Vector",
-                    "Quickwit",
-                    "Zabbix",
-                    "Trivy",
-                    "Gitleaks",
-                    "SonarQube",
-                    "Proxmox VE",
-                    "OpenStack",
-                    "VMware vSphere",
-                    "ECR",
-                    "Huawei CCE",
-                ],
                 languages: [
                     { id: uid(), name: "Thai", level: "Native" },
                     {
@@ -2410,24 +2751,79 @@ import Layout from "../layouts/Layout.astro";
                         level: "Working proficiency",
                     },
                 ],
-                certifications: [
+            };
+        }
+
+        // ── Preset: same profile, Thai wording ────────────────────────────
+        function sampleDataTH(): CVData {
+            return {
+                name: "ไตรภพ หุ่นทอง",
+                title: "DevOps Engineer",
+                location: "นนทบุรี, ประเทศไทย",
+                ...presetShared(),
+                summary:
+                    "สวัสดีครับ ผมชื่อไตรภพ ปัจจุบันทำงานด้านการดูแลระบบเครือข่าย (Network Administrator) และกำลังต่อยอดประสบการณ์ด้านเครือข่าย โครงสร้างพื้นฐาน และคลาวด์ ไปสู่ตำแหน่ง DevOps Engineer ผมผ่านการสอบรับรอง CKA และ CKAD จาก Linux Foundation รวมถึงสร้างโปรเจกต์ด้วยตนเองหลายโครงการ ทั้งแพลตฟอร์มค้นหาและจัดการ log บนโครงสร้างพื้นฐานของตนเอง (home lab) และระบบสำรองความต่อเนื่องทางธุรกิจ (Disaster Recovery) บน AWS Cloud โดยมุ่งพัฒนาทักษะด้าน Kubernetes, CI/CD, GitOps และระบบอัตโนมัติสำหรับโครงสร้างพื้นฐาน เพื่อสร้างระบบที่เสถียรและพร้อมใช้งานในสภาพแวดล้อมระดับ production จริง",
+                experience: [
                     {
                         id: uid(),
-                        name: "CKA — Certified Kubernetes Administrator",
-                        issuer: "Linux Foundation",
-                        year: "2026 – 2028",
-                    },
-                    {
-                        id: uid(),
-                        name: "CKAD — Certified Kubernetes Application Developer",
-                        issuer: "Linux Foundation",
-                        year: "2026 – 2028",
+                        role: "ผู้ดูแลระบบเครือข่าย (Tier-2)",
+                        company:
+                            "บริษัท 360 Bizmate จำกัด (NT — กสท โทรคมนาคม)",
+                        location: "นนทบุรี",
+                        start: "ม.ค. 2022",
+                        end: "",
+                        current: true,
+                        description:
+                            "รับผิดชอบดูแลระบบเครือข่ายในฐานะ Tier-2 — แก้ไขเหตุขัดข้องที่ยกระดับมาจาก Tier-1 และประสานงานกับทีมภายในและหน่วยงานภายนอกให้ทุกงานเสร็จทันกำหนด (SLA)\nดำเนินการเปลี่ยนแปลงระบบ (change) และคำขอบริการ (service request) เช่น การเพิ่มหรือแก้ไข VLAN รวมถึงดูแลการสำรองค่าการตั้งค่า (backup) ให้ถูกต้องเสมอ\nถ่ายทอดความรู้และฝึกทีม Tier-1 ให้ทำงานได้เร็วและถูกต้องยิ่งขึ้น พร้อมทั้งจัดทำรายงานประจำเดือนตามขอบเขตงาน\nช่วย сократитьเวลาเฉลี่ยในการแก้ไขเหตุขัดข้อง (MTTR) ด้วยระบบเฝ้าระวังแบบเชิงรุกผ่าน Zabbix — จับปัญหาแฝงที่การแจ้งเตือนแบบเดิมจับไม่ได้ และแจ้งเตือนผ่าน Telegram ได้ทันที\nเขียนสคริปต์อัตโนมัติสำหรับตรวจสุขภาพอุปกรณ์หลายเครื่องพร้อมกัน ลดการตรวจสอบด้วยตนเองทุกวัน\nแก้ปัญหาความขัดแย้งของนโยบาย IPv6 โดยปิด IPv6 แบบกำหนดค่าอัตโนมัติ (auto-configuration) ที่ไม่ได้ตั้งใจเปิดอยู่ ส่งผลให้ค่าการตั้งค่า firewall เป็นไปตามข้อกำหนดด้านความปลอดภัยอีกครั้ง\nช่วยวิเคราะห์ปัญหาการกระจายโหลด (load balancing) พบว่าเกิดจากค่าพอร์ตด้านหลัง (backend) และการเปิด exposure ของ Docker Compose ไม่ถูกต้อง แนะนำแนวทางแก้ไขจนลูกค้ากลับมาให้บริการได้ปกติ",
                     },
                 ],
-                accent: "#6366f1",
-                photo: null,
-                template: "modern",
-                breaks: {},
+                projects: [
+                    {
+                        id: uid(),
+                        name: "infra — K3s Platform บน Proxmox",
+                        link: "github.com/traipoap/infra",
+                        description:
+                            "สร้างระบบ K3s ที่จัดการอัตโนมัติทั้งหมด เริ่มจาก Terraform (สร้างเครื่องจากเทมเพลต, กำหนดจำนวนโหนดอัตโนมัติ, เก็บ state ที่ HCP) ต่อด้วย Ansible (playbook 6 ชุด, ปรับค่า kernel) จากนั้นติดตั้ง K3s (etcd ในตัว, HA) พร้อม Istio (ambient) + Gateway API และปิดท้ายด้วย ArgoCD สำหรับ GitOps (ติดตั้งด้วย Helm)\nสร้างระบบทั้งหมดจากศูนย์ภายในหนึ่งชั่วโมง — super-node (HAProxy L7, relay syslog, NFS, S3) + K3s โหนดควบคุม 3 (etcd quorum) + โหนด worker 2 — สร้างซ้ำได้ทุกเมื่อ และรื้อทิ้งได้ด้วยคำสั่งเดียว (terraform destroy)\nรองรับ container runtime หลายตัว — ใช้ crun เป็นค่าเริ่มต้น และเปิด youki ให้ใช้งานเป็น RuntimeClass ของ Kubernetes\nเขียนเอกสารอธิบายการตัดสินใจด้านสถาปัตยกรรม 14 ข้อ พร้อมคู่มือติดตั้งและแนวทางแก้ปัญหา (runbook)",
+                    },
+                    {
+                        id: uid(),
+                        name: "app — แพลตฟอร์มค้นหา Log (Go/GIN + Astro)",
+                        link: "app.traipoap.com · github.com/traipoap/app",
+                        description:
+                            "พัฒนาและดูแลระบบค้นหา log แบบ self-hosted บนสภาพแวดล้อมใช้งานจริง — API จาก Go (ยืนยันตัวตนด้วย JWT, ค้นหาด้วย Quickwit, นำออกเป็น CSV) และ dashboard จาก Astro\nCI/CD ด้วย GitHub Actions — สแกนรหัสรั่วด้วย Gitleaks และตรวจ SAST ด้วย SonarQube → build image เฉพาะส่วนที่เปลี่ยน → สแกนช่องโหว่ระดับ CRITICAL/HIGH ด้วย Trivy (SARIF) → push เข้า GHCR → ArgoCD ทำการ deploy ให้อัตโนมัติ",
+                    },
+                    {
+                        id: uid(),
+                        name: "gitops — ArgoCD GitOps",
+                        link: "github.com/traipoap/gitops",
+                        description:
+                            "ใช้ Git เป็นแหล่งข้อมูลหลัก (source of truth) ของคลัสเตอร์ K3s — ArgoCD ซิงก์กับ Git ตลอดเวลา และซ่อมค่าการตั้งค่าที่เบี่ยงเบนไปให้อัตโนมัติ (self-healing)\nเชื่อม External Secrets Operator กับ AWS SecretsManager — credentials เติมเข้าคลัสเตอร์ได้โดยไม่ต้องเก็บไว้ใน Git\nใช้ ArgoCD image updaters (semver) — เมื่อมี image ใหม่ ระบบจะตรวจพบ อัปเดต tag และ deploy ให้อัตโนมัติ\nกำหนดค่าเริ่มต้นของ LimitRange และตรวจสอบรูปแบบ (schema) ของ ArgoCD Application\nด้านความน่าเชื่อถือของระบบ — Prometheus, Grafana, Kiali และส่ง log ผ่าน Vector → Quickwit พร้อมดูสถานะแอปจาก ArgoCD UI",
+                    },
+                    {
+                        id: uid(),
+                        name: "aws — ระบบสำรองความต่อเนื่องข้าม region",
+                        link: "github.com/traipoap/infra/tree/main/aws",
+                        description:
+                            "ระบบสำรองข้าม region (Multi-region DR) — K3s เป็น origin ของ CloudFront origin groups เมื่อต้นทางตอบ 4xx/5xx ระบบจะ failover ไปยัง Lambda (Go/Gin จาก ECR) และ static build บน S3 ครอบคลุมทั้ง ap-southeast-1 และ ap-southeast-7 — ช่วยให้ความต่อเนื่องของ app.traipoap.com แม้ผู้ให้บริการหลักมีเหตุขัดข้อง\nเขียน Terraform modules สำหรับ CloudFront, ECR, IAM, S3 และ ACM พร้อม CloudFront Function สำหรับ clean-URL routing และ OAC/SigV4 เพื่อเข้าถึง S3 แบบส่วนตัว",
+                    },
+                ],
+                education: [
+                    {
+                        id: uid(),
+                        degree: "วิทยาศาสตรบัณฑิต (วิทยาการคอมพิวเตอร์)",
+                        school: "มหาวิทยาลัยเทคโนโลยีราชมงคลพระนคร",
+                        start: "ส.ค. 2014",
+                        end: "พ.ค. 2018",
+                    },
+                ],
+                languages: [
+                    { id: uid(), name: "ไทย", level: "ภาษาแม่" },
+                    {
+                        id: uid(),
+                        name: "อังกฤษ",
+                        level: "สื่อสารเพื่อการทำงาน",
+                    },
+                ],
             };
         }
 
@@ -2441,15 +2837,17 @@ import Layout from "../layouts/Layout.astro";
         renderAllLists();
         syncBreakButtons();
         renderSheet();
+        syncVersionUI();
 
-        // Sync with the account copy: the backend is the source of truth;
-        // a local draft is only a fallback and gets migrated to the account.
+        // Sync with the account: the backend is the source of truth for the
+        // saved versions; a local draft is a fallback that gets migrated to
+        // the account as version "Resume".
         void (async () => {
-            const fromAccount = await loadAccountResume();
-            if (fromAccount) {
+            const fromAccount = await loadAccountStore();
+            syncVersionUI();
+            if (fromAccount && activeName) {
                 draftStatus.style.color = "";
-                draftStatus.textContent =
-                    "Loaded your CV from your account. In the print dialog choose “Save as PDF”.";
+                draftStatus.textContent = `Loaded "${activeName}" from your account. In the print dialog choose “Save as PDF”.`;
                 return;
             }
             if (!restoredDraft) return;
@@ -2460,10 +2858,14 @@ import Layout from "../layouts/Layout.astro";
                     (e) => e.role.trim() !== "" || e.company.trim() !== "",
                 ) ||
                 data.projects.length > 0;
-            if (hasContent && (await pushToAccount())) {
+            if (!hasContent) return;
+            versions.Resume = clone(data);
+            activeName = "Resume";
+            if (await persist()) {
+                syncVersionUI();
                 draftStatus.style.color = "";
                 draftStatus.textContent =
-                    "Migrated your saved draft to your account.";
+                    'Migrated your local draft to your account as version "Resume".';
             }
         })();
 
@@ -2603,6 +3005,44 @@ import Layout from "../layouts/Layout.astro";
             background: rgba(129, 140, 248, 0.22);
             color: #e0e7ff;
             border-color: rgba(129, 140, 248, 0.6);
+        }
+
+        .cv-btn-danger {
+            color: #fda4af;
+            border-color: rgba(244, 63, 94, 0.35);
+        }
+
+        .cv-btn-danger:hover {
+            color: #fecdd3;
+            background: rgba(244, 63, 94, 0.12);
+            border-color: rgba(244, 63, 94, 0.55);
+        }
+
+        .cv-select {
+            padding: 0.5625rem 0.75rem;
+            background: rgba(148, 163, 184, 0.06);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--muted);
+            font-size: 0.8125rem;
+            font-weight: 600;
+            cursor: pointer;
+            max-width: 190px;
+        }
+
+        .cv-select:focus {
+            outline: none;
+            border-color: var(--border-strong);
+        }
+
+        .cv-select option {
+            background: var(--bg-elev, #0b1120);
+            color: var(--text, #e7ecf5);
+        }
+
+        .cv-btn[disabled] {
+            opacity: 0.45;
+            cursor: not-allowed;
         }
 
         .cv-seg {
