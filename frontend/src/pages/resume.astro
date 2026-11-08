@@ -858,7 +858,7 @@ import Layout from "../layouts/Layout.astro";
                 const moved = prev.splice(idx);
                 page.unshift(...moved);
             }
-            return pages;
+            return pages.filter((page) => page.length > 0);
         }
 
         // Group a page's units back into <section> blocks; a section that
@@ -2553,9 +2553,7 @@ import Layout from "../layouts/Layout.astro";
                         activeName && versions[activeName]
                             ? activeName
                             : keys[0];
-                    if (
-                        !window.confirm(`ลบเวอร์ชัน "${target}" ออก khỏiบัญชี?`)
-                    )
+                    if (!window.confirm(`ลบเวอร์ชัน "${target}" ออกจากบัญชี?`))
                         return;
                     delete versions[target];
                     if (activeName === target) activeName = null;
@@ -2649,7 +2647,7 @@ import Layout from "../layouts/Layout.astro";
                     "Terraform / Ansible",
                     "Proxmox VE / OpenStack",
                     "AWS / ECR / GHCR / Huawei Cloud Container Engine",
-                    "GitHub Actions / Gitlab / Docker / Docker-compose",
+                    "GitHub Actions / GitLab / Docker / Docker Compose",
                     "Vector / Quickwit / Loki",
                     "OpenTelemetry / OTel Collector / Grafana Tempo",
                     "Prometheus / Grafana / Zabbix",
@@ -2658,7 +2656,7 @@ import Layout from "../layouts/Layout.astro";
                     "NFS / Garage (S3)",
                     "Cloudflare Tunnel / Tailscale",
                     "Go / Python / Bash",
-                    "Investigate / Troubleshooting",
+                    "Investigation / Troubleshooting",
                     "Linux / Debian / Ubuntu",
                 ],
                 certifications: [
@@ -2689,7 +2687,7 @@ import Layout from "../layouts/Layout.astro";
                 location: "Nonthaburi, Thailand",
                 ...presetShared(),
                 summary:
-                    "Hello, my name is Traipoap. I currently work as a Network Administrator and am expanding my experience in Networking, Infrastructure, and Cloud Computing into a DevOps Engineer role. I am certified as a Kubernetes Administrator (CKA) and a Certified Kubernetes Application Developer (CKAD). I have further developed my skills through hands-on personal projects, designing and developing web applications that run on on-premises infrastructure (home lab) and designing a Disaster Recovery (DR) site on the AWS cloud. I am committed to developing my skills in Kubernetes, CI/CD, GitOps, and Infrastructure Automation to leverage my knowledge and experience to develop efficient, stable infrastructure ready to handle production workloads.",
+                    "Network Administrator expanding my experience in networking, infrastructure, and cloud computing toward a DevOps Engineer role. Certified as a Kubernetes Administrator (CKA) and Kubernetes Application Developer (CKAD) by the Linux Foundation. Built hands-on projects, including web applications running on a home lab and a disaster recovery (DR) site on AWS. Focused on Kubernetes, CI/CD, GitOps, and infrastructure automation to build reliable systems ready for production workloads.",
                 experience: [
                     {
                         id: uid(),
@@ -2701,7 +2699,7 @@ import Layout from "../layouts/Layout.astro";
                         end: "",
                         current: true,
                         description:
-                            "Acted as Tier-2 network administrator — resolved escalated incidents and coordinated with L1/L3/vendor teams to keep all tasks within SLA.\nExecuted change/service requests (e.g., VLAN additions and modifications); kept configuration backups accurate and up to date.\nTrained and upskilled Level-1 staff to improve efficiency; produced monthly reports within the assigned scope.\nReduced MTTR by implementing proactive ingress traffic monitoring with Zabbix, detecting silent failures that bypass traditional node-down alerts (Telegram alerts).\nAutomated multi-node health checks, reducing daily manual inspection of network devices.\nResolved IPv6 security policy conflicts by disabling unintended IPv6 auto-configuration, restoring firewall security compliance.\nTroubleshoot load-balancing issues by identifying backend port/listening and Docker Compose exposure problems, guiding the customer to restore successful traffic forwarding.",
+                            "Resolved Tier-2 network incidents escalated from Tier 1 and coordinated with internal teams and vendors to meet SLAs.\nHandled change and service requests, including VLAN additions and modifications, and maintained accurate configuration backups.\nTrained Tier-1 staff to improve efficiency and prepared monthly reports within the assigned scope.\nReduced mean time to resolution (MTTR) by implementing proactive traffic monitoring with Zabbix, detecting silent failures missed by standard node-down alerts and sending notifications through Telegram.\nAutomated multi-node health checks, reducing daily manual inspections of network devices.\nResolved IPv6 security policy conflicts by disabling unintended IPv6 auto-configuration and restoring firewall compliance.\nDiagnosed load-balancing issues caused by backend port settings and Docker Compose port exposure, helping the customer restore traffic forwarding.",
                     },
                 ],
                 projects: [
@@ -2710,28 +2708,28 @@ import Layout from "../layouts/Layout.astro";
                         name: "infra — K3s Platform on Proxmox",
                         link: "github.com/traipoap/infra",
                         description:
-                            "Automated K3s platform: Terraform (template-clone VMs, count-driven node scaling, HCP remote state) → Ansible (6 idempotent playbooks, kernel tuning) → K3s (embedded etcd, HA) → Istio (ambient) + Gateway API → ArgoCD GitOps (Helm install)\nProvisions the full platform from zero in under an hour — super-node (HAProxy L7 LB, syslog relay, NFS, S3) + K3s 3 control-planes (etcd quorum) + 2 workers; fully repeatable, terraform destroy tears it down\nMulti-runtime container support: crun default runtime, youki exposed as a Kubernetes RuntimeClass\nDocumented 14 architecture decisions plus deployment and troubleshooting runbook",
+                            "Automated K3s platform provisioning with Terraform (template-based VM cloning, count-driven node scaling, and HCP remote state), Ansible (six idempotent playbooks and kernel tuning), K3s (embedded etcd for high availability), Istio ambient, Gateway API, and Argo CD GitOps deployments with Helm.\nProvisioned the complete platform from scratch in under an hour: a super-node (HAProxy L7 load balancer, syslog relay, NFS, and S3), three K3s control-plane nodes (etcd quorum), and two workers. The setup is repeatable and can be torn down with terraform destroy.\nAdded multi-runtime container support, using crun as the default runtime and exposing youki as a Kubernetes RuntimeClass.\nDocumented 14 architecture decisions, along with deployment and troubleshooting runbooks.",
                     },
                     {
                         id: uid(),
                         name: "app — Go/GIN + Astro Log Platform",
                         link: "app.traipoap.com · github.com/traipoap/app",
                         description:
-                            "Built and run a self-hosted log-search platform in a personal production environment — Go API (JWT auth, Quickwit search, CSV export) + Astro dashboard\nCI/CD with GitHub Actions: Gitleaks + SonarQube SAST gate → path-filtered image build → Trivy CRITICAL/HIGH scan (SARIF) → GHCR → ArgoCD auto-deploys",
+                            "Built and operate a self-hosted log search platform in a personal production environment, with a Go API (JWT authentication, Quickwit search, and CSV export) and an Astro dashboard.\nImplemented CI/CD with GitHub Actions: Gitleaks secret scanning and a SonarQube SAST gate, path-filtered image builds, Trivy scans for CRITICAL and HIGH vulnerabilities (SARIF), publishing to GHCR, and automatic deployments through Argo CD.",
                     },
                     {
                         id: uid(),
                         name: "gitops — ArgoCD GitOps",
                         link: "github.com/traipoap/gitops",
                         description:
-                            "GitOps source of truth for the K3s cluster — all state in Git, continuously reconciled by ArgoCD with self-healing configuration drift\nExternal Secrets Operator + AWS SecretsManager — credentials synced into the cluster, never stored in Git\nArgoCD image updaters (semver) — new images auto-detected, tags updated and auto-deployed\nLimitRange defaults; ArgoCD Application schema validation\nObservability: Prometheus, Grafana, Kiali, Vector → Quickwit logging pipeline; ArgoCD UI for application visibility",
+                            "Maintained Git as the source of truth for the K3s cluster, with Argo CD continuously reconciling cluster state and correcting configuration drift.\nIntegrated External Secrets Operator with AWS Secrets Manager to sync credentials into the cluster without storing them in Git.\nConfigured Argo CD Image Updater to detect new image versions, update tags according to semantic versioning, and deploy automatically.\nConfigured LimitRange defaults and schema validation for Argo CD Applications.\nImplemented observability with Prometheus, Grafana, and Kiali, and routed logs through Vector to Quickwit; used the Argo CD UI for application visibility.",
                     },
                     {
                         id: uid(),
                         name: "aws — Multi-region Failover DR",
                         link: "github.com/traipoap/infra/tree/main/aws",
                         description:
-                            "Multi-region DR: K3s origin behind CloudFront origin groups with automatic 4xx/5xx failover to a Go/Gin Lambda (ECR) and S3 static build across ap-southeast-1/7 — cross-provider continuity for app.traipoap.com\nTerraform modules (CloudFront, ECR, IAM, S3, ACM); CloudFront Function for clean-URL routing; OAC/SigV4 for private S3 access",
+                            "Built a multi-region disaster recovery setup with K3s as the primary origin behind CloudFront origin groups, automatically failing over on 4xx/5xx responses to a Go/Gin Lambda (ECR) and a static site on S3 across ap-southeast-1 and ap-southeast-7. This provides cross-provider continuity for app.traipoap.com.\nCreated Terraform modules for CloudFront, ECR, IAM, S3, and ACM, plus a CloudFront Function for clean URL routing and OAC/SigV4 for private S3 access.",
                     },
                 ],
                 education: [
@@ -2762,7 +2760,7 @@ import Layout from "../layouts/Layout.astro";
                 location: "นนทบุรี, ประเทศไทย",
                 ...presetShared(),
                 summary:
-                    "สวัสดีครับ ผมชื่อไตรภพ ปัจจุบันทำงานด้านการดูแลระบบเครือข่าย (Network Administrator) และกำลังต่อยอดประสบการณ์ด้านเครือข่าย โครงสร้างพื้นฐาน และคลาวด์ ไปสู่ตำแหน่ง DevOps Engineer ผมผ่านการสอบรับรอง CKA และ CKAD จาก Linux Foundation รวมถึงสร้างโปรเจกต์ด้วยตนเองหลายโครงการ ทั้งแพลตฟอร์มค้นหาและจัดการ log บนโครงสร้างพื้นฐานของตนเอง (home lab) และระบบสำรองความต่อเนื่องทางธุรกิจ (Disaster Recovery) บน AWS Cloud โดยมุ่งพัฒนาทักษะด้าน Kubernetes, CI/CD, GitOps และระบบอัตโนมัติสำหรับโครงสร้างพื้นฐาน เพื่อสร้างระบบที่เสถียรและพร้อมใช้งานในสภาพแวดล้อมระดับ production จริง",
+                    "สวัสดีครับ ผมชื่อไตรภพ หุ่นทอง ปัจจุบันทำงานด้านดูแลระบบเครือข่าย (Network Administrator) และกำลังต่อยอดประสบการณ์ด้านเครือข่าย โครงสร้างพื้นฐาน และคลาวด์ เพื่อเติบโตสู่ตำแหน่ง DevOps Engineer ผมได้รับการรับรอง CKA และ CKAD จาก Linux Foundation และพัฒนาโปรเจกต์ด้วยตนเองหลายโครงการ ทั้งแพลตฟอร์มค้นหาและจัดการ log บน home lab และระบบกู้คืนระบบเมื่อเกิดเหตุขัดข้อง (Disaster Recovery) บน AWS Cloud ผมมุ่งพัฒนาทักษะด้าน Kubernetes, CI/CD, GitOps และระบบอัตโนมัติสำหรับโครงสร้างพื้นฐาน เพื่อสร้างระบบที่เสถียรและพร้อมใช้งานจริง",
                 experience: [
                     {
                         id: uid(),
@@ -2774,7 +2772,7 @@ import Layout from "../layouts/Layout.astro";
                         end: "",
                         current: true,
                         description:
-                            "รับผิดชอบดูแลระบบเครือข่ายในฐานะ Tier-2 — แก้ไขเหตุขัดข้องที่ยกระดับมาจาก Tier-1 และประสานงานกับทีมภายในและหน่วยงานภายนอกให้ทุกงานเสร็จทันกำหนด (SLA)\nดำเนินการเปลี่ยนแปลงระบบ (change) และคำขอบริการ (service request) เช่น การเพิ่มหรือแก้ไข VLAN รวมถึงดูแลการสำรองค่าการตั้งค่า (backup) ให้ถูกต้องเสมอ\nถ่ายทอดความรู้และฝึกทีม Tier-1 ให้ทำงานได้เร็วและถูกต้องยิ่งขึ้น พร้อมทั้งจัดทำรายงานประจำเดือนตามขอบเขตงาน\nช่วย сократитьเวลาเฉลี่ยในการแก้ไขเหตุขัดข้อง (MTTR) ด้วยระบบเฝ้าระวังแบบเชิงรุกผ่าน Zabbix — จับปัญหาแฝงที่การแจ้งเตือนแบบเดิมจับไม่ได้ และแจ้งเตือนผ่าน Telegram ได้ทันที\nเขียนสคริปต์อัตโนมัติสำหรับตรวจสุขภาพอุปกรณ์หลายเครื่องพร้อมกัน ลดการตรวจสอบด้วยตนเองทุกวัน\nแก้ปัญหาความขัดแย้งของนโยบาย IPv6 โดยปิด IPv6 แบบกำหนดค่าอัตโนมัติ (auto-configuration) ที่ไม่ได้ตั้งใจเปิดอยู่ ส่งผลให้ค่าการตั้งค่า firewall เป็นไปตามข้อกำหนดด้านความปลอดภัยอีกครั้ง\nช่วยวิเคราะห์ปัญหาการกระจายโหลด (load balancing) พบว่าเกิดจากค่าพอร์ตด้านหลัง (backend) และการเปิด exposure ของ Docker Compose ไม่ถูกต้อง แนะนำแนวทางแก้ไขจนลูกค้ากลับมาให้บริการได้ปกติ",
+                            "ดูแลระบบเครือข่ายในฐานะ Tier-2 แก้ไขเหตุขัดข้องที่ส่งต่อมาจาก Tier-1 และประสานงานกับทีมภายในและหน่วยงานภายนอกให้ดำเนินงานได้ตาม SLA\nดำเนินการเปลี่ยนแปลงระบบ (change) และคำขอบริการ (service request) เช่น เพิ่มหรือแก้ไข VLAN พร้อมสำรองค่าการตั้งค่า (backup) ให้เป็นปัจจุบัน\nถ่ายทอดความรู้และฝึกอบรมทีม Tier-1 เพื่อเพิ่มประสิทธิภาพการทำงาน พร้อมจัดทำรายงานประจำเดือนตามขอบเขตงาน\nช่วยลดเวลาเฉลี่ยในการแก้ไขเหตุขัดข้อง (MTTR) ด้วยระบบเฝ้าระวังเชิงรุกผ่าน Zabbix ซึ่งตรวจพบปัญหาแฝงที่การแจ้งเตือนแบบเดิมตรวจไม่พบ และส่งการแจ้งเตือนผ่าน Telegram\nเขียนสคริปต์ตรวจสุขภาพอุปกรณ์หลายเครื่องโดยอัตโนมัติ ลดการตรวจสอบด้วยตนเองในแต่ละวัน\nแก้ไขความขัดแย้งของนโยบาย IPv6 โดยปิดการกำหนดค่า IPv6 อัตโนมัติ (auto-configuration) ที่ไม่พึงประสงค์ ทำให้การตั้งค่า firewall กลับมาเป็นไปตามข้อกำหนดด้านความปลอดภัย\nวิเคราะห์ปัญหาการกระจายโหลด (load balancing) และพบว่าการตั้งค่าพอร์ต backend กับการเปิดพอร์ตใน Docker Compose ไม่ถูกต้อง พร้อมแนะนำวิธีแก้ไขจนลูกค้ากลับมาใช้งานได้ตามปกติ",
                     },
                 ],
                 projects: [
@@ -2783,28 +2781,28 @@ import Layout from "../layouts/Layout.astro";
                         name: "infra — K3s Platform บน Proxmox",
                         link: "github.com/traipoap/infra",
                         description:
-                            "สร้างระบบ K3s ที่จัดการอัตโนมัติทั้งหมด เริ่มจาก Terraform (สร้างเครื่องจากเทมเพลต, กำหนดจำนวนโหนดอัตโนมัติ, เก็บ state ที่ HCP) ต่อด้วย Ansible (playbook 6 ชุด, ปรับค่า kernel) จากนั้นติดตั้ง K3s (etcd ในตัว, HA) พร้อม Istio (ambient) + Gateway API และปิดท้ายด้วย ArgoCD สำหรับ GitOps (ติดตั้งด้วย Helm)\nสร้างระบบทั้งหมดจากศูนย์ภายในหนึ่งชั่วโมง — super-node (HAProxy L7, relay syslog, NFS, S3) + K3s โหนดควบคุม 3 (etcd quorum) + โหนด worker 2 — สร้างซ้ำได้ทุกเมื่อ และรื้อทิ้งได้ด้วยคำสั่งเดียว (terraform destroy)\nรองรับ container runtime หลายตัว — ใช้ crun เป็นค่าเริ่มต้น และเปิด youki ให้ใช้งานเป็น RuntimeClass ของ Kubernetes\nเขียนเอกสารอธิบายการตัดสินใจด้านสถาปัตยกรรม 14 ข้อ พร้อมคู่มือติดตั้งและแนวทางแก้ปัญหา (runbook)",
+                            "สร้างแพลตฟอร์ม K3s แบบอัตโนมัติ ตั้งแต่ Terraform (สร้าง VM จากเทมเพลต กำหนดจำนวนโหนด และจัดเก็บ state บน HCP Terraform) ไปจนถึง Ansible (playbook 6 ชุดและการปรับแต่ง kernel) แล้วติดตั้ง K3s แบบ HA ด้วย embedded etcd พร้อม Istio ambient, Gateway API และ ArgoCD สำหรับ GitOps (ติดตั้งผ่าน Helm)\nติดตั้งแพลตฟอร์มทั้งหมดจากศูนย์ได้ภายในหนึ่งชั่วโมง ประกอบด้วย super-node (HAProxy L7, syslog relay, NFS และ S3), control plane 3 โหนด (etcd quorum) และ worker 2 โหนด พร้อมสร้างซ้ำหรือรื้อระบบด้วย terraform destroy\nรองรับ container runtime หลายตัว โดยใช้ crun เป็นค่าเริ่มต้นและกำหนด youki เป็น RuntimeClass ของ Kubernetes\nจัดทำเอกสารการตัดสินใจด้านสถาปัตยกรรม 14 ข้อ คู่มือติดตั้ง และคู่มือแก้ไขปัญหา (runbook)",
                     },
                     {
                         id: uid(),
                         name: "app — แพลตฟอร์มค้นหา Log (Go/GIN + Astro)",
                         link: "app.traipoap.com · github.com/traipoap/app",
                         description:
-                            "พัฒนาและดูแลระบบค้นหา log แบบ self-hosted บนสภาพแวดล้อมใช้งานจริง — API จาก Go (ยืนยันตัวตนด้วย JWT, ค้นหาด้วย Quickwit, นำออกเป็น CSV) และ dashboard จาก Astro\nCI/CD ด้วย GitHub Actions — สแกนรหัสรั่วด้วย Gitleaks และตรวจ SAST ด้วย SonarQube → build image เฉพาะส่วนที่เปลี่ยน → สแกนช่องโหว่ระดับ CRITICAL/HIGH ด้วย Trivy (SARIF) → push เข้า GHCR → ArgoCD ทำการ deploy ให้อัตโนมัติ",
+                            "พัฒนาและดูแลแพลตฟอร์มค้นหา log แบบ self-hosted ในสภาพแวดล้อมใช้งานจริง ประกอบด้วย Go API (ยืนยันตัวตนด้วย JWT ค้นหาด้วย Quickwit และส่งออก CSV) กับ Astro dashboard\nสร้าง CI/CD ด้วย GitHub Actions: สแกน secret ที่รั่วไหลด้วย Gitleaks ตรวจ SAST ด้วย SonarQube สร้าง image เฉพาะส่วนที่เปลี่ยน สแกนช่องโหว่ระดับ CRITICAL/HIGH ด้วย Trivy (SARIF) ส่ง image ไปยัง GHCR และให้ ArgoCD deploy อัตโนมัติ",
                     },
                     {
                         id: uid(),
                         name: "gitops — ArgoCD GitOps",
                         link: "github.com/traipoap/gitops",
                         description:
-                            "ใช้ Git เป็นแหล่งข้อมูลหลัก (source of truth) ของคลัสเตอร์ K3s — ArgoCD ซิงก์กับ Git ตลอดเวลา และซ่อมค่าการตั้งค่าที่เบี่ยงเบนไปให้อัตโนมัติ (self-healing)\nเชื่อม External Secrets Operator กับ AWS SecretsManager — credentials เติมเข้าคลัสเตอร์ได้โดยไม่ต้องเก็บไว้ใน Git\nใช้ ArgoCD image updaters (semver) — เมื่อมี image ใหม่ ระบบจะตรวจพบ อัปเดต tag และ deploy ให้อัตโนมัติ\nกำหนดค่าเริ่มต้นของ LimitRange และตรวจสอบรูปแบบ (schema) ของ ArgoCD Application\nด้านความน่าเชื่อถือของระบบ — Prometheus, Grafana, Kiali และส่ง log ผ่าน Vector → Quickwit พร้อมดูสถานะแอปจาก ArgoCD UI",
+                            "ใช้ Git เป็นแหล่งข้อมูลหลัก (source of truth) ของคลัสเตอร์ K3s โดย ArgoCD จะซิงก์สถานะกับ Git อย่างต่อเนื่องและแก้ไข configuration drift โดยอัตโนมัติ (self-healing)\nเชื่อม External Secrets Operator กับ AWS Secrets Manager เพื่อซิงก์ credentials เข้าคลัสเตอร์โดยไม่จัดเก็บไว้ใน Git\nตั้งค่า ArgoCD Image Updater ให้ตรวจพบ image รุ่นใหม่ อัปเดต tag ตาม semver และ deploy โดยอัตโนมัติ\nกำหนดค่าเริ่มต้นของ LimitRange และตรวจสอบ schema ของ ArgoCD Application\nติดตั้งระบบ observability ด้วย Prometheus, Grafana และ Kiali พร้อมส่ง log ผ่าน Vector ไปยัง Quickwit และติดตามสถานะแอปผ่าน ArgoCD UI",
                     },
                     {
                         id: uid(),
                         name: "aws — ระบบสำรองความต่อเนื่องข้าม region",
                         link: "github.com/traipoap/infra/tree/main/aws",
                         description:
-                            "ระบบสำรองข้าม region (Multi-region DR) — K3s เป็น origin ของ CloudFront origin groups เมื่อต้นทางตอบ 4xx/5xx ระบบจะ failover ไปยัง Lambda (Go/Gin จาก ECR) และ static build บน S3 ครอบคลุมทั้ง ap-southeast-1 และ ap-southeast-7 — ช่วยให้ความต่อเนื่องของ app.traipoap.com แม้ผู้ให้บริการหลักมีเหตุขัดข้อง\nเขียน Terraform modules สำหรับ CloudFront, ECR, IAM, S3 และ ACM พร้อม CloudFront Function สำหรับ clean-URL routing และ OAC/SigV4 เพื่อเข้าถึง S3 แบบส่วนตัว",
+                            "สร้างระบบ Disaster Recovery (DR) ข้าม region โดยใช้ K3s เป็น origin หลักของ CloudFront เมื่อได้รับสถานะ 4xx/5xx จะ failover ไปยัง Lambda (Go/Gin บน ECR) และ static build บน S3 ใน ap-southeast-1 และ ap-southeast-7 เพื่อให้ app.traipoap.com ทำงานต่อได้เมื่อระบบหลักขัดข้อง\nสร้าง Terraform module สำหรับ CloudFront, ECR, IAM, S3 และ ACM พร้อม CloudFront Function สำหรับ clean-URL routing และ OAC/SigV4 เพื่อเข้าถึง S3 แบบส่วนตัว",
                     },
                 ],
                 education: [
@@ -3378,8 +3376,8 @@ import Layout from "../layouts/Layout.astro";
                 -apple-system,
                 "Segoe UI",
                 sans-serif;
-            font-size: 13px;
-            line-height: 1.5;
+            font-size: 12.5px;
+            line-height: 1.42;
             transform-origin: top center;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
@@ -3538,20 +3536,28 @@ import Layout from "../layouts/Layout.astro";
         }
 
         .cv-sheet.ats .cv-section {
-            margin-top: 18px;
+            margin-top: 12px;
         }
 
         .cv-sheet.ats .cv-section h3 {
-            font-size: 12px;
-            letter-spacing: 0.12em;
+            font-size: 11px;
+            letter-spacing: 0.1em;
             color: #111827;
             border-bottom: 1.5px solid #111827;
-            padding-bottom: 7px;
-            margin-bottom: 8px;
+            padding-bottom: 4px;
+            margin-bottom: 5px;
         }
 
         .cv-sheet.ats .cv-entry {
-            margin-bottom: 10px;
+            margin-bottom: 6px;
+        }
+
+        .cv-sheet.ats .cv-bullets {
+            margin-top: 4px;
+        }
+
+        .cv-sheet.ats .cv-bullets li {
+            margin-bottom: 1px;
         }
 
         .cv-sheet.ats .cv-entry-role,
