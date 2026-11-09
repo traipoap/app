@@ -67,11 +67,10 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                     Engineer
                 </div>
                 <p class="lead">
-                    ผมไม่ได้แค่ "ใช้" ระบบคลาวด์ — ผม
-                    <strong>สร้างมันขึ้นเองกับมือ</strong>
-                    ตั้งแต่ประกอบ Server และแพลตฟอร์ม Web Application
-                    นี้ก็รันอยู่บน Kubernetes Platform ที่ผม Provision เอง{" "}
-                    <strong>สด ๆ ในวินาทีนี้</strong>
+                    ทุกส่วนที่นี่ผมสร้างและประกอบเองทั้งหมด — ตั้งแต่เครื่อง
+                    Server ที่ประกอบเอง จนแพลตฟอร์ม Web Application
+                    นี้ที่รันอยู่บน Kubernetes platform ซึ่งผม provision เองและ
+                    <strong>กำลังให้บริการอยู่ในขณะนี้</strong>
                 </p>
                 <div class="hero-cta">
                     <a class="btn prime" href="#arch">
@@ -80,7 +79,7 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                     <a class="btn" href="#pipeline">
                         ▶ ดู Pipeline จริง
                     </a>
-                    <a class="btn" href="methodology.html">
+                    <a class="btn" href="/methodology">
                         อ่านวิธีคิดของผม
                     </a>
                 </div>
@@ -675,7 +674,7 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                             <li>
                                 <b>AWS CloudFront · behaviors</b> — single entry
                                 ของทั้งระบบ behaviors เลือก origin ตาม condition
-                                lab ไม่มี public IP เปิดไว้เลย
+                                lab ไม่เปิด public IP ไว้
                             </li>
                             <li>
                                 <b>Main — k3s-origin.traipoap.com</b> →
@@ -744,8 +743,8 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                             <span class="mono">LAYER 04</span>
                         </h3>
                         <p>
-                            ชั้นของงานจริง: แพลตฟอร์ม log-search, ดวงตาของระบบ
-                            และ GitOps ที่รักษาตัวเองได้
+                            ชั้นของงานจริง: แพลตฟอร์ม log-search, observability
+                            และ GitOps ที่ self-heal เมื่อ config เกิด drift
                         </p>
                         <ul>
                             <li>
@@ -778,11 +777,11 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                 <div>
                     <span class="sec-tag">HOME LAB / BARE-METAL</span>
                     <h2 class="lm">
-                        <span>เหล็กจริงที่รันทุกอย่าง</span>
+                        <span>ฮาร์ดแวร์จริงที่รันทุกอย่าง</span>
                     </h2>
                     <p class="sub">
-                        ไม่ใช่เครดิตการ์ดบนคลาวด์ — นี่คือเครื่องที่ประกอบเอง
-                        จ่ายค่าไฟเอง และซ่อมเองทุกครั้งที่พัง
+                        ไม่ใช่บริการที่เปิดจากคลาวด์ — เป็นเครื่องที่ประกอบเอง
+                        จ่ายค่าไฟเอง และซ่อมเองทุกครั้งที่เกิดปัญหา
                     </p>
                 </div>
             </div>
@@ -976,8 +975,8 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                         <span>ทุกอย่างสร้างใหม่ได้จากโค้ด</span>
                     </h2>
                     <p class="sub">
-                        กฎเหล็กของผม: อะไรที่ต้อง "คลิกเซ็ตเอง" เกินสองครั้ง
-                        สิ่งนั้นจะถูกเขียนเป็นโค้ดทันที
+                        หลักของผม: อะไรที่ต้องตั้งค่าด้วยมือเกินสองครั้ง
+                        สิ่งนั้นต้องถูกเขียนเป็นโค้ด
                     </p>
                 </div>
             </div>
@@ -997,10 +996,10 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                         <li>
                             <span class="n">02</span>
                             <div>
-                                <b>Ansible — ปรับโหนดให้เหมือนกันเป๊ะ</b>
+                                <b>Ansible — ปรับค่าโหนดให้ตรงกันทุกเครื่อง</b>
                                 <p>
-                                    Hardening SSH, ติดตั้ง containerd, ยก k3s
-                                    ขึ้นทั้ง control-plane และ worker ในรันเดียว
+                                    SSH hardening, ติดตั้ง containerd, bootstrap
+                                    K3s ทั้ง control-plane และ worker ในรอบเดียว
                                 </p>
                             </div>
                         </li>
@@ -1035,7 +1034,7 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                             <span>modules / roles</span>
                         </div>
                         <div class="im">
-                            <b>น้อยกว่า 1 ชม. </b>
+                            <b>&lt; 1 ชม.</b>
                             <span>rebuild ทั้งระบบจากศูนย์</span>
                         </div>
                     </div>
@@ -1127,7 +1126,9 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                 <div>
                     <span class="sec-tag">CI/CD · LIVE FROM GITHUB</span>
                     <h2 class="lm">
-                        <span>แก้โค้ดหนึ่งบรรทัด — ดูระบบวิ่งจนจบ</span>
+                        <span>
+                            commit โค้ดหนึ่งบรรทัด — ดู pipeline วิ่งจนจบ
+                        </span>
                     </h2>
                     <p class="sub">
                         ข้อมูลจริงจาก GitHub Actions ของ{" "}
@@ -1204,8 +1205,8 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                 <div class="pn rv">
                     <b>ทำไมต้อง GitOps?</b>
                     <p>
-                        เพราะ git คือ "ความจริงหนึ่งเดียว" — production เหมือนใน
-                        git เสมอ ไม่ต้องมีใครแอบ kubectl apply หลังบ้าน
+                        เพราะ git เป็น single source of truth — production
+                        สอดคล้องกับ git เสมอ ไม่มีการ kubectl apply ภายนอก git
                     </p>
                 </div>
                 <div class="pn rv" style="--d:1">
@@ -1216,7 +1217,7 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                     </p>
                 </div>
                 <div class="pn rv" style="--d:2">
-                    <b>ถ้าบิลด์พังกลางทาง?</b>
+                    <b>ถ้า build ล้มเหลวกลางทาง?</b>
                     <p>
                         pipeline หยุดทันที — image ที่มี secret (Gitleaks)
                         หรือช่องโหว่ CRITICAL/HIGH (Trivy)
@@ -1238,8 +1239,8 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                         <span>สถานะแอปในคลัสเตอร์ตอนนี้</span>
                     </h2>
                     <p class="sub">
-                        แอปที่รันจริง — app · argocd · grafana · kiali ·
-                        sonarqube
+                        แอปทั้งหมดในคลัสเตอร์ — แถว kiali เป็นตัวอย่าง drift
+                        พร้อมเดโมการ sync
                     </p>
                 </div>
             </div>
@@ -1348,21 +1349,21 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                         <div>GITOPS (ArgoCD)</div>
                     </div>
                     <div class="vs-row">
-                        <div class="no">✗ ดรืฟต์ได้เรื่อย ๆ ไม่มีใครรู้</div>
-                        <div class="yes">✓ ตรวจเจอความต่างอัตโนมัติ</div>
+                        <div class="no">✗ drift ค่อย ๆ สะสม ไม่มีใครรู้</div>
+                        <div class="yes">✓ ตรวจพบความต่างอัตโนมัติ</div>
                     </div>
                     <div class="vs-row">
                         <div class="no">✗ rollback ต้องจำว่าพิมพ์อะไรไป</div>
                         <div class="yes">✓ git revert = rollback ทั้งระบบ</div>
                     </div>
                     <div class="vs-row">
-                        <div class="no">✗ "เครื่องใครเครื่องมัน"</div>
-                        <div class="yes">✓ git คือความจริงหนึ่งเดียว</div>
+                        <div class="no">✗ การตั้งค่ากระจายตามคนดูแล</div>
+                        <div class="yes">✓ git คือ single source of truth</div>
                     </div>
                     <div class="vs-row">
                         <div class="no">✗ audit ย้อนหลังไม่ได้</div>
                         <div class="yes">
-                            ✓ ทุกการเปลี่ยนมี commit + คนรับผิดชอบ
+                            ✓ ทุกการเปลี่ยนแปลงมี commit + ผู้รับผิดชอบ
                         </div>
                     </div>
                 </div>
@@ -1384,8 +1385,8 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                         <span>ระบบที่ดี ต้องส่องเห็นข้างใน</span>
                     </h2>
                     <p class="sub">
-                        กราฟด้านล่างคือข้อมูลสดจำลองจากคลัสเตอร์ —
-                        และด้านล่างสุดคือบันทึก "ซ้อมดับระบบ" ของจริง
+                        กราฟด้านล่างเป็นข้อมูลจำลองเพื่อการสาธิต —
+                        ส่วนด้านล่างสุดเป็นบันทึกการซ้อม failover DR ที่ทำจริง
                     </p>
                 </div>
             </div>
@@ -1465,7 +1466,7 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                         </span>{" "}
                         นาที
                     </b>
-                    <span>MTTA — เฉลี่ยเวลาที่ลุกมาดูแจ้งเตือน</span>
+                    <span>MTTA — เวลาเฉลี่ยในการรับรู้การแจ้งเตือน</span>
                 </div>
                 <div class="ostat rv" style="--d:3">
                     <b>
@@ -1484,9 +1485,9 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                     <span class="mono">GAME-DAY</span>
                 </h3>
                 <p>
-                    DR layer ที่เขียนไว้แค่ในไดอะแกรม ไม่เรียกว่า DR —
-                    นี่คือบันทึกการทำให้ origin หลักล่มจริง แล้วดูว่ามัน
-                    failover อย่างไร
+                    DR ที่เขียนไว้แค่ในไดอะแกรม ไม่เรียกว่า DR —
+                    นี่คือบันทึกการจำลองให้ origin หลักล้มจริง
+                    แล้วสังเกตกระบวนการ failover
                 </p>
                 <div class="timeline">
                     <div class="tl-item">
@@ -1506,14 +1507,14 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                         <time>10:02:08</time>
                         <b>Lambda + S3 ตอบต่อ</b>
                         <p>
-                            Go API (ECR) + static build ตอบจาก ap-southeast-7 /
-                            us-east-1
+                            Go API (ECR) + static build ตอบจาก ap-southeast-1 /
+                            7
                         </p>
                     </div>
                     <div class="tl-item">
                         <time>10:03:00</time>
                         <b>บริการกลับมาครบ</b>
-                        <p>ผู้ใช้งานแทบไม่ทันสังเกต — ไม่มีข้อมูลหาย</p>
+                        <p>ผู้ใช้งานแทบไม่รู้สึก — ไม่มีข้อมูลสูญหาย</p>
                     </div>
                 </div>
                 <div class="chaos-result">
@@ -1531,9 +1532,9 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                     </span>
                 </div>
                 <div class="lesson">
-                    <b>บทเรียนที่ได้:</b> รอบแรก failover ช้าเพราะ edge ยังถือ
-                    origin เก่าไว้ — หลังปรับ origin groups + CloudFront
-                    Function เหลือแค่ 6 วินาที 📈
+                    <b>บทเรียนที่ได้:</b> รอบแรก failover ช้าเพราะ edge cache
+                    ยังถือ origin เก่าไว้ — หลังปรับ origin groups + CloudFront
+                    Function เหลือ 6 วินาที
                 </div>
             </div>
         </div>
@@ -1550,8 +1551,9 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                         <span>กว่าจะเป็นระบบนี้ — 6 ขั้นตอน</span>
                     </h2>
                     <p class="sub">
-                        เล่าแบบไม่ตัดต่อความพังออก —
-                        เพราะกระบวนการที่ดีวัดกันที่วิธีรับมือตอนทุกอย่างไม่ได้ดั่งใจ
+                        เล่าตามจริง ไม่ตัดช่วงที่ล้มเหลวออก —
+                        เพราะกระบวนการที่ดีวัดกันที่วิธีรับมือ
+                        ตอนที่ทุกอย่างไม่ได้ดั่งใจ
                     </p>
                 </div>
             </div>
@@ -1636,8 +1638,7 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                             ไม่ใช่ทุกเรื่องจนคนชาชิน
                         </p>
                         <div class="quote">
-                            "Alert ที่ดี คือ alert ที่ปลุกเฉพาะตอนต้องตื่นจริง
-                            ๆ"
+                            "Alert ที่ดี คือ alert ที่ปลุกเฉพาะตอนที่ต้องตื่น"
                         </div>
                     </div>
                 </article>
@@ -1653,8 +1654,7 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                             และผมใจเย็นขึ้น (นิดหน่อย)
                         </p>
                         <div class="quote">
-                            "ระบบที่ไม่เคยถูกทดสอบ
-                            คือระบบที่รอวันพิสูจน์ตัวเองในเวลาที่แย่ที่สุด"
+                            "ระบบที่ไม่เคยถูกทดสอบ จะถูกทดสอบในเวลาที่แย่ที่สุด"
                         </div>
                     </div>
                 </article>
@@ -1676,8 +1676,7 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                         <span>เรซูเม่ฉบับย่อ</span>
                     </h2>
                     <p class="sub">
-                        ทักษะทั้งหมดผ่านการลงสนามจริง —
-                        ไม่ใช่จากการดูคลิปจบแล้วติ๊กถูก
+                        ทุกทักษะผ่านการนำไปใช้งานจริง — ไม่ใช่เพียงความรู้ในตำรา
                     </p>
                 </div>
             </div>
@@ -1715,10 +1714,11 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                                 360 Bizmate Co., Ltd. — NT (National Telecom)
                             </div>
                             <p>
-                                5 ปีดูแล cloud ของ telco ระดับประเทศ —
-                                ทำงานร่วมกับ L1/L3 และ vendor ใต้ SLA ใช้ Zabbix
-                                เฝ้า ingress traffic ชี้เจอ silent failures ที่
-                                node-down alert ตรวจไม่เจอ ลด MTTR ลงจริง
+                                4+ ปีดูแลเครือข่ายของ telco ระดับประเทศ —
+                                ทำงานร่วมกับทีม L1/L3 และ vendor ภายใต้ SLA ใช้
+                                Zabbix เฝ้า ingress traffic และระบุ silent
+                                failures ที่ node-down alert ตรวจจับไม่ได้
+                                ส่งผลให้ MTTR ลดลง
                             </p>
                         </div>
                     </div>
@@ -1749,8 +1749,7 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                         </div>
                         <div class="ec">
                             <b>ภาษา</b>
-                            <p>ไทย · อังกฤษ (ทำงานได้)</p>
-                            <small>ไทย — Native</small>
+                            <p>ไทย — Native · อังกฤษ — สื่อสารเพื่อการทำงาน</p>
                         </div>
                     </div>
                 </div>
@@ -1765,13 +1764,13 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                 <span class="sec-tag">CONTACT</span>
                 <h2 class="lm">
                     <span>
-                        อยากรู้ว่าระบบนี้รับมือความพังยังไง —{" "}
-                        <mark>ทักมาคุยกันได้ครับ</mark>
+                        ต้องการทราบรายละเอียดว่าระบบนี้รับมือกับความล้มเหลวอย่างไร
+                        — <mark>ติดต่อผมได้ด้านล่าง</mark>
                     </span>
                 </h2>
                 <p class="sub" style="max-width:62ch;margin-top:16px">
-                    หรือถ้าใจร้อน ลองกดดูเดโมด้านบนให้ครบทุกอันก่อนก็ได้
-                    ผมตอบทุกข้อความที่พูดถึงเรื่องระบบล่ม 🛠️
+                    หรือเริ่มจากเดโมด้านบนก่อนก็ได้ — ผมตอบทุกข้อความภายใน 24
+                    ชั่วโมง
                 </p>
             </div>
             <div class="c-cards">
@@ -1779,7 +1778,7 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                     <span class="arr">→</span>
                     <span class="mono">EMAIL</span>
                     <b>traipoap@hotmail.com</b>
-                    <span>ตอบภายใน 24 ชั่วโมง (ยกเว้นตอนคลัสเตอร์ล่ม)</span>
+                    <span>ตอบกลับภายใน 24 ชั่วโมง</span>
                 </a>
                 <a
                     class="ccard rv"
@@ -1789,7 +1788,7 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                     <span class="arr">→</span>
                     <span class="mono">GITHUB</span>
                     <b>github.com/traipoap</b>
-                    <span>โค้ด IaC ของ K3s platform + AWS DR ทั้งหมด</span>
+                    <span>IaC ทั้งหมดของ K3s platform และ AWS DR</span>
                 </a>
                 <a
                     class="ccard rv"
@@ -1804,7 +1803,7 @@ const buildStamp = new Date().toLocaleString("th-TH", {
             </div>
             <div style="margin-top:34px" class="rv">
                 <a class="btn" href="/resume">
-                    ⇩ ดาวน์โหลดเรซูเม่ PDF
+                    ⇩ เปิดหน้า Resume — เลือกเวอร์ชัน EN/TH แล้ว Save as PDF
                 </a>{" "}
                 <a class="btn prime" href="#top" style="margin-left:10px">
                     ↑ กลับขึ้นด้านบน
@@ -2625,46 +2624,6 @@ const buildStamp = new Date().toLocaleString("th-TH", {
         .hw-uptime b {
             color: var(--txt);
         }
-        .lab-strip {
-            display: grid;
-            grid-template-columns: 1.4fr 1fr;
-            gap: 18px;
-            margin-top: 18px;
-        }
-        .kb {
-            border: 1px solid var(--line);
-            border-radius: 10px;
-            overflow: hidden;
-            position: relative;
-        }
-        .kb img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            animation: kb 18s ease-in-out infinite alternate;
-        }
-        @keyframes kb {
-            from {
-                transform: scale(1) translate(0, 0);
-            }
-            to {
-                transform: scale(1.1) translate(-2%, 1.5%);
-            }
-        }
-        .kb figcaption {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            padding: 26px 18px 14px;
-            font-family: var(--mono);
-            font-size: 11px;
-            color: var(--txt);
-            background: linear-gradient(transparent, rgba(4, 8, 12, 0.9));
-        }
-        .kb.kb2 img {
-            animation-delay: -9s;
-        }
 
         /* ============ IaC ============ */
         .iac-grid {
@@ -3375,21 +3334,6 @@ const buildStamp = new Date().toLocaleString("th-TH", {
             padding-left: 14px;
             font-style: italic;
         }
-        .scard figure {
-            border: 1px solid var(--line);
-            border-radius: 10px;
-            overflow: hidden;
-            aspect-ratio: 16/10;
-        }
-        .scard figure img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            transition: transform 1.2s ease;
-        }
-        .scard:hover figure img {
-            transform: scale(1.05);
-        }
 
         /* ============ RESUME ============ */
         .res-grid {
@@ -3627,9 +3571,6 @@ const buildStamp = new Date().toLocaleString("th-TH", {
             .pipe-note {
                 grid-template-columns: 1fr;
             }
-            .lab-strip {
-                grid-template-columns: 1fr;
-            }
             .c-cards {
                 grid-template-columns: 1fr;
             }
@@ -3666,9 +3607,6 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                 animation: none;
                 transform: none;
             }
-            .kb img {
-                animation: none;
-            }
             html.js .rv {
                 opacity: 1;
                 transform: none;
@@ -3695,16 +3633,6 @@ const buildStamp = new Date().toLocaleString("th-TH", {
             ).matches;
             const wait = (ms) => new Promise((r) => setTimeout(r, ms));
             const pad = (n) => String(n).padStart(2, "0");
-            const nowT = () => {
-                const d = new Date();
-                return (
-                    pad(d.getHours()) +
-                    ":" +
-                    pad(d.getMinutes()) +
-                    ":" +
-                    pad(d.getSeconds())
-                );
-            };
             function toast(msg) {
                 const t = $("#toast");
                 t.textContent = msg;
