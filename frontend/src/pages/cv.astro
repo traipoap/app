@@ -1,0 +1,263 @@
+---
+import Layout from "../layouts/Layout.astro";
+import "../styles/cv.css";
+---
+
+<Layout
+    title="CV / Resume — Traipoap Hunthong · DevOps Engineer"
+    description="Preview and download the resume of Traipoap Hunthong (DevOps Engineer) — all published versions, print-ready A4 PDF."
+>
+    <div class="cv-page">
+        <header class="cv-head">
+            <div>
+                <p class="cv-eyebrow">LUMINA · Resume</p>
+                <h1 class="cv-title">Traipoap Hunthong — DevOps Engineer</h1>
+                <p class="cv-sub">
+                    Preview each published version of the resume, then download
+                    it as a print-ready A4 PDF.
+                </p>
+            </div>
+            <div class="cv-toolbar">
+                <span class="cv-page-badge" id="pageBadge" aria-live="polite">
+                    …
+                </span>
+                <div
+                    class="cv-seg"
+                    id="versionSeg"
+                    role="group"
+                    aria-label="Version"
+                ></div>
+                <div class="cv-seg" role="group" aria-label="Template">
+                    <button
+                        type="button"
+                        class="seg-btn is-active"
+                        data-tpl="classic"
+                    >
+                        Classic
+                    </button>
+                    <button type="button" class="seg-btn" data-tpl="modern">
+                        Modern
+                    </button>
+                    <button type="button" class="seg-btn" data-tpl="ats">
+                        ATS
+                    </button>
+                </div>
+                <button
+                    type="button"
+                    class="cv-btn cv-btn-primary"
+                    data-action="download"
+                >
+                    <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                    >
+                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4 M7 10l5 5 5-5 M12 15V3" />
+                    </svg>
+                    Download PDF
+                </button>
+            </div>
+        </header>
+
+        <p class="cv-note" id="sourceNote" aria-live="polite">
+            …
+        </p>
+
+        <div class="cv-sheet-wrap" id="sheetWrap">
+            <article
+                class="cv-sheet"
+                id="cvSheet"
+                aria-label="CV preview"
+            ></article>
+        </div>
+    </div>
+
+    <script>
+        import {
+            renderSheetInto,
+            sampleDataEN,
+            sampleDataTH,
+            SHEET_W,
+        } from "../lib/cv";
+        import type { CVData } from "../lib/cv";
+
+        const sheet = document.getElementById("cvSheet") as HTMLElement;
+        const wrap = document.getElementById("sheetWrap") as HTMLElement;
+        const badge = document.getElementById("pageBadge") as HTMLElement;
+        const versionSeg = document.getElementById("versionSeg") as HTMLElement;
+        const sourceNote = document.getElementById("sourceNote") as HTMLElement;
+
+        // The published store has the same shape the builder saves to the
+        // account: { v, active, versions: { name: CVData } }.
+        type Store = {
+            v?: unknown;
+            active?: string | null;
+            versions: Record<string, CVData>;
+        };
+
+        let store: Store;
+        let names: string[] = [];
+        let current = "";
+        let tpl: CVData["template"] = "classic";
+
+        function fallbackStore(): Store {
+            return {
+                v: 2,
+                active: "ไทย",
+                versions: {
+                    ไทย: sampleDataTH(),
+                    English: sampleDataEN(),
+                },
+            };
+        }
+
+        // Timestamp of the last publish, as reported by the API.
+        function publishedNote(updatedAt: unknown): string {
+            if (typeof updatedAt === "string") {
+                const d = new Date(updatedAt);
+                if (!isNaN(d.getTime())) {
+                    return `ข้อมูลล่าสุด — เผยแพร่เมื่อ ${d.toLocaleString([], {
+                        dateStyle: "medium",
+                        timeStyle: "short",
+                    })}`;
+                }
+            }
+            return "ข้อมูลล่าสุด — เผยแพร่จาก CV Builder";
+        }
+
+        async function loadStore(): Promise<Store> {
+            try {
+                const res = await fetch("/api/resume/published", {
+                    headers: { Accept: "application/json" },
+                });
+                if (res.ok) {
+                    const body = await res.json();
+                    const s: unknown =
+                        body && typeof body === "object"
+                            ? (body as { data?: unknown }).data
+                            : null;
+                    if (
+                        s &&
+                        typeof s === "object" &&
+                        (s as { versions?: unknown }).versions &&
+                        typeof (s as { versions?: unknown }).versions ===
+                            "object"
+                    ) {
+                        const raw = (s as { versions: Record<string, unknown> })
+                            .versions;
+                        const vs: Record<string, CVData> = {};
+                        for (const [k, v] of Object.entries(raw))
+                            if (v && typeof v === "object") vs[k] = v as CVData;
+                        if (Object.keys(vs).length) {
+                            sourceNote.textContent = publishedNote(
+                                (body as { updatedAt?: unknown }).updatedAt,
+                            );
+                            return { ...s, versions: vs } as Store;
+                        }
+                    }
+                }
+            } catch {
+                // Offline / API down — fall back to the bundled sample.
+            }
+            sourceNote.textContent =
+                "ข้อมูลตัวอย่าง — ยังไม่มีการเผยแพร่ หรือเชื่อมต่อเซิร์ฟเวอร์ไม่ได้ (หน้านี้ยังใช้งานได้ปกติ)";
+            return fallbackStore();
+        }
+
+        function buildTabs() {
+            names = Object.keys(store.versions);
+            versionSeg.replaceChildren();
+            for (const n of names) {
+                const b = document.createElement("button");
+                b.type = "button";
+                b.className = "seg-btn";
+                b.textContent = n; // text node — safe for any name
+                b.addEventListener("click", () => {
+                    versionSeg
+                        .querySelectorAll(".seg-btn")
+                        .forEach((x) => x.classList.remove("is-active"));
+                    b.classList.add("is-active");
+                    current = n;
+                    render();
+                });
+                versionSeg.append(b);
+            }
+            const def =
+                store.active && store.versions[store.active]
+                    ? store.active
+                    : names[0];
+            current = def;
+            versionSeg
+                .querySelectorAll(".seg-btn")
+                .forEach((x, i) =>
+                    x.classList.toggle("is-active", names[i] === def),
+                );
+        }
+
+        function data(): CVData {
+            return { ...store.versions[current], template: tpl };
+        }
+
+        // Scale the A4 pages to fit the container (mirrors the builder).
+        function fit() {
+            const avail = wrap.clientWidth;
+            if (!avail) return;
+            const scale = Math.min(1, avail / SHEET_W);
+            sheet.style.transform = `scale(${scale})`;
+            wrap.style.width = `${SHEET_W * scale}px`;
+            wrap.style.height = `${sheet.offsetHeight * scale}px`;
+            const pages = sheet.querySelectorAll(".cv-a4").length || 1;
+            badge.textContent = pages === 1 ? "1 page" : `${pages} pages`;
+        }
+
+        function render() {
+            renderSheetInto(sheet, data());
+            fit();
+        }
+
+        document
+            .querySelectorAll<HTMLElement>(".seg-btn[data-tpl]")
+            .forEach((b) => {
+                b.addEventListener("click", () => {
+                    const group = b.parentElement as HTMLElement;
+                    group
+                        .querySelectorAll(".seg-btn")
+                        .forEach((x) => x.classList.remove("is-active"));
+                    b.classList.add("is-active");
+                    tpl = b.dataset.tpl as CVData["template"];
+                    render();
+                });
+            });
+
+        document
+            .querySelector<HTMLElement>('[data-action="download"]')
+            ?.addEventListener("click", () => window.print());
+
+        window.addEventListener("resize", fit);
+
+        void (async () => {
+            store = await loadStore();
+            buildTabs();
+            render();
+        })();
+    </script>
+
+    <style>
+        .cv-note {
+            max-width: 1560px;
+            margin: -0.75rem auto 1.25rem;
+            font-size: 0.8125rem;
+            color: var(--faint);
+        }
+
+        @media print {
+            .cv-note {
+                display: none !important;
+            }
+        }
+    </style>
+</Layout>
