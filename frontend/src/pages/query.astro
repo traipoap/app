@@ -43,7 +43,7 @@ import "../styles/main.css";
             }
             if (role !== "admin") {
                 setTimeout(function () {
-                    window.location.href = "/resume";
+                    window.location.href = "/cv";
                 }, 100);
             }
         })();
@@ -822,7 +822,7 @@ import "../styles/main.css";
 
             if (res.status === 403) {
                 // 403 = valid session without the admin role — keep the session.
-                window.location.href = "/resume";
+                window.location.href = "/cv";
                 return;
             }
 
@@ -1234,7 +1234,7 @@ import "../styles/main.css";
 
                 if (res.status === 403) {
                     // 403 = valid session without the admin role — keep the session.
-                    window.location.href = "/resume";
+                    window.location.href = "/cv";
                     return;
                 }
 

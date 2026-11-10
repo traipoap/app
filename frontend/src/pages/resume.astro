@@ -1,12 +1,14 @@
 ---
 import Layout from "../layouts/Layout.astro";
+import "../styles/cv.css";
 ---
 
 <Layout
     title="CV Builder — LUMINA"
     description="Build a polished, ATS-friendly CV with live A4 preview and one-click PDF export."
 >
-    <!-- Client-side route protection: any authenticated role sees their own CV -->
+    <!-- Client-side route protection: admin only — non-admin sessions
+         are sent to the public resume preview (/cv). -->
     <script>
         (function protectRoute() {
             if (typeof window === "undefined") return;
@@ -16,6 +18,30 @@ import Layout from "../layouts/Layout.astro";
             if (!token) {
                 setTimeout(function () {
                     window.location.href = "/signin";
+                }, 100);
+                return;
+            }
+            let role = null;
+            try {
+                const b64 = token
+                    .split(".")[1]
+                    .replace(/-/g, "+")
+                    .replace(/_/g, "/");
+                role =
+                    JSON.parse(
+                        window.atob(
+                            b64.padEnd(
+                                b64.length + ((4 - (b64.length % 4)) % 4),
+                                "=",
+                            ),
+                        ),
+                    ).role || null;
+            } catch {
+                role = null;
+            }
+            if (role !== "admin") {
+                setTimeout(function () {
+                    window.location.href = "/cv";
                 }, 100);
             }
         })();
@@ -147,6 +173,24 @@ import Layout from "../layouts/Layout.astro";
                     title="ลบข้อมูล resume ที่บันทึกไว้ในบัญชี (ล้างฟอร์มปัจจุบันด้วย)"
                 >
                     ลบ
+                </button>
+                <button
+                    type="button"
+                    class="cv-btn"
+                    data-action="publish"
+                    title="เผยแพร่เวอร์ชันที่บันทึกไว้ไปยังหน้า /cv เพื่อให้ HR ดูและดาวน์โหลดได้"
+                >
+                    Publish
+                </button>
+                <button
+                    type="button"
+                    class="cv-btn cv-btn-danger"
+                    data-action="unpublish"
+                    id="unpublishBtn"
+                    hidden
+                    title="ยกเลิกการเผยแพร่ — หน้า /cv จะกลับไปใช้ข้อมูลตัวอย่าง"
+                >
+                    Unpublish
                 </button>
                 <span class="cv-page-badge" id="pageBadge">
                     1 page
@@ -518,73 +562,26 @@ import Layout from "../layouts/Layout.astro";
     </div>
 
     <script>
-        // ── Types ──────────────────────────────────────────────────────
-        interface ExperienceItem {
-            id: string;
-            role: string;
-            company: string;
-            location: string;
-            start: string;
-            end: string;
-            current: boolean;
-            description: string;
-        }
-        interface ProjectItem {
-            id: string;
-            name: string;
-            link: string;
-            description: string;
-        }
-        interface EducationItem {
-            id: string;
-            degree: string;
-            school: string;
-            start: string;
-            end: string;
-        }
-        interface LanguageItem {
-            id: string;
-            name: string;
-            level: string;
-        }
-        interface CertificationItem {
-            id: string;
-            name: string;
-            issuer: string;
-            year: string;
-        }
-        interface CVData {
-            name: string;
-            title: string;
-            email: string;
-            phone: string;
-            location: string;
-            website: string;
-            github: string;
-            linkedin: string;
-            summary: string;
-            experience: ExperienceItem[];
-            projects: ProjectItem[];
-            education: EducationItem[];
-            skills: string[];
-            languages: LanguageItem[];
-            certifications: CertificationItem[];
-            accent: string;
-            photo: string | null;
-            template: "classic" | "modern" | "ats";
-            breaks: Record<string, boolean>;
-        }
+        import {
+            SHEET_W,
+            el,
+            presetShared,
+            renderSheetInto,
+            sampleDataEN,
+            sampleDataTH,
+            uid,
+        } from "../lib/cv";
+        import type {
+            CertificationItem,
+            CVData,
+            EducationItem,
+            ExperienceItem,
+            LanguageItem,
+            ProjectItem,
+        } from "../lib/cv";
 
         // ── State ──────────────────────────────────────────────────────
         const DRAFT_KEY = "lumina.cv.draft.v1";
-        const SHEET_W = (210 / 25.4) * 96; // A4 width @96dpi ≈ 793.7
-        const PAGE_CAP = (269 / 25.4) * 96 - 4; // A4 content height (297 − 28mm) − 4px slack
-
-        const uid = () =>
-            typeof crypto !== "undefined" && "randomUUID" in crypto
-                ? crypto.randomUUID()
-                : "id-" + Math.random().toString(36).slice(2, 10);
-
         const blankExperience = (): ExperienceItem => ({
             id: uid(),
             role: "",
@@ -680,50 +677,6 @@ import Layout from "../layouts/Layout.astro";
         let data: CVData = restored ?? defaultData();
         const restoredDraft = restored !== null;
 
-        // ── DOM helpers (all user content is escaped via text nodes) ──
-        function el<K extends keyof HTMLElementTagNameMap>(
-            tag: K,
-            attrs?: Record<string, string | boolean | number | null> | null,
-            ...children: Array<Node | string | null | undefined>
-        ): HTMLElementTagNameMap[K] {
-            const node = document.createElement(tag);
-            if (attrs) {
-                for (const [key, value] of Object.entries(attrs)) {
-                    if (
-                        value === null ||
-                        value === false ||
-                        value === undefined
-                    )
-                        continue;
-                    if (key === "class") node.className = String(value);
-                    else if (value === true) node.setAttribute(key, "");
-                    else node.setAttribute(key, String(value));
-                }
-            }
-            for (const child of children) {
-                if (child === null || child === undefined) continue;
-                node.append(
-                    child instanceof Node
-                        ? child
-                        : document.createTextNode(String(child)),
-                );
-            }
-            return node;
-        }
-
-        function bullets(text: string): string[] {
-            return text
-                .split("\n")
-                .map((s) => s.trim())
-                .filter(Boolean);
-        }
-
-        function entryDate(start: string, end: string, current?: boolean) {
-            const to = current ? "Present" : end.trim();
-            if (start.trim() && to) return `${start.trim()} — ${to}`;
-            return start.trim() || to || "";
-        }
-
         // ── Elements ───────────────────────────────────────────────────
         const form = document.getElementById("cvForm") as HTMLFormElement;
         const sheet = document.getElementById("cvSheet") as HTMLElement;
@@ -733,656 +686,8 @@ import Layout from "../layouts/Layout.astro";
             "draftStatus",
         ) as HTMLElement;
 
-        // ── Preview rendering ──────────────────────────────────────────
-        type Sec = {
-            col: "main" | "side";
-            title: string;
-            kind: "single" | "entry" | "pair";
-            nodes: Node[];
-        };
-
-        type Unit = {
-            node: Node;
-            section: string;
-            heading: boolean;
-            kind: "heading" | "single" | "entry" | "pair";
-        };
-
-        type Measured = Unit & { h: number; t: number; b: number };
-
-        // Greedy A4 pagination with the same keep-together rules as print:
-        // headings stay with their first item, entries/pairs are not split.
-        // `used` always includes the last box's trailing margin (collapsed
-        // against the next), matching how the browser sizes a page — this
-        // keeps the final line away from the printed page edge.
-        function paginate(
-            ms: Measured[],
-            cap: number,
-            firstOffset = 0,
-            topMargin = 0,
-            forceBreak: (title: string) => boolean = () => false,
-        ): Measured[][] {
-            const pages: Measured[][] = [];
-            let cur: Measured[] = [];
-            let used = firstOffset;
-            let lastB = topMargin;
-            const cost = (m: Measured, pending: number) =>
-                Math.max(pending, m.t) - pending + m.h + m.b;
-            const add = (m: Measured) => {
-                used += cost(m, lastB);
-                cur.push(m);
-                lastB = m.b;
-            };
-            const flush = () => {
-                if (cur.length) pages.push(cur);
-                cur = [];
-                used = 0;
-                lastB = 0;
-            };
-            let i = 0;
-            while (i < ms.length) {
-                const m = ms[i];
-                // An explicit "start on new page" wins over packing heuristics.
-                if (m.heading && cur.length > 0 && forceBreak(m.section))
-                    flush();
-                const pair = m.heading && i + 1 < ms.length ? ms[i + 1] : null;
-                const unitCost = cost(m, lastB) + (pair ? cost(pair, m.b) : 0);
-                // Only force a page break if the pair actually fits a fresh page.
-                const pairFitsPage =
-                    !pair ||
-                    m.t + m.h + Math.max(m.b, pair.t) + pair.h + pair.b <=
-                        cap + 0.5;
-                if (cur.length && unitCost > cap - used && pairFitsPage)
-                    flush();
-                add(m);
-                if (pair) {
-                    add(pair);
-                    i++;
-                }
-                i++;
-            }
-            flush();
-            return pages;
-        }
-
-        // Height of a page's units (same collapse model as paginate).
-        function pageCost(ms: Measured[]): number {
-            let used = 0;
-            let lastB = 0;
-            for (const m of ms) {
-                used += Math.max(lastB, m.t) - lastB + m.h + m.b;
-                lastB = m.b;
-            }
-            return used;
-        }
-
-        // A final page carrying only a sliver of content reads as an
-        // accident — pull it back when the previous page genuinely has room.
-        function rescueOrphan(
-            pages: Measured[][],
-            cap: number,
-            forceBreak: (title: string) => boolean,
-        ): Measured[][] {
-            if (pages.length < 2) return pages;
-            const last = pages[pages.length - 1];
-            const prev = pages[pages.length - 2];
-            if (!last || !prev) return pages;
-            // Respect an explicit "start on new page" on that section.
-            const first = last[0];
-            const forced = first && first.heading && forceBreak(first.section);
-            if (
-                !forced &&
-                last.length <= 4 &&
-                pageCost(prev) + pageCost(last) <= cap + 0.5
-            ) {
-                prev.push(...last);
-                pages.pop();
-            }
-            return pages;
-        }
-
-        // A section split across pages so that only its last item lands on
-        // the new page reads as an accident — move the whole section there
-        // (heading + items stay together).
-        function pullSplitSection(pages: Measured[][]): Measured[][] {
-            for (let p = pages.length - 1; p >= 1; p--) {
-                const page = pages[p];
-                const prev = pages[p - 1];
-                if (!page.length || !prev.length) continue;
-                const first = page[0];
-                if (first.heading) continue; // section starts fresh — fine
-                if (page.length !== 1) continue; // more content follows
-                const idx = prev.findIndex((u) => u.section === first.section);
-                if (idx === -1) continue;
-                // A split section is always the last one on the previous page.
-                const moved = prev.splice(idx);
-                page.unshift(...moved);
-            }
-            return pages.filter((page) => page.length > 0);
-        }
-
-        // Group a page's units back into <section> blocks; a section that
-        // continues onto a new page simply re-opens without its heading.
-        function renderSectioned(ms: Measured[]): Node[] {
-            const out: Node[] = [];
-            let sec: HTMLElement | null = null;
-            let curTitle = "";
-            let run: Measured[] = [];
-            const flushRun = () => {
-                const target = sec;
-                if (!run.length || !target) {
-                    run = [];
-                    return;
-                }
-                const nodes = run.map((m) => m.node);
-                if (run[0].kind === "entry")
-                    target.append(el("div", null, ...nodes));
-                else if (run[0].kind === "pair")
-                    target.append(
-                        el("div", { class: "cv-pairgrid" }, ...nodes),
-                    );
-                else nodes.forEach((n) => target.append(n));
-                run = [];
-            };
-            for (const m of ms) {
-                if (m.section !== curTitle || !sec) {
-                    flushRun();
-                    sec = el("section", { class: "cv-section" });
-                    out.push(sec);
-                    curTitle = m.section;
-                }
-                const target = sec as HTMLElement;
-                if (m.heading) {
-                    target.append(m.node);
-                    continue;
-                }
-                if (m.kind === "single") {
-                    flushRun();
-                    target.append(m.node);
-                    continue;
-                }
-                if (run.length && run[0].kind !== m.kind) flushRun();
-                run.push(m);
-            }
-            flushRun();
-            return out;
-        }
-
         function renderSheet() {
-            sheet.style.setProperty("--cv-accent", data.accent);
-            sheet.classList.toggle("ats", data.template === "ats");
-            let headNode: HTMLElement | null = null;
-            const secs: Array<Sec> = [];
-
-            const contact = [
-                data.email,
-                data.phone,
-                data.location,
-                data.website,
-                data.github,
-                data.linkedin,
-            ].filter(Boolean);
-
-            const hasIdentity = Boolean(
-                data.name || data.title || data.summary,
-            );
-            const showPhoto = Boolean(data.photo) && data.template !== "ats";
-
-            if (hasIdentity) {
-                const head = el("header", {
-                    class: showPhoto
-                        ? "cv-sheet-head has-photo"
-                        : "cv-sheet-head",
-                });
-                const headText = el("div", { class: "cv-head-text" });
-                headText.append(el("div", { class: "cv-headbar" }));
-                if (showPhoto)
-                    head.append(
-                        el("img", {
-                            class: "cv-photo",
-                            src: data.photo,
-                            alt: "",
-                        }),
-                    );
-                if (data.name)
-                    headText.append(el("h1", { class: "cv-name" }, data.name));
-                if (data.title)
-                    headText.append(
-                        el("p", { class: "cv-roletitle" }, data.title),
-                    );
-                if (contact.length) {
-                    const line = el("p", { class: "cv-contact" });
-                    contact.forEach((c, i) => {
-                        if (i > 0)
-                            line.append(
-                                el(
-                                    "span",
-                                    { class: "sep", "aria-hidden": true },
-                                    "•",
-                                ),
-                            );
-                        line.append(document.createTextNode(String(c)));
-                    });
-                    headText.append(line);
-                }
-                head.append(headText);
-                headNode = head;
-            }
-
-            if (data.summary.trim())
-                secs.push({
-                    col: "main",
-                    title: "Profile",
-                    kind: "single",
-                    nodes: [el("p", { class: "cv-para" }, data.summary.trim())],
-                });
-
-            const expItems = data.experience.filter(
-                (e) =>
-                    e.role ||
-                    e.company ||
-                    e.location ||
-                    e.start ||
-                    e.end ||
-                    bullets(e.description).length,
-            );
-            if (expItems.length) {
-                const list: Node[] = [];
-                for (const e of expItems) {
-                    const item = el("div", { class: "cv-entry" });
-                    const headLine = el("div", { class: "cv-entry-head" });
-                    headLine.append(
-                        el(
-                            "span",
-                            { class: "cv-entry-main" },
-                            e.role &&
-                                el(
-                                    "strong",
-                                    { class: "cv-entry-role" },
-                                    e.role,
-                                ),
-                            e.company &&
-                                el(
-                                    "span",
-                                    { class: "cv-entry-company" },
-                                    (e.role ? " · " : "") + e.company,
-                                ),
-                            e.location &&
-                                el(
-                                    "span",
-                                    { class: "cv-entry-loc" },
-                                    " — " + e.location,
-                                ),
-                        ),
-                        entryDate(e.start, e.end, e.current) &&
-                            el(
-                                "span",
-                                { class: "cv-entry-date" },
-                                entryDate(e.start, e.end, e.current),
-                            ),
-                    );
-                    item.append(headLine);
-                    const lines = bullets(e.description);
-                    if (lines.length) {
-                        const ul = el("ul", { class: "cv-bullets" });
-                        for (const l of lines) ul.append(el("li", null, l));
-                        item.append(ul);
-                    }
-                    list.push(item);
-                }
-                secs.push({
-                    col: "main",
-                    title: "Experience",
-                    kind: "entry",
-                    nodes: list,
-                });
-            }
-
-            const projItems = data.projects.filter(
-                (p) => p.name || p.link || p.description,
-            );
-            if (projItems.length) {
-                const list: Node[] = [];
-                for (const p of projItems) {
-                    const item = el("div", { class: "cv-entry" });
-                    item.append(
-                        el(
-                            "span",
-                            { class: "cv-entry-main" },
-                            p.name &&
-                                el(
-                                    "strong",
-                                    { class: "cv-entry-role" },
-                                    p.name,
-                                ),
-                            p.link &&
-                                el(
-                                    "span",
-                                    { class: "cv-entry-company" },
-                                    (p.name ? " · " : "") + p.link,
-                                ),
-                        ),
-                    );
-                    if (p.description.trim()) {
-                        const pLines = bullets(p.description);
-                        if (pLines.length > 1) {
-                            const ul = el("ul", { class: "cv-bullets" });
-                            for (const l of pLines)
-                                ul.append(el("li", null, l));
-                            item.append(ul);
-                        } else {
-                            item.append(
-                                el(
-                                    "p",
-                                    { class: "cv-entry-desc" },
-                                    p.description.trim(),
-                                ),
-                            );
-                        }
-                    }
-                    list.push(item);
-                }
-                secs.push({
-                    col: "main",
-                    title: "Projects",
-                    kind: "entry",
-                    nodes: list,
-                });
-            }
-
-            const eduItems = data.education.filter(
-                (e) => e.degree || e.school || e.start || e.end,
-            );
-            if (eduItems.length) {
-                const list: Node[] = [];
-                for (const e of eduItems) {
-                    list.push(
-                        el(
-                            "div",
-                            { class: "cv-entry" },
-                            el(
-                                "div",
-                                { class: "cv-entry-head" },
-                                el(
-                                    "span",
-                                    { class: "cv-entry-main" },
-                                    e.degree &&
-                                        el(
-                                            "strong",
-                                            { class: "cv-entry-role" },
-                                            e.degree,
-                                        ),
-                                    e.school &&
-                                        el(
-                                            "span",
-                                            { class: "cv-entry-company" },
-                                            (e.degree ? " · " : "") + e.school,
-                                        ),
-                                ),
-                                entryDate(e.start, e.end) &&
-                                    el(
-                                        "span",
-                                        { class: "cv-entry-date" },
-                                        entryDate(e.start, e.end),
-                                    ),
-                            ),
-                        ),
-                    );
-                }
-                secs.push({
-                    col: "side",
-                    title: "Education",
-                    kind: "entry",
-                    nodes: list,
-                });
-            }
-
-            if (data.skills.length) {
-                const chips = el("div", { class: "cv-chips" });
-                for (const s of data.skills)
-                    chips.append(el("span", { class: "cv-chip" }, s));
-                secs.push({
-                    col: "side",
-                    title: "Skills",
-                    kind: "single",
-                    nodes: [chips],
-                });
-            }
-
-            const langItems = data.languages.filter((l) => l.name || l.level);
-            if (langItems.length) {
-                const pairs: Node[] = [];
-                for (const l of langItems)
-                    pairs.push(
-                        el(
-                            "div",
-                            { class: "cv-pair" },
-                            el(
-                                "span",
-                                { class: "cv-pair-name" },
-                                l.name || "—",
-                            ),
-                            l.level
-                                ? el("span", { class: "cv-pair-meta" }, l.level)
-                                : null,
-                        ),
-                    );
-                secs.push({
-                    col: "side",
-                    title: "Languages",
-                    kind: "pair",
-                    nodes: pairs,
-                });
-            }
-
-            const certItems = data.certifications.filter(
-                (c) => c.name || c.issuer || c.year,
-            );
-            if (certItems.length) {
-                const pairs: Node[] = [];
-                for (const c of certItems)
-                    pairs.push(
-                        el(
-                            "div",
-                            { class: "cv-pair" },
-                            el(
-                                "span",
-                                { class: "cv-pair-name" },
-                                c.name || "—",
-                            ),
-                            [c.issuer, c.year].filter(Boolean).length
-                                ? el(
-                                      "span",
-                                      { class: "cv-pair-meta" },
-                                      [c.issuer, c.year]
-                                          .filter(Boolean)
-                                          .join(" · "),
-                                  )
-                                : null,
-                        ),
-                    );
-                secs.push({
-                    col: "side",
-                    title: "Certifications",
-                    kind: "pair",
-                    nodes: pairs,
-                });
-            }
-
-            // ── Flows ──
-            if (data.template === "ats") {
-                // Canonical order ATS parsers expect.
-                const order: Record<string, number> = {
-                    Profile: 0,
-                    Experience: 1,
-                    Projects: 2,
-                    Education: 3,
-                    Skills: 4,
-                    Languages: 5,
-                    Certifications: 6,
-                };
-                secs.sort(
-                    (a, b) => (order[a.title] ?? 9) - (order[b.title] ?? 9),
-                );
-            }
-            const mainSecs = secs.filter((s) => s.col === "main");
-            const sideSecs = secs.filter((s) => s.col === "side");
-            const modern = data.template === "modern" && sideSecs.length > 0;
-
-            if (!headNode && secs.length === 0) {
-                const page = el("div", { class: "cv-a4" });
-                page.append(el("span", { class: "cv-a4-num" }, "1"));
-                page.append(
-                    el(
-                        "div",
-                        { class: "cv-sheet-empty" },
-                        el("strong", null, "Your CV preview"),
-                        el(
-                            "p",
-                            null,
-                            "Start filling the form on the left — or press “Load my data” to pre-fill your profile.",
-                        ),
-                    ),
-                );
-                sheet.replaceChildren(page);
-                fitSheet();
-                return;
-            }
-
-            const mkUnits = (s: Sec): Unit[] => [
-                {
-                    node: el("h3", null, s.title),
-                    section: s.title,
-                    heading: true,
-                    kind: "heading",
-                },
-                ...s.nodes.map((n): Unit => ({
-                    node: n,
-                    section: s.title,
-                    heading: false,
-                    kind: s.kind,
-                })),
-            ];
-            const mainUnits = mainSecs.flatMap(mkUnits);
-            const sideUnits = sideSecs.flatMap(mkUnits);
-            // Single-column templates flow every section in canonical order.
-            const singleUnits = modern ? mainUnits : secs.flatMap(mkUnits);
-
-            // ── Measure units at their final width (exact final structure) ──
-            const measureBox = el("div", { class: "cv-measure" });
-            if (headNode) measureBox.append(headNode);
-            const attach = (box: Element, ss: Sec[], units: Unit[]) => {
-                let i = 0;
-                for (const s of ss) {
-                    const sec = el("section", { class: "cv-section" });
-                    sec.append(units[i].node); // heading
-                    if (s.kind === "pair") {
-                        const grid = el("div", { class: "cv-pairgrid" });
-                        for (const n of s.nodes) grid.append(n);
-                        sec.append(grid);
-                    } else {
-                        for (const n of s.nodes) sec.append(n);
-                    }
-                    box.append(sec);
-                    i += 1 + s.nodes.length;
-                }
-            };
-            if (modern) {
-                const cols = el("div", { class: "cv-cols" });
-                const mainC = el("div", { class: "cv-col-main" });
-                const sideC = el("div", { class: "cv-col-side" });
-                attach(mainC, mainSecs, mainUnits);
-                attach(sideC, sideSecs, sideUnits);
-                cols.append(mainC, sideC);
-                measureBox.append(cols);
-            } else {
-                attach(measureBox, secs, singleUnits);
-            }
-            sheet.append(measureBox);
-
-            const toMeasured = (units: Unit[]): Measured[] =>
-                units.map((u) => {
-                    const node = u.node as HTMLElement;
-                    const cs = getComputedStyle(node);
-                    return {
-                        ...u,
-                        h: node.offsetHeight,
-                        t: u.heading
-                            ? parseFloat(
-                                  getComputedStyle(node.parentElement ?? node)
-                                      .marginTop,
-                              ) || 0
-                            : parseFloat(cs.marginTop) || 0,
-                        b: parseFloat(cs.marginBottom) || 0,
-                    };
-                });
-
-            const mainMs = toMeasured(singleUnits);
-            const sideMs = modern ? toMeasured(sideUnits) : [];
-            const headMs = headNode
-                ? (() => {
-                      const n = headNode as HTMLElement;
-                      const cs = getComputedStyle(n);
-                      return {
-                          h: n.offsetHeight,
-                          t: parseFloat(cs.marginTop) || 0,
-                          b: parseFloat(cs.marginBottom) || 0,
-                      };
-                  })()
-                : null;
-            measureBox.remove();
-
-            // ── Split into A4 pages and render one card per page ──
-            const wantsBreak = (t: string) => data.breaks[t] === true;
-            const firstOffset = headMs ? headMs.t + headMs.h + headMs.b : 0;
-            const topMargin = headMs ? headMs.b : 0;
-            const mainPages = pullSplitSection(
-                rescueOrphan(
-                    paginate(
-                        mainMs,
-                        PAGE_CAP,
-                        firstOffset,
-                        topMargin,
-                        wantsBreak,
-                    ),
-                    PAGE_CAP,
-                    wantsBreak,
-                ),
-            );
-            const sidePages = pullSplitSection(
-                rescueOrphan(
-                    paginate(
-                        sideMs,
-                        PAGE_CAP,
-                        firstOffset,
-                        topMargin,
-                        wantsBreak,
-                    ),
-                    PAGE_CAP,
-                    wantsBreak,
-                ),
-            );
-            const total = Math.max(mainPages.length, sidePages.length, 1);
-
-            const pageEls: HTMLElement[] = [];
-            for (let k = 0; k < total; k++) {
-                const page = el("div", { class: "cv-a4" });
-                page.append(el("span", { class: "cv-a4-num" }, String(k + 1)));
-                if (k === 0 && headNode) page.append(headNode);
-                if (modern) {
-                    const cols = el("div", { class: "cv-cols" });
-                    const mainC = el("div", { class: "cv-col-main" });
-                    mainC.append(...renderSectioned(mainPages[k] ?? []));
-                    const sideC = el("div", { class: "cv-col-side" });
-                    sideC.append(...renderSectioned(sidePages[k] ?? []));
-                    cols.append(mainC, sideC);
-                    page.append(cols);
-                } else {
-                    page.append(...renderSectioned(mainPages[k] ?? []));
-                }
-                pageEls.push(page);
-            }
-            sheet.replaceChildren(...pageEls);
+            renderSheetInto(sheet, data);
             fitSheet();
         }
 
@@ -1965,6 +1270,20 @@ import Layout from "../layouts/Layout.astro";
         const clone = <T,>(x: T): T => JSON.parse(JSON.stringify(x)) as T;
         let versions: Record<string, CVData> = {};
         let activeName: string | null = null;
+        let published = false; // a public copy is live at /cv
+
+        // Reflect the publish state in the toolbar buttons.
+        function setPublishedState(v: boolean) {
+            published = v;
+            const unp = document.getElementById(
+                "unpublishBtn",
+            ) as HTMLButtonElement | null;
+            if (unp) unp.hidden = !v;
+            const pub = document.querySelector<HTMLButtonElement>(
+                '[data-action="publish"]',
+            );
+            if (pub) pub.textContent = v ? "Republish" : "Publish";
+        }
 
         function toBlob(): unknown {
             const all: Record<string, CVData> = {};
@@ -2582,6 +1901,67 @@ import Layout from "../layouts/Layout.astro";
                         draftStatus.style.color = "var(--danger)";
                         draftStatus.textContent = "ลบไม่สำเร็จ — ลองอีกครั้ง";
                     }
+                } else if (action === "publish") {
+                    const keys = Object.keys(versions);
+                    if (!keys.length) {
+                        draftStatus.style.color = "var(--danger)";
+                        draftStatus.textContent =
+                            'ยังไม่มีเวอร์ชันที่บันทึกไว้ — กด "บันทึก" อย่างน้อยหนึ่งเวอร์ชัน (เช่น EN, TH) ก่อน แล้วค่อย Publish"';
+                        return;
+                    }
+                    if (
+                        !window.confirm(
+                            `เผยแพร่เวอร์ชัน ${keys.length} (เช่น ${keys.join(", ")}) ไปยังหน้า /cv เพื่อใช้? ` +
+                                "(จะทับข้อมูลสาธารณะปัจจุบัน)",
+                        )
+                    )
+                        return;
+                    draftStatus.style.color = "";
+                    draftStatus.textContent = "กำลังเผยแพร่…";
+                    const res = await authenticatedFetch(
+                        "/api/resume/published",
+                        {
+                            method: "PUT",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ data: toBlob() }),
+                        },
+                    );
+                    if (res.ok) {
+                        setPublishedState(true);
+                        const t = new Date().toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                        });
+                        draftStatus.style.color = "";
+                        draftStatus.textContent = `เผยแพร่แล้ว เมื่อ ${t} — ดูได้ที่ app.traipoap.com/cv`;
+                    } else {
+                        draftStatus.style.color = "var(--danger)";
+                        draftStatus.textContent =
+                            "เผยแพร่ไม่สำเร็จ — ลองอีกครั้ง";
+                    }
+                } else if (action === "unpublish") {
+                    if (
+                        !window.confirm(
+                            "ยกเลิกการเผยแพร่? หน้า /cv จะกลับไปใช้ข้อมูลตัวอย่าง",
+                        )
+                    )
+                        return;
+                    draftStatus.style.color = "";
+                    draftStatus.textContent = "กำลังยกเลิกการเผยแพร่…";
+                    const res = await authenticatedFetch(
+                        "/api/resume/published",
+                        { method: "DELETE" },
+                    );
+                    if (res.ok || res.status === 404) {
+                        setPublishedState(false);
+                        draftStatus.style.color = "";
+                        draftStatus.textContent =
+                            "ยกเลิกการเผยแพร่แล้ว — หน้า /cv ใช้ข้อมูลตัวอย่าง";
+                    } else {
+                        draftStatus.style.color = "var(--danger)";
+                        draftStatus.textContent =
+                            "ยกเลิกการเผยแพร่ไม่สำเร็จ — ลองอีกครั้ง";
+                    }
                 } else if (action === "sample-en" || action === "sample-th") {
                     const isTH = action === "sample-th";
                     if (
@@ -2618,213 +1998,6 @@ import Layout from "../layouts/Layout.astro";
                 }
             });
 
-        // ── Preset: Traipoap Hunthong ("Load my data") — EN / TH versions ──
-        function presetShared(): Pick<
-            CVData,
-            | "email"
-            | "phone"
-            | "website"
-            | "github"
-            | "linkedin"
-            | "skills"
-            | "certifications"
-            | "accent"
-            | "photo"
-            | "template"
-            | "breaks"
-        > {
-            return {
-                email: "traipoap@hotmail.com",
-                phone: "+66 80 638 0921",
-                website: "app.traipoap.com",
-                github: "github.com/traipoap",
-                linkedin: "linkedin.com/in/traipoap",
-                skills: [
-                    "Kubernetes / K8s / K3s / etcd / kubectl",
-                    "Helm / Kustomize / ArgoCD / FluxCD",
-                    "Istio / Cilium / Kiali / Gateway API",
-                    "cert-manager / Kyverno / External Secrets Operator",
-                    "Terraform / Ansible",
-                    "Proxmox VE / OpenStack",
-                    "AWS / ECR / GHCR / Huawei Cloud Container Engine",
-                    "GitHub Actions / GitLab / Docker / Docker Compose",
-                    "Vector / Quickwit / Loki",
-                    "OpenTelemetry / OTel Collector / Grafana Tempo",
-                    "Prometheus / Grafana / Zabbix",
-                    "Trivy / Gitleaks / SonarQube",
-                    "nginx / HAProxy / Keepalived",
-                    "NFS / Garage (S3)",
-                    "Cloudflare Tunnel / Tailscale",
-                    "Go / Python / Bash",
-                    "Investigation / Troubleshooting",
-                    "Linux / Debian / Ubuntu",
-                ],
-                certifications: [
-                    {
-                        id: uid(),
-                        name: "CKA — Certified Kubernetes Administrator",
-                        issuer: "Linux Foundation",
-                        year: "2026 – 2028",
-                    },
-                    {
-                        id: uid(),
-                        name: "CKAD — Certified Kubernetes Application Developer",
-                        issuer: "Linux Foundation",
-                        year: "2026 – 2028",
-                    },
-                ],
-                accent: "#6366f1",
-                photo: null,
-                template: "classic",
-                breaks: {},
-            };
-        }
-
-        function sampleDataEN(): CVData {
-            return {
-                name: "Traipoap Hunthong",
-                title: "DevOps Engineer",
-                location: "Nonthaburi, Thailand",
-                ...presetShared(),
-                summary:
-                    "Network Administrator expanding my experience in networking, infrastructure, and cloud computing toward a DevOps Engineer role. Certified as a Kubernetes Administrator (CKA) and Kubernetes Application Developer (CKAD) by the Linux Foundation. Built hands-on projects, including web applications running on a home lab and a disaster recovery (DR) site on AWS. Focused on Kubernetes, CI/CD, GitOps, and infrastructure automation to build reliable systems ready for production workloads.",
-                experience: [
-                    {
-                        id: uid(),
-                        role: "Network Administrator — Tier-2 Support",
-                        company:
-                            "360 Bizmate Co., Ltd. (NT — National Telecom)",
-                        location: "Nonthaburi",
-                        start: "Jan 2022",
-                        end: "",
-                        current: true,
-                        description:
-                            "Resolved Tier-2 network incidents escalated from Tier 1 and coordinated with internal teams and vendors to meet SLAs.\nHandled change and service requests, including VLAN additions and modifications, and maintained accurate configuration backups.\nTrained Tier-1 staff to improve efficiency and prepared monthly reports within the assigned scope.\nReduced mean time to resolution (MTTR) by implementing proactive traffic monitoring with Zabbix, detecting silent failures missed by standard node-down alerts and sending notifications through Telegram.\nAutomated multi-node health checks, reducing daily manual inspections of network devices.\nResolved IPv6 security policy conflicts by disabling unintended IPv6 auto-configuration and restoring firewall compliance.\nDiagnosed load-balancing issues caused by backend port settings and Docker Compose port exposure, helping the customer restore traffic forwarding.\nBuilt a scheduled infrastructure asset monitoring automation using Google Apps Script to parse hardware license and EOL records from CSV files, identify upcoming expirations and lifecycle risks, and deliver automated alerts through Telegram.",
-                    },
-                ],
-                projects: [
-                    {
-                        id: uid(),
-                        name: "infra — K3s Platform on Proxmox",
-                        link: "github.com/traipoap/infra",
-                        description:
-                            "Automated K3s platform provisioning with Terraform (template-based VM cloning, count-driven node scaling, and HCP remote state), Ansible (six idempotent playbooks and kernel tuning), K3s (embedded etcd for high availability), Istio ambient, Gateway API, and Argo CD GitOps deployments with Helm.\nProvisioned the complete platform from scratch in under an hour: a super-node (HAProxy L7 load balancer, syslog relay, NFS, and S3), three K3s control-plane nodes (etcd quorum), and two workers. The setup is repeatable and can be torn down with terraform destroy.\nAdded multi-runtime container support, using crun as the default runtime and exposing youki as a Kubernetes RuntimeClass.\nDocumented 14 architecture decisions, along with deployment and troubleshooting runbooks.",
-                    },
-                    {
-                        id: uid(),
-                        name: "app — Go/GIN + Astro Log Platform",
-                        link: "app.traipoap.com · github.com/traipoap/app",
-                        description:
-                            "Built and operate a self-hosted log search platform in a personal production environment, with a Go API (JWT authentication, Quickwit search, and CSV export) and an Astro dashboard.\nImplemented CI/CD with GitHub Actions: Gitleaks secret scanning and a SonarQube SAST gate, path-filtered image builds, Trivy scans for CRITICAL and HIGH vulnerabilities (SARIF), publishing to GHCR, and automatic deployments through Argo CD.",
-                    },
-                    {
-                        id: uid(),
-                        name: "gitops — ArgoCD GitOps",
-                        link: "github.com/traipoap/gitops",
-                        description:
-                            "Maintained Git as the source of truth for the K3s cluster, with Argo CD continuously reconciling cluster state and correcting configuration drift.\nIntegrated External Secrets Operator with AWS Secrets Manager to sync credentials into the cluster without storing them in Git.\nConfigured Argo CD Image Updater to detect new image versions, update tags according to semantic versioning, and deploy automatically.\nConfigured LimitRange defaults and schema validation for Argo CD Applications.\nImplemented observability with Prometheus, Grafana, and Kiali, and routed logs through Otel to Loki; used the Argo CD UI for application visibility.",
-                    },
-                    {
-                        id: uid(),
-                        name: "aws — Multi-region Failover DR",
-                        link: "github.com/traipoap/infra/tree/main/aws",
-                        description:
-                            "Built a multi-region disaster recovery setup with K3s as the primary origin behind CloudFront origin groups, automatically failing over on 4xx/5xx responses to a Go/Gin Lambda (ECR) and a static site on S3 across ap-southeast-1 and ap-southeast-7. This provides cross-provider continuity for app.traipoap.com.\nCreated Terraform modules for CloudFront, ECR, IAM, S3, and ACM, plus a CloudFront Function for clean URL routing and OAC/SigV4 for private S3 access.",
-                    },
-                ],
-                education: [
-                    {
-                        id: uid(),
-                        degree: "B.Sc. Computer Science",
-                        school: "Rajamangala University of Technology Phranakorn",
-                        start: "Aug 2014",
-                        end: "May 2018",
-                    },
-                ],
-                languages: [
-                    { id: uid(), name: "Thai", level: "Native" },
-                    {
-                        id: uid(),
-                        name: "English",
-                        level: "Working proficiency",
-                    },
-                ],
-            };
-        }
-
-        // ── Preset: same profile, Thai wording ────────────────────────────
-        function sampleDataTH(): CVData {
-            return {
-                name: "ไตรภพ หุ่นทอง",
-                title: "DevOps Engineer",
-                location: "นนทบุรี, ประเทศไทย",
-                ...presetShared(),
-                summary:
-                    "สวัสดีครับ ผมชื่อไตรภพ หุ่นทอง ปัจจุบันทำงานด้านดูแลระบบเครือข่าย (Network Administrator) และกำลังต่อยอดประสบการณ์ด้านเครือข่าย โครงสร้างพื้นฐาน และคลาวด์ เพื่อเติบโตสู่ตำแหน่ง DevOps Engineer ผมได้รับการรับรอง CKA และ CKAD จาก Linux Foundation และพัฒนาโปรเจกต์ด้วยตนเองหลายโครงการ ทั้งแพลตฟอร์มค้นหาและจัดการ log บน home lab และระบบกู้คืนระบบเมื่อเกิดเหตุขัดข้อง (Disaster Recovery) บน AWS Cloud ผมมุ่งพัฒนาทักษะด้าน Kubernetes, CI/CD, GitOps และระบบอัตโนมัติสำหรับโครงสร้างพื้นฐาน เพื่อสร้างระบบที่เสถียรและพร้อมใช้งานจริง",
-                experience: [
-                    {
-                        id: uid(),
-                        role: "Network Administrator (Tier-2)",
-                        company:
-                            "บริษัท 360 Bizmate จำกัด (NT — กสท โทรคมนาคม)",
-                        location: "นนทบุรี",
-                        start: "ม.ค. 2022",
-                        end: "",
-                        current: true,
-                        description:
-                            "ดูแลระบบเครือข่ายในฐานะ Tier-2 แก้ไขเหตุขัดข้องที่ส่งต่อมาจาก Tier-1 และประสานงานกับทีมภายในและหน่วยงานภายนอกให้ดำเนินงานได้ตาม SLA\nดำเนินการเปลี่ยนแปลงระบบ (change) และคำขอบริการ (service request) เช่น เพิ่มหรือแก้ไข VLAN พร้อมสำรองค่าการตั้งค่า (backup) ให้เป็นปัจจุบัน\nถ่ายทอดความรู้และฝึกอบรมทีม Tier-1 เพื่อเพิ่มประสิทธิภาพการทำงาน พร้อมจัดทำรายงานประจำเดือนตามขอบเขตงาน\nช่วยลดเวลาเฉลี่ยในการแก้ไขเหตุขัดข้อง (MTTR) ด้วยระบบเฝ้าระวังเชิงรุกผ่าน Zabbix ซึ่งตรวจพบปัญหาแฝงที่การแจ้งเตือนแบบเดิมตรวจไม่พบ และส่งการแจ้งเตือนผ่าน Telegram\nเขียนสคริปต์ตรวจสุขภาพอุปกรณ์หลายเครื่องโดยอัตโนมัติ ลดการตรวจสอบด้วยตนเองในแต่ละวัน\nแก้ไขความขัดแย้งของนโยบาย IPv6 โดยปิดการกำหนดค่า IPv6 อัตโนมัติ (auto-configuration) ที่ไม่พึงประสงค์ ทำให้การตั้งค่า firewall กลับมาเป็นไปตามข้อกำหนดด้านความปลอดภัย\nวิเคราะห์ปัญหาการกระจายโหลด (load balancing) และพบว่าการตั้งค่าพอร์ต backend กับการเปิดพอร์ตใน Docker Compose ไม่ถูกต้อง พร้อมแนะนำวิธีแก้ไขจนลูกค้ากลับมาใช้งานได้ตามปกติ\nพัฒนาระบบติดตามสถานะ Hardware License และ End-of-Life (EOL) โดยใช้ Google Apps Script ให้สามารถประมวลผลข้อมูลจากไฟล์ CSV ตามเวลาที่กำหนด ตรวจสอบ License ที่ใกล้หมดอายุและอุปกรณ์ที่ใกล้สิ้นสุดระยะเวลาการสนับสนุน พร้อมส่งการแจ้งเตือนผ่าน Telegram โดยอัตโนมัติ",
-                    },
-                ],
-                projects: [
-                    {
-                        id: uid(),
-                        name: "infra — K3s Platform บน Proxmox",
-                        link: "github.com/traipoap/infra",
-                        description:
-                            "สร้างแพลตฟอร์ม K3s แบบอัตโนมัติ ตั้งแต่ Terraform (สร้าง VM จากเทมเพลต กำหนดจำนวนโหนด และจัดเก็บ state บน HCP Terraform) ไปจนถึง Ansible (playbook 6 ชุดและการปรับแต่ง kernel) แล้วติดตั้ง K3s แบบ HA ด้วย embedded etcd พร้อม Istio ambient, Gateway API และ ArgoCD สำหรับ GitOps (ติดตั้งผ่าน Helm)\nติดตั้งแพลตฟอร์มทั้งหมดจากศูนย์ได้ภายในหนึ่งชั่วโมง ประกอบด้วย super-node (HAProxy L7, syslog relay, NFS และ S3), control plane 3 โหนด (etcd quorum) และ worker 2 โหนด พร้อมสร้างซ้ำหรือรื้อระบบด้วย terraform destroy\nรองรับ container runtime หลายตัว โดยใช้ crun เป็นค่าเริ่มต้นและกำหนด youki เป็น RuntimeClass ของ Kubernetes\nจัดทำเอกสารการตัดสินใจด้านสถาปัตยกรรม 14 ข้อ คู่มือติดตั้ง และคู่มือแก้ไขปัญหา (runbook)",
-                    },
-                    {
-                        id: uid(),
-                        name: "app — Go/GIN + Astro Log Platform",
-                        link: "app.traipoap.com · github.com/traipoap/app",
-                        description:
-                            "พัฒนาและดูแลแพลตฟอร์มค้นหา log แบบ self-hosted ในสภาพแวดล้อมใช้งานจริง ประกอบด้วย Go API (ยืนยันตัวตนด้วย JWT ค้นหาด้วย Quickwit และส่งออก CSV) กับ Astro dashboard\nสร้าง CI/CD ด้วย GitHub Actions: สแกน secret ที่รั่วไหลด้วย Gitleaks ตรวจ SAST ด้วย SonarQube สร้าง image เฉพาะส่วนที่เปลี่ยน สแกนช่องโหว่ระดับ CRITICAL/HIGH ด้วย Trivy (SARIF) ส่ง image ไปยัง GHCR และให้ ArgoCD deploy อัตโนมัติ",
-                    },
-                    {
-                        id: uid(),
-                        name: "gitops — ArgoCD GitOps",
-                        link: "github.com/traipoap/gitops",
-                        description:
-                            "ใช้ Git เป็นแหล่งข้อมูลหลัก (source of truth) ของคลัสเตอร์ K3s โดย ArgoCD จะซิงก์สถานะกับ Git อย่างต่อเนื่องและแก้ไข configuration drift โดยอัตโนมัติ (self-healing)\nเชื่อม External Secrets Operator กับ AWS Secrets Manager เพื่อซิงก์ credentials เข้าคลัสเตอร์โดยไม่จัดเก็บไว้ใน Git\nตั้งค่า ArgoCD Image Updater ให้ตรวจพบ image รุ่นใหม่ อัปเดต tag ตาม semver และ deploy โดยอัตโนมัติ\nกำหนดค่าเริ่มต้นของ LimitRange และตรวจสอบ schema ของ ArgoCD Application\nติดตั้งระบบ observability ด้วย Prometheus, Grafana และ Kiali พร้อมส่ง log ผ่าน Otel ไปยัง Loki และติดตามสถานะแอปผ่าน ArgoCD UI",
-                    },
-                    {
-                        id: uid(),
-                        name: "aws — Multi-region Failover DR",
-                        link: "github.com/traipoap/infra/tree/main/aws",
-                        description:
-                            "สร้างระบบ Disaster Recovery (DR) ข้าม region โดยใช้ K3s เป็น origin หลักของ CloudFront เมื่อได้รับสถานะ 4xx/5xx จะ failover ไปยัง Lambda (Go/Gin บน ECR) และ static build บน S3 ใน ap-southeast-1 และ ap-southeast-7 เพื่อให้ app.traipoap.com ทำงานต่อได้เมื่อระบบหลักขัดข้อง\nสร้าง Terraform module สำหรับ CloudFront, ECR, IAM, S3 และ ACM พร้อม CloudFront Function สำหรับ clean-URL routing และ OAC/SigV4 เพื่อเข้าถึง S3 แบบส่วนตัว",
-                    },
-                ],
-                education: [
-                    {
-                        id: uid(),
-                        degree: "วิทยาศาสตรบัณฑิต (วิทยาการคอมพิวเตอร์)",
-                        school: "มหาวิทยาลัยเทคโนโลยีราชมงคลพระนคร",
-                        start: "ส.ค. 2014",
-                        end: "พ.ค. 2018",
-                    },
-                ],
-                languages: [
-                    { id: uid(), name: "ไทย", level: "ภาษาแม่" },
-                    {
-                        id: uid(),
-                        name: "อังกฤษ",
-                        level: "สื่อสารเพื่อการทำงาน",
-                    },
-                ],
-            };
-        }
-
         // ── Boot ─────────────────────────────────────────────────────────────
         if (restoredDraft)
             draftStatus.textContent =
@@ -2841,6 +2014,14 @@ import Layout from "../layouts/Layout.astro";
         // saved versions; a local draft is a fallback that gets migrated to
         // the account as version "Resume".
         void (async () => {
+            // Reflect the current public state in the toolbar.
+            try {
+                const res = await fetch("/api/resume/published");
+                setPublishedState(res.ok);
+            } catch {
+                // Backend unreachable — assume unpublished.
+            }
+
             const fromAccount = await loadAccountStore();
             syncVersionUI();
             if (fromAccount && activeName) {
@@ -2872,219 +2053,6 @@ import Layout from "../layouts/Layout.astro";
         window.addEventListener("resize", fitSheet);
     </script>
     <style>
-        .cv-page {
-            width: 100%;
-            padding: 2.5rem 1.25rem 4rem;
-        }
-
-        .cv-head {
-            max-width: 1560px;
-            margin: 0 auto 1.5rem;
-            display: flex;
-            flex-wrap: wrap;
-            align-items: flex-end;
-            justify-content: space-between;
-            gap: 1rem;
-        }
-
-        .cv-eyebrow {
-            font-family: var(--mono);
-            font-size: 0.6875rem;
-            font-weight: 600;
-            letter-spacing: 0.14em;
-            text-transform: uppercase;
-            color: var(--faint);
-            margin-bottom: 0.5rem;
-        }
-
-        .cv-title {
-            font-size: 1.75rem;
-            font-weight: 700;
-            letter-spacing: -0.01em;
-            color: var(--text);
-        }
-
-        .cv-sub {
-            margin-top: 0.375rem;
-            font-size: 0.875rem;
-            color: var(--muted);
-            max-width: 42rem;
-        }
-
-        .cv-xlink {
-            display: inline-block;
-            margin-top: 0.5rem;
-            font-size: 0.8125rem;
-            font-weight: 500;
-            color: var(--accent, #6366f1);
-            text-decoration: none;
-        }
-
-        .cv-xlink:hover {
-            text-decoration: underline;
-        }
-
-        .cv-toolbar {
-            display: flex;
-            align-items: center;
-            gap: 0.625rem;
-            flex-wrap: wrap;
-        }
-
-        .cv-swatches {
-            display: flex;
-            gap: 0.375rem;
-            padding-right: 0.5rem;
-            border-right: 1px solid var(--border);
-        }
-
-        .swatch {
-            width: 22px;
-            height: 22px;
-            border-radius: 50%;
-            border: 2px solid transparent;
-            cursor: pointer;
-            padding: 0;
-            transition: transform 0.12s ease;
-        }
-
-        .swatch:hover {
-            transform: scale(1.12);
-        }
-
-        .swatch.is-active {
-            border-color: #fff;
-            box-shadow:
-                0 0 0 2px var(--bg),
-                0 0 0 4px var(--border-strong);
-        }
-
-        .cv-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.5625rem 1rem;
-            background: rgba(148, 163, 184, 0.06);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            color: var(--muted);
-            font-size: 0.8125rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition:
-                color 0.15s ease,
-                border-color 0.15s ease,
-                background 0.15s ease;
-        }
-
-        /* `display` above would otherwise override the `hidden` attribute. */
-        .cv-btn[hidden] {
-            display: none;
-        }
-
-        .cv-btn svg {
-            width: 15px;
-            height: 15px;
-        }
-
-        .cv-btn:hover {
-            color: var(--text);
-            border-color: var(--border-strong);
-            background: rgba(148, 163, 184, 0.1);
-        }
-
-        .cv-btn-primary {
-            background: rgba(129, 140, 248, 0.14);
-            border-color: rgba(129, 140, 248, 0.4);
-            color: #c7d2fe;
-        }
-
-        .cv-btn-primary:hover {
-            background: rgba(129, 140, 248, 0.22);
-            color: #e0e7ff;
-            border-color: rgba(129, 140, 248, 0.6);
-        }
-
-        .cv-btn-danger {
-            color: #fda4af;
-            border-color: rgba(244, 63, 94, 0.35);
-        }
-
-        .cv-btn-danger:hover {
-            color: #fecdd3;
-            background: rgba(244, 63, 94, 0.12);
-            border-color: rgba(244, 63, 94, 0.55);
-        }
-
-        .cv-select {
-            padding: 0.5625rem 0.75rem;
-            background: rgba(148, 163, 184, 0.06);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            color: var(--muted);
-            font-size: 0.8125rem;
-            font-weight: 600;
-            cursor: pointer;
-            max-width: 190px;
-        }
-
-        .cv-select:focus {
-            outline: none;
-            border-color: var(--border-strong);
-        }
-
-        .cv-select option {
-            background: var(--bg-elev, #0b1120);
-            color: var(--text, #e7ecf5);
-        }
-
-        .cv-btn[disabled] {
-            opacity: 0.45;
-            cursor: not-allowed;
-        }
-
-        .cv-seg {
-            display: inline-flex;
-            padding: 3px;
-            background: rgba(148, 163, 184, 0.07);
-            border: 1px solid var(--border);
-            border-radius: 9px;
-        }
-
-        .seg-btn {
-            border: none;
-            background: transparent;
-            color: var(--muted);
-            font-size: 0.8125rem;
-            font-weight: 600;
-            padding: 0.4375rem 0.875rem;
-            border-radius: 6px;
-            cursor: pointer;
-            transition:
-                color 0.15s ease,
-                background 0.15s ease;
-        }
-
-        .seg-btn:hover {
-            color: var(--text);
-        }
-
-        .seg-btn.is-active {
-            background: rgba(129, 140, 248, 0.18);
-            color: #e0e7ff;
-        }
-
-        .cv-page-badge {
-            font-family: var(--mono);
-            font-size: 0.6875rem;
-            font-weight: 600;
-            letter-spacing: 0.04em;
-            color: var(--muted);
-            padding: 0.5rem 0.75rem;
-            border: 1px dashed var(--border-strong);
-            border-radius: 999px;
-        }
-
         .cv-photo-row {
             display: flex;
             align-items: center;
@@ -3340,10 +2308,6 @@ import Layout from "../layouts/Layout.astro";
             padding: 0.5rem 0 2rem;
         }
 
-        .cv-sheet-wrap {
-            margin: 0 auto;
-        }
-
         @media (max-width: 1100px) {
             .cv-workspace {
                 grid-template-columns: 1fr;
@@ -3358,659 +2322,6 @@ import Layout from "../layouts/Layout.astro";
         @media (max-width: 640px) {
             .cv-grid2 {
                 grid-template-columns: 1fr;
-            }
-        }
-    </style>
-
-    <!-- Sheet + dynamic entry styles must be global: they target nodes
-         created at runtime (no data-astro-cid attribute). -->
-    <style is:global>
-        /* ═══════════ A4 sheet (screen) ═══════════ */
-        .cv-sheet {
-            --cv-accent: #6366f1;
-            width: 210mm;
-            color: #1f2937;
-            font-family:
-                "Inter",
-                system-ui,
-                -apple-system,
-                "Segoe UI",
-                sans-serif;
-            font-size: 12.5px;
-            line-height: 1.42;
-            transform-origin: top center;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-            position: relative;
-        }
-
-        /* One card per printed A4 page — the preview is the print.
-           (named .cv-a4 to avoid clashing with the outer .cv-page layout) */
-        .cv-a4 {
-            position: relative;
-            min-height: 296.8mm;
-            padding: 14mm 15mm;
-            background: #ffffff;
-            border-radius: 8px;
-            box-shadow: 0 24px 64px rgba(2, 6, 16, 0.55);
-        }
-
-        .cv-a4 + .cv-a4 {
-            margin-top: 30px;
-        }
-
-        .cv-a4-num {
-            position: absolute;
-            top: -11px;
-            right: 14px;
-            background: #4f46e5;
-            color: #ffffff;
-            font:
-                600 11px/1 "Inter",
-                system-ui,
-                sans-serif;
-            padding: 3px 9px;
-            border-radius: 999px;
-            letter-spacing: 0.02em;
-        }
-
-        /* Offscreen measurement context, same box as a page's content. */
-        .cv-measure {
-            position: absolute;
-            top: 0;
-            left: -4000px;
-            width: 100%;
-            padding: 14mm 15mm;
-            visibility: hidden;
-            pointer-events: none;
-        }
-
-        .cv-sheet-head {
-            margin-bottom: 4px;
-        }
-
-        .cv-headbar {
-            width: 52px;
-            height: 4px;
-            border-radius: 2px;
-            background: var(--cv-accent);
-            margin-bottom: 16px;
-        }
-
-        .cv-name {
-            font-size: 30px;
-            font-weight: 800;
-            letter-spacing: -0.02em;
-            color: #0f172a;
-            line-height: 1.15;
-        }
-
-        .cv-roletitle {
-            margin-top: 3px;
-            font-size: 15px;
-            font-weight: 600;
-            color: var(--cv-accent);
-        }
-
-        .cv-contact {
-            margin-top: 12px;
-            font-size: 11.5px;
-            color: #475569;
-        }
-
-        .cv-contact .sep {
-            margin: 0 8px;
-            color: #cbd5e1;
-        }
-
-        .cv-sheet-head.has-photo {
-            display: flex;
-            align-items: flex-start;
-            gap: 22px;
-        }
-
-        .cv-head-text {
-            flex: 1;
-            min-width: 0;
-        }
-
-        .cv-photo {
-            width: 88px;
-            height: 88px;
-            object-fit: cover;
-            border-radius: 10px;
-            border: 1px solid #e2e8f0;
-            flex: none;
-        }
-
-        .cv-cols {
-            display: grid;
-            grid-template-columns: 1.55fr 1fr;
-            gap: 4px 36px;
-            align-items: start;
-        }
-
-        .cv-col-side .cv-chip {
-            font-size: 11px;
-            padding: 2px 10px;
-        }
-
-        .cv-col-side .cv-pairgrid {
-            grid-template-columns: 1fr;
-        }
-
-        /* Narrow side column: stack name over meta instead of one cramped row. */
-        .cv-col-side .cv-pair {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 2px;
-        }
-
-        .cv-col-side .cv-pair-meta {
-            font-size: 11px;
-        }
-
-        /* ═══════════ ATS / AI template — plain, parser-friendly ═══════════ */
-        .cv-sheet.ats {
-            --cv-accent: #111827;
-            font-size: 13.5px;
-            line-height: 1.55;
-        }
-
-        .cv-sheet.ats .cv-headbar {
-            display: none;
-        }
-
-        .cv-sheet.ats .cv-photo {
-            display: none;
-        }
-
-        .cv-sheet.ats .cv-name {
-            font-size: 32px;
-            letter-spacing: -0.01em;
-        }
-
-        .cv-sheet.ats .cv-contact {
-            font-size: 12px;
-            color: #374151;
-        }
-
-        .cv-sheet.ats .cv-section {
-            margin-top: 12px;
-        }
-
-        .cv-sheet.ats .cv-section h3 {
-            font-size: 11px;
-            letter-spacing: 0.1em;
-            color: #111827;
-            border-bottom: 1.5px solid #111827;
-            padding-bottom: 4px;
-            margin-bottom: 5px;
-        }
-
-        .cv-sheet.ats .cv-entry {
-            margin-bottom: 6px;
-        }
-
-        .cv-sheet.ats .cv-bullets {
-            margin-top: 4px;
-        }
-
-        .cv-sheet.ats .cv-bullets li {
-            margin-bottom: 1px;
-        }
-
-        .cv-sheet.ats .cv-entry-role,
-        .cv-sheet.ats .cv-entry-company,
-        .cv-sheet.ats .cv-pair-name {
-            color: #111827;
-        }
-
-        .cv-sheet.ats .cv-chip {
-            background: none;
-            border: 1px solid #d1d5db;
-            color: #1f2937;
-        }
-
-        .cv-section {
-            margin-top: 22px;
-        }
-
-        .cv-section h3 {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 10px;
-            padding-bottom: 6px;
-            border-bottom: 1px solid #e2e8f0;
-            font-size: 10.5px;
-            font-weight: 700;
-            letter-spacing: 0.14em;
-            text-transform: uppercase;
-            color: var(--cv-accent);
-        }
-
-        .cv-para {
-            color: #334155;
-        }
-
-        .cv-entry {
-            margin-bottom: 12px;
-        }
-
-        .cv-entry:last-child {
-            margin-bottom: 0;
-        }
-
-        .cv-entry-head {
-            display: flex;
-            align-items: baseline;
-            justify-content: space-between;
-            gap: 12px;
-        }
-
-        .cv-entry-role {
-            font-size: 13.5px;
-            font-weight: 700;
-            color: #0f172a;
-        }
-
-        .cv-entry-company {
-            font-weight: 600;
-            color: var(--cv-accent);
-        }
-
-        .cv-entry-loc {
-            color: #64748b;
-            font-size: 12px;
-        }
-
-        .cv-entry-date {
-            font-family:
-                "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
-            font-size: 10.5px;
-            color: #64748b;
-            white-space: nowrap;
-        }
-
-        .cv-entry-desc {
-            margin-top: 3px;
-            color: #334155;
-        }
-
-        .cv-bullets {
-            margin: 6px 0 0 16px;
-            padding: 0;
-        }
-
-        .cv-bullets li {
-            margin-bottom: 3px;
-            color: #334155;
-        }
-
-        .cv-bullets li::marker {
-            color: var(--cv-accent);
-        }
-
-        .cv-chips {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-        }
-
-        .cv-chip {
-            padding: 3px 11px;
-            border-radius: 999px;
-            background: #eef2ff;
-            background: color-mix(in srgb, var(--cv-accent) 9%, white);
-            border: 1px solid #c7d2fe;
-            border-color: color-mix(in srgb, var(--cv-accent) 28%, white);
-            font-size: 11.5px;
-            font-weight: 500;
-            color: #1e293b;
-        }
-
-        .cv-pairgrid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-            gap: 8px 18px;
-        }
-
-        .cv-pair {
-            display: flex;
-            justify-content: space-between;
-            gap: 10px;
-        }
-
-        .cv-pair-name {
-            font-weight: 600;
-            color: #0f172a;
-        }
-
-        .cv-pair-meta {
-            color: #64748b;
-        }
-
-        .cv-sheet-empty {
-            min-height: 900px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            text-align: center;
-            color: #94a3b8;
-            border: 1.5px dashed #e2e8f0;
-            border-radius: 10px;
-        }
-
-        .cv-sheet-empty strong {
-            font-size: 15px;
-            color: #64748b;
-        }
-
-        /* ═══════════ Shared control scale (static + JS-created) ═══════════ */
-        .cv-form input:not([type="checkbox"]),
-        .cv-form select,
-        .cv-form textarea,
-        .entry input:not([type="checkbox"]),
-        .entry select,
-        .entry textarea {
-            width: 100%;
-            padding: 0.6875rem 0.875rem;
-            background: var(--bg-elev);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            color: var(--text);
-            font-size: 0.875rem;
-            line-height: 1.5;
-            caret-color: var(--accent);
-            transition:
-                border-color 0.15s ease,
-                box-shadow 0.15s ease;
-        }
-
-        .cv-form textarea,
-        .entry textarea {
-            resize: vertical;
-            min-height: 5.5rem;
-        }
-
-        .cv-form select,
-        .entry select {
-            appearance: none;
-            -webkit-appearance: none;
-            background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%2394a3b8' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-position: right 0.875rem center;
-            padding-right: 2.5rem;
-            cursor: pointer;
-        }
-
-        .cv-form input:not([type="checkbox"]):hover,
-        .cv-form select:hover,
-        .cv-form textarea:hover,
-        .entry input:not([type="checkbox"]):hover,
-        .entry select:hover,
-        .entry textarea:hover {
-            border-color: var(--border-strong);
-        }
-
-        .cv-form input:not([type="checkbox"]):focus,
-        .cv-form select:focus,
-        .cv-form textarea:focus,
-        .entry input:not([type="checkbox"]):focus,
-        .entry select:focus,
-        .entry textarea:focus {
-            outline: none;
-            border-color: var(--accent);
-            box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.18);
-        }
-
-        .cv-form input::placeholder,
-        .cv-form textarea::placeholder,
-        .entry input::placeholder,
-        .entry textarea::placeholder {
-            color: var(--faint);
-        }
-
-        .entry input:disabled,
-        .entry select:disabled,
-        .entry textarea:disabled {
-            opacity: 0.45;
-            cursor: not-allowed;
-        }
-
-        /* ═══════════ Dynamic form entries (JS-created) ═══════════ */
-        .entry {
-            display: flex;
-            flex-direction: column;
-            gap: 0.75rem;
-            padding: 0.875rem 1rem 1rem;
-            background: rgba(148, 163, 184, 0.04);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            transition:
-                border-color 0.15s ease,
-                box-shadow 0.15s ease;
-        }
-
-        .entry:hover {
-            border-color: var(--border-strong);
-        }
-
-        .entry:focus-within {
-            border-color: var(--accent);
-            box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.15);
-        }
-
-        .entry-empty {
-            padding: 0.875rem 1rem;
-            border: 1.5px dashed var(--border-strong);
-            border-radius: 10px;
-            color: var(--faint);
-            font-size: 0.8125rem;
-            text-align: center;
-        }
-
-        .entry-head {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .entry-num {
-            font-family: var(--mono);
-            font-size: 0.6875rem;
-            font-weight: 600;
-            color: var(--faint);
-            background: rgba(148, 163, 184, 0.1);
-            padding: 2px 8px;
-            border-radius: 999px;
-        }
-
-        .entry-remove {
-            background: transparent;
-            border: none;
-            padding: 0.25rem 0.5rem;
-            color: var(--faint);
-            font-size: 0.75rem;
-            font-weight: 600;
-            cursor: pointer;
-            border-radius: 6px;
-            transition:
-                color 0.15s ease,
-                background 0.15s ease;
-        }
-
-        .entry-remove:hover {
-            color: var(--danger);
-            background: rgba(248, 113, 113, 0.1);
-        }
-
-        .entry-remove:focus-visible {
-            outline: 2px solid var(--accent);
-            outline-offset: 1px;
-        }
-
-        .chip {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.375rem;
-            padding: 0.3125rem 0.625rem;
-            background: rgba(129, 140, 248, 0.12);
-            border: 1px solid rgba(129, 140, 248, 0.3);
-            border-radius: 999px;
-            color: #c7d2fe;
-            font-size: 0.8125rem;
-            font-weight: 500;
-        }
-
-        .chip-x {
-            background: transparent;
-            border: none;
-            padding: 0;
-            color: inherit;
-            opacity: 0.65;
-            font-size: 1rem;
-            line-height: 1;
-            cursor: pointer;
-        }
-
-        .chip-x:hover {
-            opacity: 1;
-        }
-
-        .chip-x:focus-visible {
-            outline: 2px solid var(--accent);
-            outline-offset: 1px;
-            border-radius: 4px;
-        }
-
-        /* ═══════════ Print: only the sheet, A4, multi-page ═══════════ */
-        @media print {
-            @page {
-                size: A4;
-                margin: 14mm 15mm;
-            }
-
-            html,
-            body {
-                background: #ffffff !important;
-            }
-
-            .app-shell,
-            .app-main {
-                display: block !important;
-            }
-
-            /* App chrome (dark rail / overlays) must never reach the PDF. */
-            .app-nav {
-                display: none !important;
-            }
-
-            .app-shell,
-            .app-main,
-            .cv-page,
-            .cv-workspace,
-            .cv-preview,
-            .cv-sheet-wrap {
-                background: transparent !important;
-                box-shadow: none !important;
-            }
-
-            .cv-page {
-                display: block !important;
-                padding: 0 !important;
-            }
-
-            .cv-head,
-            .cv-form {
-                display: none !important;
-            }
-
-            .cv-workspace {
-                display: block !important;
-            }
-
-            .cv-preview {
-                position: static !important;
-                padding: 0 !important;
-            }
-
-            .cv-sheet-wrap {
-                width: auto !important;
-                height: auto !important;
-                margin: 0 !important;
-            }
-
-            .cv-sheet {
-                width: auto !important;
-                transform: none !important;
-            }
-
-            /* Each preview page maps 1:1 onto one printed A4 page. */
-            .cv-a4 {
-                width: auto !important;
-                min-height: 0 !important;
-                padding: 0 !important;
-                border-radius: 0 !important;
-                box-shadow: none !important;
-                margin: 0 !important;
-                break-inside: avoid-page;
-                page-break-inside: avoid;
-                break-after: page;
-                page-break-after: always;
-            }
-
-            .cv-a4:last-child {
-                break-after: auto;
-                page-break-after: auto;
-            }
-
-            .cv-a4-num,
-            .cv-measure {
-                display: none !important;
-            }
-
-            /* If a single unit overflows a page, keep it intact where possible. */
-            .cv-sheet-head,
-            .cv-entry,
-            .cv-para,
-            .cv-pair,
-            .cv-chips,
-            .cv-pairgrid,
-            .cv-bullets li,
-            .cv-entry-head {
-                break-inside: avoid-page;
-                page-break-inside: avoid;
-            }
-
-            .cv-section h3,
-            .cv-entry-head {
-                break-after: avoid-page;
-                page-break-after: avoid;
-            }
-
-            .cv-entry-desc,
-            .cv-para,
-            .cv-sheet p {
-                orphans: 4;
-                widows: 4;
-            }
-
-            .cv-section {
-                margin-top: 18px;
-            }
-
-            .cv-section:first-child {
-                margin-top: 0;
-            }
-
-            .cv-sheet,
-            .cv-sheet * {
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
             }
         }
     </style>

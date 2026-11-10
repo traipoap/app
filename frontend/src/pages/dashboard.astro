@@ -43,7 +43,7 @@ import "../styles/main.css";
             }
             if (role !== "admin") {
                 setTimeout(function () {
-                    window.location.href = "/resume";
+                    window.location.href = "/cv";
                 }, 100);
             }
         })();
@@ -414,7 +414,7 @@ import "../styles/main.css";
             if (res.status === 403) {
                 // 403 = valid session without the admin role — keep the session,
                 // don't wipe it (that was the "bounced back to login" bug).
-                window.location.href = "/resume";
+                window.location.href = "/cv";
                 throw new Error("forbidden");
             }
             if (!res.ok) throw new Error(`Server error ${res.status}`);
@@ -720,7 +720,7 @@ import "../styles/main.css";
                     `${API_BASE}/api/indices?engine=${encodeURIComponent(engineId)}`,
                 );
                 if (res.status === 403) {
-                    window.location.href = "/resume";
+                    window.location.href = "/cv";
                     return;
                 }
                 if (!res.ok) throw new Error(`Server error ${res.status}`);

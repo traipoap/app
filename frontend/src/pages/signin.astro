@@ -454,8 +454,8 @@ interface Props {
                     localStorage.setItem("refreshToken", data.refresh_token);
 
                     // Route by role: admins land on the dashboard, regular
-                    // user accounts on their own resume (their home page).
-                    let target = "/dashboard";
+                    // user accounts on the public resume preview (/cv).
+                    let target = "/setting";
                     try {
                         const b64 = data.token
                             .split(".")[1]
@@ -470,7 +470,7 @@ interface Props {
                             ),
                         );
                         if (claims.role && claims.role !== "admin") {
-                            target = "/resume";
+                            target = "/setting";
                         }
                     } catch {
                         // Unreadable token claims — keep the default target.

@@ -26,21 +26,6 @@ import Layout from "../layouts/Layout.astro";
                 <p class="page-eyebrow">LUMINA · Workspace</p>
                 <h1 class="page-title">Settings</h1>
             </div>
-            <a href="/dashboard" class="back-dash">
-                <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    aria-hidden="true"
-                >
-                    <path d="M19 12H5"></path>
-                    <path d="M12 19l-7-7 7-7"></path>
-                </svg>
-                Back to Dashboard
-            </a>
         </header>
 
         <div class="settings-grid">
@@ -523,35 +508,6 @@ import Layout from "../layouts/Layout.astro";
             font-weight: 700;
             letter-spacing: -0.01em;
             color: var(--text);
-        }
-
-        .back-dash {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.5rem 0.9375rem;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            background: rgba(148, 163, 184, 0.04);
-            color: var(--muted);
-            text-decoration: none;
-            font-size: 0.8125rem;
-            font-weight: 500;
-            transition:
-                color 0.15s ease,
-                border-color 0.15s ease,
-                background 0.15s ease;
-        }
-
-        .back-dash svg {
-            width: 15px;
-            height: 15px;
-        }
-
-        .back-dash:hover {
-            color: var(--text);
-            border-color: var(--border-strong);
-            background: rgba(148, 163, 184, 0.08);
         }
 
         .settings-grid {
