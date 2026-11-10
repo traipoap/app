@@ -41,6 +41,10 @@ func setupAuthRoutes(r *gin.Engine, jwtService *services.JWTService, db *gorm.DB
 		auth.POST("/register", controllers.HandleRegister(db))
 	}
 
+	// Public: the owner's published CV — read by the /cv page, which
+	// HR visitors open without any token.
+	r.GET("/api/resume/published", controllers.HandlePublishedGet(db))
+
 	// Protected routes
 	api := r.Group("/api")
 	api.Use(middleware.JWTAuth())
@@ -49,11 +53,14 @@ func setupAuthRoutes(r *gin.Engine, jwtService *services.JWTService, db *gorm.DB
 		api.GET("/admin", middleware.RoleAuth("admin"), controllers.HandleAdmin)
 		api.POST("/logout", controllers.HandleLogout(db, jwtService))
 
-		// Per-account CV document — every authenticated role gets their own
-		// copy; the backend scopes the data to the caller's user id.
-		api.GET("/resume", controllers.HandleResumeGet(db))
-		api.PUT("/resume", controllers.HandleResumePut(db))
-		api.DELETE("/resume", controllers.HandleResumeDelete(db))
+		// Admin-only CV backend — the owner's resume builder data.
+		api.GET("/resume", middleware.RoleAuth("admin"), controllers.HandleResumeGet(db))
+		api.PUT("/resume", middleware.RoleAuth("admin"), controllers.HandleResumePut(db))
+		api.DELETE("/resume", middleware.RoleAuth("admin"), controllers.HandleResumeDelete(db))
+
+		// Publish the CV store to the public /cv page.
+		api.PUT("/resume/published", middleware.RoleAuth("admin"), controllers.HandlePublishedPut(db))
+		api.DELETE("/resume/published", middleware.RoleAuth("admin"), controllers.HandlePublishedDelete(db))
 
 		// User administration (admin only)
 		api.GET("/users", middleware.RoleAuth("admin"), controllers.HandleUsersList(db))

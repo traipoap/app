@@ -51,7 +51,7 @@ func main() {
 	}
 
 	// Auto-migrate the User, RevokedToken and Resume tables
-	if err := db.AutoMigrate(&models.User{}, &models.RevokedToken{}, &models.Resume{}); err != nil {
+	if err := db.AutoMigrate(&models.User{}, &models.RevokedToken{}, &models.Resume{}, &models.PublishedResume{}); err != nil {
 		log.Fatalf("failed to migrate database: %v", err)
 	}
 
