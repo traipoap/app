@@ -12,7 +12,7 @@ const buildStamp = new Date().toLocaleString("th-TH", {
 ---
 
 <Layout
-    title="TRAIPAP HUNTHONG — DevOps Engineer Portfolio"
+    title="TRAIPOAP HUNTHONG — DevOps Engineer Portfolio"
     description="พอร์ตโฟลิโอสาย DevOps — GitOps Kubernetes platform 4 โครงการบน Proxmox + AWS DR สร้างเองจากเหล็กจน Live Production"
     lang="th"
     bodyClass="pf"
@@ -59,17 +59,17 @@ const buildStamp = new Date().toLocaleString("th-TH", {
         <div class="hero-grid">
             <div>
                 <div class="eyebrow">$ whoami</div>
-                <h1 id="scrName" data-text="TRAIPAP HUNTHONG">
-                    TRAIPAP HUNTHONG
+                <h1 id="scrName" data-text="TRAIPOAP HUNTHONG">
+                    TRAIPOAP HUNTHONG
                 </h1>
                 <div class="role mono">
                     Traipoap Hunthong <span class="slash">//</span> DevOps
                     Engineer
                 </div>
                 <p class="lead">
-                    ทุกส่วนที่นี่ผมสร้างและประกอบเองทั้งหมด — ตั้งแต่เครื่อง
-                    Server ที่ประกอบเอง จนแพลตฟอร์ม Web Application
-                    นี้ที่รันอยู่บน Kubernetes platform ซึ่งผม provision เองและ
+                    ทุกส่วนที่นี่ผมสร้างและประกอบเองทั้งหมด — ตั้งแต่เครื่อง Server ที่ประกอบเอง
+                    จนแพลตฟอร์ม Web Application นี้ที่รันอยู่บน Kubernetes platform ซึ่งผม
+                    provision เองและ
                     <strong>กำลังให้บริการอยู่ในขณะนี้</strong>
                 </p>
                 <div class="hero-cta">
@@ -196,8 +196,8 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                         <span>สถาปัตยกรรมทั้งหมด ในหนึ่งรูป</span>
                     </h2>
                     <p class="sub">
-                        ทุกชิ้นส่วนในระบบนี้ผมออกแบบและประกอบเอง —
-                        เลื่อนอ่านทีละชั้น ไดอะแกรมด้านซ้ายจะไฮไลต์ตาม
+                        ทุกชิ้นส่วนในระบบนี้ผมออกแบบและประกอบเอง — เลื่อนอ่านทีละชั้น
+                        ไดอะแกรมด้านซ้ายจะไฮไลต์ตาม
                     </p>
                 </div>
             </div>
@@ -665,10 +665,9 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                         </h3>
                         <p>
                             DNS ของ Cloudflare resolve app.traipoap.com → เข้า
-                            CloudFront ตัวเดียว — behaviors เป็นตัวกำหนด
-                            condition: main → k3s-origin.traipoap.com ผ่าน
-                            Cloudflare Tunnel เข้า lab และ DR → S3 web static +
-                            Lambda
+                            CloudFront ตัวเดียว — behaviors เป็นตัวกำหนด condition:
+                            main → k3s-origin.traipoap.com ผ่าน Cloudflare Tunnel
+                            เข้า lab และ DR → S3 web static + Lambda
                         </p>
                         <ul>
                             <li>
@@ -682,9 +681,9 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                                 สาธารณะ ตัวเดียว edge ทำ TLS/protect ให้
                             </li>
                             <li>
-                                <b>DR — S3 web static + Lambda</b> — เมื่อ
-                                origin หลักล่ม CloudFront failover ไป static
-                                site บน S3 (Lambda จัดการ routing/fallback)
+                                <b>DR — S3 web static + Lambda</b> — เมื่อ origin
+                                หลักล่ม CloudFront failover ไป static site บน S3
+                                (Lambda จัดการ routing/fallback)
                             </li>
                             <li>2 Regional — ap-southeast-1, ap-southeast-7</li>
                         </ul>
@@ -719,8 +718,8 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                         <p>
                             K3s 5 โหนดบน VM ของ Proxmox — 3 control-planes (etcd
                             quorum) + 2 workers — Terraform clone จาก template
-                            แล้ว scale node ด้วย count variable ทั้งระบบ
-                            repeatable และ teardown ด้วย terraform destroy
+                            แล้ว scale node ด้วย count variable ทั้งระบบ repeatable
+                            และ teardown ด้วย terraform destroy
                         </p>
                         <ul>
                             <li>
@@ -743,8 +742,8 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                             <span class="mono">LAYER 04</span>
                         </h3>
                         <p>
-                            ชั้นของงานจริง: แพลตฟอร์ม log-search, observability
-                            และ GitOps ที่ self-heal เมื่อ config เกิด drift
+                            ชั้นของงานจริง: แพลตฟอร์ม log-search, observability และ
+                            GitOps ที่ self-heal เมื่อ config เกิด drift
                         </p>
                         <ul>
                             <li>
@@ -756,8 +755,8 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                                 และ Otel → Loki เก็บ log
                             </li>
                             <li>
-                                <b>ArgoCD</b> reconcile จาก Git ต่อเนื่อง —
-                                drift auto-heal, deploy ด้วยมือ 0 ขั้นตอน
+                                <b>ArgoCD</b> reconcile จาก Git ต่อเนื่อง — drift
+                                auto-heal, deploy ด้วยมือ 0 ขั้นตอน
                             </li>
                         </ul>
                     </article>
@@ -780,27 +779,27 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                         <span>ฮาร์ดแวร์จริงที่รันทุกอย่าง</span>
                     </h2>
                     <p class="sub">
-                        ไม่ใช่บริการที่เปิดจากคลาวด์ — เป็นเครื่องที่ประกอบเอง
-                        จ่ายค่าไฟเอง และซ่อมเองทุกครั้งที่เกิดปัญหา
+                        ไม่ใช่บริการที่เปิดจากคลาวด์ — เป็นเครื่องที่ประกอบเอง จ่ายค่าไฟเอง
+                        และซ่อมเองทุกครั้งที่เกิดปัญหา
                     </p>
                 </div>
             </div>
             <div class="hw-grid">
                 <article class="hw-card rv" style="--d:0">
-                    <div class="hw-host">lab-host ×2</div>
+                    <div class="hw-host">lab-host ×3</div>
                     <span class="hw-role">PROXMOX HOST · VIRTUALIZATION</span>
                     <div class="hw-spec">
                         <div>
-                            CPU <b>8C/16T | 4C/4T</b>
+                            CPU <b>16C/28T</b>
                         </div>
                         <div>
-                            RAM <b>16 GB | 16 GB</b>
+                            RAM <b>64 GB</b>
                         </div>
                         <div>
-                            DISK <b>512 GB SSD | 512 GB SSD</b>
+                            DISK <b>2.5 TB SSD & HDD</b>
                         </div>
                         <div>
-                            HV <b>Proxmox VE 8</b>
+                            HV <b>Proxmox VE 8 & 9</b>
                         </div>
                     </div>
                     <div class="meter">
@@ -830,17 +829,17 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                     </div>
                 </article>
                 <article class="hw-card rv" style="--d:1">
-                    <div class="hw-host">control-plan ×2</div>
-                    <span class="hw-role">CONTROL-PLANE + ETCD · 2 VMS</span>
+                    <div class="hw-host">control-plan ×3</div>
+                    <span class="hw-role">CONTROL-PLANE + ETCD · 3 VMS</span>
                     <div class="hw-spec">
                         <div>
-                            CPU <b>2C</b>
+                            CPU <b>6C</b>
                         </div>
                         <div>
-                            RAM <b>4 GB</b>
+                            RAM <b>12 GB</b>
                         </div>
                         <div>
-                            DISK <b>32 GB</b>
+                            DISK <b>96 GB</b>
                         </div>
                         <div>
                             OS <b>Debian 13</b>
@@ -873,17 +872,17 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                     </div>
                 </article>
                 <article class="hw-card rv" style="--d:2">
-                    <div class="hw-host">worker-node ×2</div>
-                    <span class="hw-role">WORKER · CRUN + YOUKI · 2 VMS</span>
+                    <div class="hw-host">worker-node ×3</div>
+                    <span class="hw-role">WORKER · CRUN + YOUKI · 3 VMS</span>
                     <div class="hw-spec">
                         <div>
-                            CPU <b>2C</b>
+                            CPU <b>6C</b>
                         </div>
                         <div>
-                            RAM <b>8 GB</b>
+                            RAM <b>24 GB</b>
                         </div>
                         <div>
-                            DISK <b>32 GB</b>
+                            DISK <b>96 GB</b>
                         </div>
                         <div>
                             OS <b>Debian 13</b>
@@ -916,9 +915,9 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                     </div>
                 </article>
                 <article class="hw-card rv" style="--d:3">
-                    <div class="hw-host">control-plan</div>
+                    <div class="hw-host">edge-node</div>
                     <span class="hw-role">
-                        CONTROL-PLANE + ETCD · HAPROXY + NFS + GARAGE
+                        EDGE-NODE · HAPROXY + NFS + GARAGE
                     </span>
                     <div class="hw-spec">
                         <div>
@@ -975,8 +974,7 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                         <span>ทุกอย่างสร้างใหม่ได้จากโค้ด</span>
                     </h2>
                     <p class="sub">
-                        หลักของผม: อะไรที่ต้องตั้งค่าด้วยมือเกินสองครั้ง
-                        สิ่งนั้นต้องถูกเขียนเป็นโค้ด
+                        หลักของผม: อะไรที่ต้องตั้งค่าด้วยมือเกินสองครั้ง สิ่งนั้นต้องถูกเขียนเป็นโค้ด
                     </p>
                 </div>
             </div>
@@ -988,8 +986,8 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                             <div>
                                 <b>Terraform — กำเนิดโหนด</b>
                                 <p>
-                                    สั่งสร้าง VM บน Proxmox ทั้งฝูงจากไฟล์เดียว
-                                    พร้อม network, disk และ cloud-init ครบ
+                                    สั่งสร้าง VM บน Proxmox ทั้งฝูงจากไฟล์เดียว พร้อม
+                                    network, disk และ cloud-init ครบ
                                 </p>
                             </div>
                         </li>
@@ -1008,9 +1006,8 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                             <div>
                                 <b>ArgoCD — แอปและคอนฟิกทั้งหมดอยู่ใน Git</b>
                                 <p>
-                                    ทุก state อยู่ใน Git — ArgoCD reconcile
-                                    ต่อเนื่อง drift เมื่อไหร่ ระบบ heal
-                                    เองโดยอัตโนมัติ
+                                    ทุก state อยู่ใน Git — ArgoCD reconcile ต่อเนื่อง
+                                    drift เมื่อไหร่ ระบบ heal เองโดยอัตโนมัติ
                                 </p>
                             </div>
                         </li>
@@ -1126,9 +1123,7 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                 <div>
                     <span class="sec-tag">CI/CD · LIVE FROM GITHUB</span>
                     <h2 class="lm">
-                        <span>
-                            commit โค้ดหนึ่งบรรทัด — ดู pipeline วิ่งจนจบ
-                        </span>
+                        <span>commit โค้ดหนึ่งบรรทัด — ดู pipeline วิ่งจนจบ</span>
                     </h2>
                     <p class="sub">
                         ข้อมูลจริงจาก GitHub Actions ของ{" "}
@@ -1219,9 +1214,8 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                 <div class="pn rv" style="--d:2">
                     <b>ถ้า build ล้มเหลวกลางทาง?</b>
                     <p>
-                        pipeline หยุดทันที — image ที่มี secret (Gitleaks)
-                        หรือช่องโหว่ CRITICAL/HIGH (Trivy)
-                        ไม่มีทางหลุดถึงคลัสเตอร์
+                        pipeline หยุดทันที — image ที่มี secret (Gitleaks) หรือช่องโหว่
+                        CRITICAL/HIGH (Trivy) ไม่มีทางหลุดถึงคลัสเตอร์
                     </p>
                 </div>
             </div>
@@ -1485,17 +1479,15 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                     <span class="mono">GAME-DAY</span>
                 </h3>
                 <p>
-                    DR ที่เขียนไว้แค่ในไดอะแกรม ไม่เรียกว่า DR —
-                    นี่คือบันทึกการจำลองให้ origin หลักล้มจริง
-                    แล้วสังเกตกระบวนการ failover
+                    DR ที่เขียนไว้แค่ในไดอะแกรม ไม่เรียกว่า DR — นี่คือบันทึกการจำลองให้
+                    origin หลักล้มจริง แล้วสังเกตกระบวนการ failover
                 </p>
                 <div class="timeline">
                     <div class="tl-item">
                         <time>10:02:00</time>
                         <b>Primary origin ล่ม</b>
                         <p>
-                            จำลอง K3s origin ของ app.traipoap.com ตอบ 5xx
-                            ต่อเนื่อง
+                            จำลอง K3s origin ของ app.traipoap.com ตอบ 5xx ต่อเนื่อง
                         </p>
                     </div>
                     <div class="tl-item">
@@ -1532,9 +1524,9 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                     </span>
                 </div>
                 <div class="lesson">
-                    <b>บทเรียนที่ได้:</b> รอบแรก failover ช้าเพราะ edge cache
-                    ยังถือ origin เก่าไว้ — หลังปรับ origin groups + CloudFront
-                    Function เหลือ 6 วินาที
+                    <b>บทเรียนที่ได้:</b> รอบแรก failover ช้าเพราะ edge cache ยังถือ
+                    origin เก่าไว้ — หลังปรับ origin groups + CloudFront Function
+                    เหลือ 6 วินาที
                 </div>
             </div>
         </div>
@@ -1552,8 +1544,7 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                     </h2>
                     <p class="sub">
                         เล่าตามจริง ไม่ตัดช่วงที่ล้มเหลวออก —
-                        เพราะกระบวนการที่ดีวัดกันที่วิธีรับมือ
-                        ตอนที่ทุกอย่างไม่ได้ดั่งใจ
+                        เพราะกระบวนการที่ดีวัดกันที่วิธีรับมือ ตอนที่ทุกอย่างไม่ได้ดั่งใจ
                     </p>
                 </div>
             </div>
@@ -1564,13 +1555,12 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                         <h3>ตัดสินใจบนกระดาษก่อน</h3>
                         <div class="tool">14 ADRs · RUNBOOK</div>
                         <p>
-                            ทุก architectural decision ตั้งแต่ครั้งแรก ถูกจดเป็น
-                            ADR — เลือกอะไร, ปฏิเสธอะไร, เพราะอะไร พร้อม runbook
-                            สำหรับ deploy และ troubleshooting ที่เกิดขึ้นจริง
+                            ทุก architectural decision ตั้งแต่ครั้งแรก ถูกจดเป็น ADR —
+                            เลือกอะไร, ปฏิเสธอะไร, เพราะอะไร พร้อม runbook สำหรับ
+                            deploy และ troubleshooting ที่เกิดขึ้นจริง
                         </p>
                         <div class="quote">
-                            "decision ที่คนอื่นอ่านไม่ออก คือ bug
-                            รอวันตัดสินใจใหม่"
+                            "decision ที่คนอื่นอ่านไม่ออก คือ bug รอวันตัดสินใจใหม่"
                         </div>
                     </div>
                 </article>
@@ -1583,13 +1573,11 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                         </div>
                         <p>
                             Terraform ครั้งแรกใช้เวลาหลายวัน —
-                            แต่หลังจากนั้นสร้างโหนดใหม่ไม่กี่นาที
-                            เหมือนเดิมทุกครั้งไม่มีเพี้ยน — remote state บน HCP
-                            render inventory + HAProxy config จาก state
+                            แต่หลังจากนั้นสร้างโหนดใหม่ไม่กี่นาที เหมือนเดิมทุกครั้งไม่มีเพี้ยน —
+                            remote state บน HCP render inventory + HAProxy
+                            config จาก state
                         </p>
-                        <div class="quote">
-                            "ช้าวันแรก เพื่อเร็วทุกวันถัดไป"
-                        </div>
+                        <div class="quote">"ช้าวันแรก เพื่อเร็วทุกวันถัดไป"</div>
                     </div>
                 </article>
                 <article class="scard">
@@ -1598,9 +1586,9 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                         <h3>Configure ให้เหมือนกันทุกเครื่อง</h3>
                         <div class="tool">ANSIBLE · 6 PLAYBOOKS</div>
                         <p>
-                            6 playbooks idempotent ครอบคลุมตั้งแต่ kernel
-                            tuning, SSH hardening ยันการ bootstrap K3s ทั้ง
-                            control-plane และ worker — รันซ้ำได้ไม่จำกัดครั้ง
+                            6 playbooks idempotent ครอบคลุมตั้งแต่ kernel tuning,
+                            SSH hardening ยันการ bootstrap K3s ทั้ง control-plane
+                            และ worker — รันซ้ำได้ไม่จำกัดครั้ง
                         </p>
                         <div class="quote">
                             "สโนว์เฟลก์มีไว้ประดับตู้เย็น ไม่ใช่เซิร์ฟเวอร์"
@@ -1619,8 +1607,7 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                             คืนวันศุกร์ก็ไม่ต่างจากคืนไหน
                         </p>
                         <div class="quote">
-                            "ถ้าการดีพลอยยังน่าตื่นเต้น
-                            แปลว่าระบบยังไม่น่าไว้วางใจ"
+                            "ถ้าการดีพลอยยังน่าตื่นเต้น แปลว่าระบบยังไม่น่าไว้วางใจ"
                         </div>
                     </div>
                 </article>
@@ -1634,8 +1621,7 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                         <p>
                             metric ระดับโหนดยัน service mesh, pipeline log
                             มาตรฐานเดียว Vector → Quickwit —
-                            แจ้งเตือนเฉพาะตอนที่ต้องตื่นจริง
-                            ไม่ใช่ทุกเรื่องจนคนชาชิน
+                            แจ้งเตือนเฉพาะตอนที่ต้องตื่นจริง ไม่ใช่ทุกเรื่องจนคนชาชิน
                         </p>
                         <div class="quote">
                             "Alert ที่ดี คือ alert ที่ปลุกเฉพาะตอนที่ต้องตื่น"
@@ -1648,10 +1634,9 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                         <h3>ทุบเพื่อเรียนรู้</h3>
                         <div class="tool">CHAOS DRILL + ADR</div>
                         <p>
-                            ทุกเดือนปิดอะไรสักอย่างในระบบโดยตั้งใจ — ซ้อม
-                            failover ข้ามภูมิภาคบน AWS, ถอดโหนด —
-                            แล้วจดทุกอย่างที่เรียนรู้ ระบบทนขึ้นเรื่อย ๆ
-                            และผมใจเย็นขึ้น (นิดหน่อย)
+                            ทุกเดือนปิดอะไรสักอย่างในระบบโดยตั้งใจ — ซ้อม failover
+                            ข้ามภูมิภาคบน AWS, ถอดโหนด — แล้วจดทุกอย่างที่เรียนรู้
+                            ระบบทนขึ้นเรื่อย ๆ และผมใจเย็นขึ้น (นิดหน่อย)
                         </p>
                         <div class="quote">
                             "ระบบที่ไม่เคยถูกทดสอบ จะถูกทดสอบในเวลาที่แย่ที่สุด"
@@ -1717,18 +1702,15 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                                 4+ ปีดูแลเครือข่ายของ telco ระดับประเทศ —
                                 ทำงานร่วมกับทีม L1/L3 และ vendor ภายใต้ SLA ใช้
                                 Zabbix เฝ้า ingress traffic และระบุ silent
-                                failures ที่ node-down alert ตรวจจับไม่ได้
-                                ส่งผลให้ MTTR ลดลง
+                                failures ที่ node-down alert ตรวจจับไม่ได้ ส่งผลให้
+                                MTTR ลดลง
                             </p>
                         </div>
                     </div>
                     <div class="edu-cert">
                         <div class="ec">
                             <b>การศึกษา</b>
-                            <p>
-                                คณะวิทยาศาสตร์และเทคโนโลยี
-                                สาขาวิทยาการคอมพิวเตอร์
-                            </p>
+                            <p>คณะวิทยาศาสตร์และเทคโนโลยี สาขาวิทยาการคอมพิวเตอร์</p>
                             <small>
                                 มหาวิทยาลัยเทคโนโลยีราชมงคลพระนคร · ส.ค. 2014 —
                                 พ.ค. 2018
@@ -1764,13 +1746,12 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                 <span class="sec-tag">CONTACT</span>
                 <h2 class="lm">
                     <span>
-                        ต้องการทราบรายละเอียดว่าระบบนี้รับมือกับความล้มเหลวอย่างไร
-                        — <mark>ติดต่อผมได้ด้านล่าง</mark>
+                        ต้องการทราบรายละเอียดว่าระบบนี้รับมือกับความล้มเหลวอย่างไร —{" "}
+                        <mark>ติดต่อผมได้ด้านล่าง</mark>
                     </span>
                 </h2>
                 <p class="sub" style="max-width:62ch;margin-top:16px">
-                    หรือเริ่มจากเดโมด้านบนก่อนก็ได้ — ผมตอบทุกข้อความภายใน 24
-                    ชั่วโมง
+                    หรือเริ่มจากเดโมด้านบนก่อนก็ได้ — ผมตอบทุกข้อความภายใน 24 ชั่วโมง
                 </p>
             </div>
             <div class="c-cards">
@@ -3810,10 +3791,7 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                         ["cmd", "curl -s https://app.traipoap.com/healthz"],
                         ["ok", '{"status":"ok"}'],
                         ["dim", "────────────────────────────────────────────"],
-                        [
-                            "dim",
-                            "แพลตฟอร์มที่คุณกำลังดู คือผลลัพธ์ของคำสั่งด้านบน ✓",
-                        ],
+                        ["dim", "แพลตฟอร์มที่คุณกำลังดู คือผลลัพธ์ของคำสั่งด้านบน ✓"],
                     ];
                     const body = $("#term");
                     if (!body || REDUCED) return;
@@ -3992,9 +3970,7 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                                 String(r.name || "").startsWith("Pipeline"),
                             ) || all[0];
                         if (!run)
-                            throw new Error(
-                                "ยังไม่มี run ของ pipeline ใน repo",
-                            );
+                            throw new Error("ยังไม่มี run ของ pipeline ใน repo");
                         if (runLink) runLink.href = run.html_url;
 
                         // 2) jobs + commit ของ run นั้น
@@ -4113,8 +4089,7 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                                 );
                             else if (j.conclusion === "skipped")
                                 logLine(
-                                    esc(j.name) +
-                                        " → ⊘ skipped (path ไม่เปลี่ยน)",
+                                    esc(j.name) + " → ⊘ skipped (path ไม่เปลี่ยน)",
                                 );
                             else logLine(esc(j.name) + " → กำลังทำงาน…");
                         }
@@ -4170,9 +4145,7 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                         $("#certBadge").textContent = "SYNCED";
                         $("#certSync").textContent = "เมื่อสักครู่";
                         this.textContent = "✓ แล้ว";
-                        toast(
-                            "✓ kiali synced — image ใหม่เข้าคลัสเตอร์เรียบร้อย",
-                        );
+                        toast("✓ kiali synced — image ใหม่เข้าคลัสเตอร์เรียบร้อย");
                     });
 
                 /* sparkline charts */
