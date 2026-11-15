@@ -1,4 +1,6 @@
 ---
+import fs from "node:fs";
+import path from "node:path";
 import Layout from "../layouts/Layout.astro";
 
 // เวลา build จริงสำหรับแสดงใน footer — หน้า static ถูก generate ตอนรัน
@@ -9,6 +11,20 @@ const buildStamp = new Date().toLocaleString("th-TH", {
     dateStyle: "medium",
     timeStyle: "short",
 });
+
+// Evidence screenshots — drop the file into public/shots/ (webp/png/jpg)
+// and the matching card picks it up automatically at build time.
+function shotSrc(name: string): string | null {
+    for (const ext of ["webp", "png", "jpg"]) {
+        if (
+            fs.existsSync(
+                path.join(process.cwd(), "public", "shots", `${name}.${ext}`),
+            )
+        )
+            return `/shots/${name}.${ext}`;
+    }
+    return null;
+}
 ---
 
 <Layout
@@ -67,8 +83,8 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                     Engineer
                 </div>
                 <p class="lead">
-                    ทุกส่วนที่นี่ผมสร้างและประกอบเองทั้งหมด — ตั้งแต่เครื่อง Server ที่ประกอบเอง
-                    จนแพลตฟอร์ม Web Application นี้ที่รันอยู่บน Kubernetes platform ซึ่งผม
+                    ทุกส่วนที่นี่สร้างและประกอบเองทั้งหมด — ตั้งแต่เครื่อง Server ที่ประกอบเอง
+                    จนแพลตฟอร์ม Web Application นี้ที่รันอยู่บน Kubernetes platform ที่
                     provision เองและ
                     <strong>กำลังให้บริการอยู่ในขณะนี้</strong>
                 </p>
@@ -80,7 +96,7 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                         ▶ ดู Pipeline จริง
                     </a>
                     <a class="btn" href="/methodology">
-                        อ่านวิธีคิดของผม
+                        อ่านวิธีคิด
                     </a>
                 </div>
                 <div class="hero-stats">
@@ -140,12 +156,12 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                 <div class="term-body" id="term">
                     <div class="tl-cmd">kubectl get nodes -o wide</div>
                     <div class="tl-out">
-                        NAME STATUS ROLES AGE VERSION k3s-cp-01 Ready
-                        control-plane,etcd 88d v1.30.4+k3s1 k3s-cp-02 Ready
-                        control-plane,etcd 88d v1.30.4+k3s1 k3s-cp-03 Ready
-                        control-plane,etcd 88d v1.30.4+k3s1 k3s-worker-01 Ready
-                        worker 88d v1.30.4+k3s1 k3s-worker-02 Ready worker 88d
-                        v1.30.4+k3s1
+                        NAME STATUS ROLES AGE VERSION controlplan-1 Ready
+                        control-plane,etcd 88d v1.37.2+k3s1 controlplan-2 Ready
+                        control-plane,etcd 88d v1.37.2+k3s1 controlplan-3 Ready
+                        control-plane,etcd 88d v1.37.2+k3s1 worker-2 Ready
+                        worker 88d v1.37.2+k3s1 worker-2 Ready worker 88d
+                        v1.37.2+k3s1 worker-2 Ready worker 88d v1.37.2+k3s1
                     </div>
                     <div class="tl-cmd">
                         kubectl get pods -A --no-headers | grep -c Running
@@ -196,7 +212,7 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                         <span>สถาปัตยกรรมทั้งหมด ในหนึ่งรูป</span>
                     </h2>
                     <p class="sub">
-                        ทุกชิ้นส่วนในระบบนี้ผมออกแบบและประกอบเอง — เลื่อนอ่านทีละชั้น
+                        ทุกชิ้นส่วนในระบบนี้ออกแบบและประกอบเอง — เลื่อนอ่านทีละชั้น
                         ไดอะแกรมด้านซ้ายจะไฮไลต์ตาม
                     </p>
                 </div>
@@ -428,28 +444,28 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                                     rx="9"
                                 />
                                 <text class="sub" x="76" y="424">
-                                    K3S CLUSTER — 3 CP (ETCD QUORUM) + 2 WORKERS
+                                    K3S CLUSTER — 3 CP (ETCD QUORUM) + 3 WORKERS
                                 </text>
                                 <rect
                                     class="node"
                                     x="76"
                                     y="438"
-                                    width="80"
+                                    width="64"
                                     height="56"
                                     rx="5"
                                 />
                                 <text
                                     class="lbl"
-                                    x="116"
+                                    x="108"
                                     y="460"
                                     text-anchor="middle"
                                     font-size="10"
                                 >
-                                    k3s-cp-01
+                                    cp-01
                                 </text>
                                 <text
                                     class="sub"
-                                    x="116"
+                                    x="108"
                                     y="476"
                                     text-anchor="middle"
                                 >
@@ -457,24 +473,24 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                                 </text>
                                 <rect
                                     class="node"
-                                    x="164"
+                                    x="148"
                                     y="438"
-                                    width="80"
+                                    width="64"
                                     height="56"
                                     rx="5"
                                 />
                                 <text
                                     class="lbl"
-                                    x="204"
+                                    x="180"
                                     y="460"
                                     text-anchor="middle"
                                     font-size="10"
                                 >
-                                    k3s-cp-02
+                                    cp-02
                                 </text>
                                 <text
                                     class="sub"
-                                    x="204"
+                                    x="180"
                                     y="476"
                                     text-anchor="middle"
                                 >
@@ -482,24 +498,24 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                                 </text>
                                 <rect
                                     class="node"
+                                    x="220"
+                                    y="438"
+                                    width="64"
+                                    height="56"
+                                    rx="5"
+                                />
+                                <text
+                                    class="lbl"
                                     x="252"
-                                    y="438"
-                                    width="80"
-                                    height="56"
-                                    rx="5"
-                                />
-                                <text
-                                    class="lbl"
-                                    x="292"
                                     y="460"
                                     text-anchor="middle"
                                     font-size="10"
                                 >
-                                    k3s-cp-03
+                                    cp-03
                                 </text>
                                 <text
                                     class="sub"
-                                    x="292"
+                                    x="252"
                                     y="476"
                                     text-anchor="middle"
                                 >
@@ -507,24 +523,24 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                                 </text>
                                 <rect
                                     class="node"
-                                    x="340"
+                                    x="292"
                                     y="438"
-                                    width="80"
+                                    width="64"
                                     height="56"
                                     rx="5"
                                 />
                                 <text
                                     class="lbl"
-                                    x="380"
+                                    x="324"
                                     y="460"
                                     text-anchor="middle"
                                     font-size="10"
                                 >
-                                    k3s-w-01
+                                    w-01
                                 </text>
                                 <text
                                     class="sub"
-                                    x="380"
+                                    x="324"
                                     y="476"
                                     text-anchor="middle"
                                 >
@@ -532,9 +548,34 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                                 </text>
                                 <rect
                                     class="node"
-                                    x="428"
+                                    x="364"
                                     y="438"
-                                    width="80"
+                                    width="64"
+                                    height="56"
+                                    rx="5"
+                                />
+                                <text
+                                    class="lbl"
+                                    x="396"
+                                    y="460"
+                                    text-anchor="middle"
+                                    font-size="10"
+                                >
+                                    w-02
+                                </text>
+                                <text
+                                    class="sub"
+                                    x="396"
+                                    y="476"
+                                    text-anchor="middle"
+                                >
+                                    crun+youki
+                                </text>
+                                <rect
+                                    class="node"
+                                    x="436"
+                                    y="438"
+                                    width="64"
                                     height="56"
                                     rx="5"
                                 />
@@ -545,7 +586,7 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                                     text-anchor="middle"
                                     font-size="10"
                                 >
-                                    k3s-w-02
+                                    w-03
                                 </text>
                                 <text
                                     class="sub"
@@ -974,7 +1015,7 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                         <span>ทุกอย่างสร้างใหม่ได้จากโค้ด</span>
                     </h2>
                     <p class="sub">
-                        หลักของผม: อะไรที่ต้องตั้งค่าด้วยมือเกินสองครั้ง สิ่งนั้นต้องถูกเขียนเป็นโค้ด
+                        หลัก: อะไรที่ต้องตั้งค่าด้วยมือเกินสองครั้ง สิ่งนั้นต้องถูกเขียนเป็นโค้ด
                     </p>
                 </div>
             </div>
@@ -1636,11 +1677,229 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                         <p>
                             ทุกเดือนปิดอะไรสักอย่างในระบบโดยตั้งใจ — ซ้อม failover
                             ข้ามภูมิภาคบน AWS, ถอดโหนด — แล้วจดทุกอย่างที่เรียนรู้
-                            ระบบทนขึ้นเรื่อย ๆ และผมใจเย็นขึ้น (นิดหน่อย)
+                            ระบบทนขึ้นเรื่อย ๆ และค่อย ๆ ใจเย็นขึ้น (นิดหน่อย)
                         </p>
                         <div class="quote">
                             "ระบบที่ไม่เคยถูกทดสอบ จะถูกทดสอบในเวลาที่แย่ที่สุด"
                         </div>
+                    </div>
+                </article>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================= EVIDENCE ================= -->
+    <section id="evidence" style="border-block:1px solid var(--line)">
+        <div class="wrap">
+            <div class="sec-head rv">
+                <span class="sec-idx">08</span>
+                <div>
+                    <span class="sec-tag">EVIDENCE · CHECK IT YOURSELF</span>
+                    <h2 class="lm">
+                        <span>หลักฐาน 5 ด้าน — กดตรวจสอบได้เอง</span>
+                    </h2>
+                    <p class="sub">
+                        ไม่ใช่แค่ภาพ — แต่ละด้านมี link ไปที่ระบบจริง: repo ทั้ง 3 เป็น
+                        public กดดู commit และ pipeline ได้เลย
+                    </p>
+                </div>
+            </div>
+            <div class="ev-grid">
+                <article class="ev rv" style="--d:0">
+                    <div class="ev-shot">
+                        {shotSrc("01-cicd") ? (
+                            <img
+                                src={shotSrc("01-cicd")}
+                                alt="GitHub Actions pipeline run ของ traipoap/app พร้อม security gates"
+                                loading="lazy"
+                            />
+                        ) : (
+                            <span class="ev-ph">
+                                AWAITING SCREENSHOT
+                                <br />
+                                public/shots/01-cicd.webp
+                            </span>
+                        )}
+                    </div>
+                    <div class="ev-body">
+                        <span class="ev-tag">01 · CI/CD — SECURITY GATES</span>
+                        <h3>pipeline ที่ gate ด้วย security จริงทุก commit</h3>
+                        <p>
+                            Gitleaks สแกน secret ที่รั่ว → SonarQube ตรวจ SAST →
+                            Trivy สแกนช่องโหว่ระดับ CRITICAL/HIGH (SARIF) → build
+                            เฉพาะส่วนที่เปลี่ยน → push GHCR → Argo CD deploy —
+                            ดูการรันล่าสุดของ traipoap/app ได้เลย
+                        </p>
+                        <a
+                            class="ev-link"
+                            href="https://github.com/traipoap/app/actions"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            <span>ตรวจสอบจริง</span>
+                            <span class="mono">
+                                github.com/traipoap/app/actions
+                            </span>
+                            <span aria-hidden="true">→</span>
+                        </a>
+                    </div>
+                </article>
+
+                <article class="ev rv" style="--d:1">
+                    <div class="ev-shot">
+                        {shotSrc("02-gitops") ? (
+                            <img
+                                src={shotSrc("02-gitops")}
+                                alt="Argo CD แสดงสถานะแอปในคลัสเตอร์เป็น Synced / Healthy"
+                                loading="lazy"
+                            />
+                        ) : (
+                            <span class="ev-ph">
+                                AWAITING SCREENSHOT
+                                <br />
+                                public/shots/02-gitops .webp
+                            </span>
+                        )}
+                    </div>
+                    <div class="ev-body">
+                        <span class="ev-tag">02 · GITOPS — ARGO CD</span>
+                        <h3>Git คือแหล่งความจริงของคลัสเตอร์</h3>
+                        <p>
+                            Argo CD sync ต่อเนื่องและแก้ configuration drift เอง ·
+                            Image Updater อัปเดต tag ตาม semver อัตโนมัติ · External
+                            Secrets Operator รับ credentials จาก AWS Secrets
+                            Manager · กำหนด LimitRange และ schema validation ทุก
+                            Application
+                        </p>
+                        <a
+                            class="ev-link"
+                            href="https://github.com/traipoap/argocd-bootstrap"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            <span>ตรวจสอบจริง</span>
+                            <span class="mono">
+                                github.com/traipoap/argocd-bootstrap
+                            </span>
+                            <span aria-hidden="true">→</span>
+                        </a>
+                    </div>
+                </article>
+
+                <article class="ev rv" style="--d:2">
+                    <div class="ev-shot">
+                        {shotSrc("03-k8s") ? (
+                            <img
+                                src={shotSrc("03-k8s")}
+                                alt="Kiali service map หรือสถานะโหนดของคลัสเตอร์ K3s"
+                                loading="lazy"
+                            />
+                        ) : (
+                            <span class="ev-ph">
+                                AWAITING SCREENSHOT
+                                <br />
+                                public/shots/03-k8s .webp
+                            </span>
+                        )}
+                    </div>
+                    <div class="ev-body">
+                        <span class="ev-tag">03 · KUBERNETES PLATFORM</span>
+                        <h3>K3s HA ที่รัน workload จริงบน platform นี้</h3>
+                        <p>
+                            K3s แบบ HA (etcd quorum 3 โหนด) + Istio ambient +
+                            Gateway API — รันทั้ง log platform และ Google
+                            microservices-demo (10 services) บน platform เดียวกัน
+                            สร้างทั้งหมดจากโค้ด
+                        </p>
+                        <a
+                            class="ev-link"
+                            href="https://github.com/traipoap/infra"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            <span>ตรวจสอบจริง</span>
+                            <span class="mono">github.com/traipoap/infra</span>
+                            <span aria-hidden="true">→</span>
+                        </a>
+                    </div>
+                </article>
+
+                <article class="ev rv" style="--d:3">
+                    <div class="ev-shot">
+                        {shotSrc("04-obs") ? (
+                            <img
+                                src={shotSrc("04-obs")}
+                                alt="Grafana dashboard และหน้า Query ค้นหา log"
+                                loading="lazy"
+                            />
+                        ) : (
+                            <span class="ev-ph">
+                                AWAITING SCREENSHOT
+                                <br />
+                                public/shots/04-obs .webp
+                            </span>
+                        )}
+                    </div>
+                    <div class="ev-body">
+                        <span class="ev-tag">04 · OBSERVABILITY</span>
+                        <h3>เห็นระบบจากข้างใน — metrics · traces · logs</h3>
+                        <p>
+                            Prometheus + Grafana + Kiali ติดตามสถานะระบบ ·
+                            OpenTelemetry ส่ง trace และ log ไปยัง Loki · Quickwit
+                            ค้นหา log ทั้งหมด — ลองเองได้ที่หน้า Query ของเว็บนี้
+                        </p>
+                        <a
+                            class="ev-link"
+                            href="https://grafana.traipoap.com/"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            <span>ทดลองใช้งาน</span>
+                            <span class="mono">grafana.traipoap.com/</span>
+                            <span aria-hidden="true">→</span>
+                        </a>
+                    </div>
+                </article>
+
+                <article class="ev wide rv" style="--d:4">
+                    <div class="ev-shot">
+                        {shotSrc("05-iac") ? (
+                            <img
+                                src={shotSrc("05-iac")}
+                                alt="HCP Terraform run หรือผล terraform plan"
+                                loading="lazy"
+                            />
+                        ) : (
+                            <span class="ev-ph">
+                                AWAITING SCREENSHOT
+                                <br />
+                                public/shots/05-iac .webp
+                            </span>
+                        )}
+                    </div>
+                    <div class="ev-body">
+                        <span class="ev-tag">05 · IaC — MULTI-REGION DR</span>
+                        <h3>สร้างใหม่จากโค้ดได้ทั้งหมด — และรอดเมื่อ region ล่ม</h3>
+                        <p>
+                            Terraform modules (CloudFront · ECR · IAM · S3 ·
+                            ACM) + CloudFront Function จัดการ clean-URL routing +
+                            OAC/SigV4 เข้าถึง S3 แบบส่วนตัว · CloudFront origin
+                            groups failover จาก K3s ไปยัง Go API บน Lambda (ECR)
+                            และ static site บน S3 ข้าม ap-southeast-1 / 7 —
+                            app.traipoap.com ไม่หยุดแม้ region หลักขัดข้อง
+                        </p>
+                        <a
+                            class="ev-link"
+                            href="https://github.com/traipoap/infra/tree/main/aws"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            <span>ตรวจสอบจริง</span>
+                            <span class="mono">
+                                github.com/traipoap/infra · aws/
+                            </span>
+                            <span aria-hidden="true">→</span>
+                        </a>
                     </div>
                 </article>
             </div>
@@ -1654,7 +1913,7 @@ const buildStamp = new Date().toLocaleString("th-TH", {
     >
         <div class="wrap">
             <div class="sec-head rv">
-                <span class="sec-idx">08</span>
+                <span class="sec-idx">09</span>
                 <div>
                     <span class="sec-tag">RESUME / CAPABILITIES</span>
                     <h2 class="lm">
@@ -1747,11 +2006,11 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                 <h2 class="lm">
                     <span>
                         ต้องการทราบรายละเอียดว่าระบบนี้รับมือกับความล้มเหลวอย่างไร —{" "}
-                        <mark>ติดต่อผมได้ด้านล่าง</mark>
+                        <mark>ติดต่อได้ด้านล่าง</mark>
                     </span>
                 </h2>
                 <p class="sub" style="max-width:62ch;margin-top:16px">
-                    หรือเริ่มจากเดโมด้านบนก่อนก็ได้ — ผมตอบทุกข้อความภายใน 24 ชั่วโมง
+                    หรือเริ่มจากเดโมด้านบนก่อนก็ได้ — ตอบทุกข้อความภายใน 24 ชั่วโมง
                 </p>
             </div>
             <div class="c-cards">
@@ -3316,6 +3575,118 @@ const buildStamp = new Date().toLocaleString("th-TH", {
             font-style: italic;
         }
 
+        /* ============ EVIDENCE ============ */
+        .ev-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 18px;
+        }
+        .ev {
+            display: grid;
+            grid-template-columns: minmax(0, 52%) minmax(0, 1fr);
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            background: var(--panel);
+            overflow: hidden;
+            transition:
+                border-color 0.2s,
+                transform 0.2s;
+        }
+        .ev:hover {
+            border-color: var(--line2);
+            transform: translateY(-3px);
+        }
+        .ev-shot {
+            border-right: 1px solid var(--line);
+            background:
+                radial-gradient(
+                    120% 120% at 0% 0%,
+                    rgba(94, 234, 212, 0.05),
+                    transparent 55%
+                ),
+                #0a101d;
+            min-height: 230px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .ev-shot img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: top left;
+            display: block;
+        }
+        .ev-ph {
+            font-family: var(--mono);
+            font-size: 10px;
+            letter-spacing: 0.08em;
+            line-height: 1.9;
+            color: var(--dim);
+            text-align: center;
+            padding: 20px;
+        }
+        .ev-body {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding: 22px 24px;
+        }
+        .ev-tag {
+            font-family: var(--mono);
+            font-size: 10px;
+            letter-spacing: 0.16em;
+            color: var(--grn);
+        }
+        .ev-body h3 {
+            font-family: var(--disp);
+            font-size: 1.12rem;
+            letter-spacing: -0.01em;
+            color: var(--txt);
+            line-height: 1.35;
+        }
+        .ev-body p {
+            font-size: 0.83rem;
+            line-height: 1.65;
+            color: var(--mut);
+        }
+        .ev-link {
+            margin-top: auto;
+            padding-top: 8px;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            flex-wrap: wrap;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--cyn);
+            text-decoration: none;
+        }
+        .ev-link:hover {
+            text-decoration: underline;
+        }
+        .ev-link .mono {
+            font-size: 10px;
+            font-weight: 400;
+            color: var(--dim);
+        }
+        .ev.wide {
+            grid-column: 1 / -1;
+        }
+        @media (max-width: 1020px) {
+            .ev-grid {
+                grid-template-columns: 1fr;
+            }
+            .ev {
+                grid-template-columns: 1fr;
+            }
+            .ev-shot {
+                border-right: none;
+                border-bottom: 1px solid var(--line);
+                min-height: 180px;
+            }
+        }
+
         /* ============ RESUME ============ */
         .res-grid {
             display: grid;
@@ -3765,23 +4136,27 @@ const buildStamp = new Date().toLocaleString("th-TH", {
                         ],
                         [
                             "out",
-                            "k3s-cp-01    Ready    control-plane,etcd   88d    v1.30.4+k3s1",
+                            "controlplan-1    Ready    control-plane,etcd   88d    v1.37.2+k3s1",
                         ],
                         [
                             "out",
-                            "k3s-cp-02    Ready    control-plane,etcd   88d    v1.30.4+k3s1",
+                            "controlplan-2    Ready    control-plane,etcd   88d    v1.37.2+k3s1",
                         ],
                         [
                             "out",
-                            "k3s-cp-03    Ready    control-plane,etcd   88d    v1.30.4+k3s1",
+                            "controlplan-3    Ready    control-plane,etcd   88d    v1.37.2+k3s1",
                         ],
                         [
                             "out",
-                            "k3s-worker-01 Ready    worker               88d    v1.30.4+k3s1",
+                            "worker-1 Ready    worker               88d    v1.37.2+k3s1",
                         ],
                         [
                             "out",
-                            "k3s-worker-02 Ready    worker               88d    v1.30.4+k3s1",
+                            "worker-2 Ready    worker               88d    v1.37.2+k3s1",
+                        ],
+                        [
+                            "out",
+                            "worker-3 Ready    worker               88d    v1.37.2+k3s1",
                         ],
                         [
                             "cmd",
