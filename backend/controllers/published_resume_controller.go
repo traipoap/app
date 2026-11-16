@@ -55,6 +55,29 @@ func HandlePublishedGet(db *gorm.DB) gin.HandlerFunc {
 	}
 }
 
+// errNotOwner marks the 403 case: the row exists but belongs to
+// another account.
+var errNotOwner = errors.New("published resume belongs to another account")
+
+// savePublishedResume upserts the single published row. It is created
+// on first use; afterwards the row stays locked to the account that
+// first published it.
+func savePublishedResume(db *gorm.DB, id uint, doc string) error {
+	var pub models.PublishedResume
+	err := db.First(&pub).Error
+	switch {
+	case errors.Is(err, gorm.ErrRecordNotFound):
+		return db.Create(&models.PublishedResume{OwnerID: id, Data: doc}).Error
+	case err != nil:
+		return err
+	}
+	if pub.OwnerID != id {
+		return errNotOwner
+	}
+	pub.Data = doc
+	return db.Save(&pub).Error
+}
+
 // HandlePublishedPut stores the given document as the published CV,
 // creating the row on first use. Only the publishing account can
 // update it afterwards.
@@ -75,32 +98,16 @@ func HandlePublishedPut(db *gorm.DB) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "'data' must be a CV store with at least one version"})
 			return
 		}
-		doc := string(bytes.TrimSpace(input.Data))
 
-		var pub models.PublishedResume
-		err := db.First(&pub).Error
-		switch {
-		case errors.Is(err, gorm.ErrRecordNotFound):
-			pub = models.PublishedResume{OwnerID: id, Data: doc}
-			if createErr := db.Create(&pub).Error; createErr != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to publish resume"})
-				return
-			}
-		case err != nil:
+		err := savePublishedResume(db, id, string(bytes.TrimSpace(input.Data)))
+		if errors.Is(err, errNotOwner) {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Only the publishing account can update the published resume"})
+			return
+		}
+		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to publish resume"})
 			return
-		default:
-			if pub.OwnerID != id {
-				c.JSON(http.StatusForbidden, gin.H{"error": "Only the publishing account can update the published resume"})
-				return
-			}
-			pub.Data = doc
-			if saveErr := db.Save(&pub).Error; saveErr != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to publish resume"})
-				return
-			}
 		}
-
 		c.JSON(http.StatusOK, gin.H{"message": "Published"})
 	}
 }
