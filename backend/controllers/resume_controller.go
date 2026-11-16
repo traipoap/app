@@ -19,6 +19,9 @@ type resumeInput struct {
 	Data json.RawMessage `json:"data" binding:"required"`
 }
 
+// resumeWhere scopes every CV query to the owning account.
+const resumeWhere = "user_id = ?"
+
 // actorUserID resolves the authenticated account's numeric id.
 func actorUserID(c *gin.Context) (uint, bool) {
 	raw, ok := c.Get("userID")
@@ -47,7 +50,7 @@ func HandleResumeGet(db *gorm.DB) gin.HandlerFunc {
 		}
 
 		var resume models.Resume
-		err := db.Where("user_id = ?", id).First(&resume).Error
+		err := db.Where(resumeWhere, id).First(&resume).Error
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Resume not found"})
 			return
@@ -79,7 +82,7 @@ func bindResumePayload(c *gin.Context) (string, error) {
 // row on first save.
 func upsertResume(db *gorm.DB, id uint, doc string) error {
 	var resume models.Resume
-	err := db.Where("user_id = ?", id).First(&resume).Error
+	err := db.Where(resumeWhere, id).First(&resume).Error
 	switch {
 	case errors.Is(err, gorm.ErrRecordNotFound):
 		return db.Create(&models.Resume{UserID: id, Data: doc}).Error
@@ -124,7 +127,7 @@ func HandleResumeDelete(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		res := db.Where("user_id = ?", id).Delete(&models.Resume{})
+		res := db.Where(resumeWhere, id).Delete(&models.Resume{})
 		if res.Error != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete resume"})
 			return

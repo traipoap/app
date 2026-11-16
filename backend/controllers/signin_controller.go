@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"errors"
 	"exporter/models"
 	"exporter/services"
 	"fmt"
@@ -19,59 +20,77 @@ import (
 // still secure against brute-force for short passwords.
 const targetBCryptCost = 10
 
+// basicCredentials extracts the Basic Auth pair from the request; ok is
+// false when the header is missing or incomplete.
+func basicCredentials(c *gin.Context) (username, password string, ok bool) {
+	username, password, hasAuth := c.Request.BasicAuth()
+	return username, password, hasAuth && username != "" && password != ""
+}
+
+// findUser loads the account for the given username.
+func findUser(db *gorm.DB, username string) (*models.User, error) {
+	var user models.User
+	err := db.Where("username = ?", username).First(&user).Error
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
+// issueTokens mints the access + refresh token pair for a user.
+func issueTokens(jwtService *services.JWTService, user *models.User) (string, string, error) {
+	userID := fmt.Sprintf("%d", user.ID)
+	accessToken, err := jwtService.GenerateToken(userID, user.Username, user.Role)
+	if err != nil {
+		return "", "", err
+	}
+	refreshToken, err := jwtService.GenerateRefreshToken(userID)
+	if err != nil {
+		return "", "", err
+	}
+	return accessToken, refreshToken, nil
+}
+
 // Auth handlers
 func HandleSignIn(db *gorm.DB, jwtService *services.JWTService) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// 1. Extract Basic Auth credentials
-		username, password, hasAuth := c.Request.BasicAuth()
-		if !hasAuth || username == "" || password == "" {
+		username, password, ok := basicCredentials(c)
+		if !ok {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing or invalid credentials"})
 			return
 		}
 
-		// 2. Retrieve user from SQLite database
-		var user models.User
-		if err := db.Where("username = ?", username).First(&user).Error; err != nil {
-			if err == gorm.ErrRecordNotFound {
-				c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
-			} else {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
-			}
+		user, err := findUser(db, username)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
+			return
+		}
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 			return
 		}
 
-		// 3. Verify password using bcrypt
 		if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
 			return
 		}
 
-		// 3a. Lazy rehash: if the stored hash uses a different bcrypt cost than
-		//     our target, upgrade it in the background (fire-and-forget). This
-		//     lets users who registered with cost-14 hashes transparently
-		//     migrate to cost-10 without needing to reset their password.
+		// Lazy rehash: if the stored hash uses a different bcrypt cost than
+		// our target, upgrade it in the background (fire-and-forget). This
+		// lets users who registered with cost-14 hashes transparently
+		// migrate to cost-10 without needing to reset their password.
 		if cost := bcryptCost(user.PasswordHash); cost != targetBCryptCost {
 			if newHash, err := bcrypt.GenerateFromPassword([]byte(password), targetBCryptCost); err == nil {
-				db.Model(&user).Update("password_hash", string(newHash)) // best-effort
+				db.Model(user).Update("password_hash", string(newHash)) // best-effort
 			}
 		}
 
-		// 4. Generate JWT tokens
-		userID := fmt.Sprintf("%d", user.ID)
-
-		accessToken, err := jwtService.GenerateToken(userID, user.Username, user.Role)
+		accessToken, refreshToken, err := issueTokens(jwtService, user)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate access token"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate tokens"})
 			return
 		}
 
-		refreshToken, err := jwtService.GenerateRefreshToken(userID)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate refresh token"})
-			return
-		}
-
-		// 5. Return tokens to client
 		c.JSON(http.StatusOK, gin.H{
 			"token":         accessToken,
 			"refresh_token": refreshToken,

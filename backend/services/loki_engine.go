@@ -41,6 +41,69 @@ func NewLokiEngine(baseURL, tenant, selector string) *LokiEngine {
 
 func (e *LokiEngine) ID() string { return "loki" }
 
+// lokiStream is one result stream of a Loki query_range response.
+type lokiStream struct {
+	Stream map[string]string `json:"stream"`
+	Values [][]string        `json:"values"`
+}
+
+// queryRangePath returns the (tenant) query_range path for this engine.
+func (e *LokiEngine) queryRangePath() string {
+	if e.tenant != "" {
+		return "/loki/api/v1/tenant/" + url.PathEscape(e.tenant) + "/query_range"
+	}
+	return "/loki/api/v1/query_range"
+}
+
+// lokiWindow normalizes the time window + limit for a query_range call.
+func lokiWindow(req EngineRequest) (start, end int64, limit int) {
+	now := time.Now().UnixMilli()
+	end = req.ToMS
+	if end == 0 {
+		end = now
+	}
+	start = req.FromMS
+	if start == 0 {
+		start = end - time.Hour.Milliseconds() // default window: last hour
+	}
+	limit = req.MaxHits
+	if limit <= 0 {
+		// Count mode (dashboard totals): fetch up to Loki's per-request cap —
+		// best-effort total, capped at 5000 lines.
+		limit = 5000
+	}
+	if limit > 5000 {
+		limit = 5000
+	}
+	return start, end, limit
+}
+
+// collectLokiHits flattens result streams into canonical hits, capped.
+func collectLokiHits(result []lokiStream, limit int) []map[string]interface{} {
+	hits := make([]map[string]interface{}, 0, limit)
+	for _, r := range result {
+		for _, v := range r.Values {
+			if len(v) < 2 {
+				continue
+			}
+			tsNS, _ := strconv.ParseInt(v[0], 10, 64)
+			hits = append(hits, normHit(
+				tsNS/1_000_000,
+				"",
+				v[1],
+				labelAny(r.Stream, "ip", "source_ip"),
+				labelAny(r.Stream, "host", "pod", "instance"),
+				labelAny(r.Stream, "job", "service_name", "app"),
+				"loki",
+			))
+			if len(hits) >= limit {
+				return hits
+			}
+		}
+	}
+	return hits
+}
+
 func (e *LokiEngine) logQL(req EngineRequest) string {
 	q := strings.TrimSpace(req.Query)
 	if q == "" {
@@ -62,29 +125,8 @@ func isRawLogQL(q string) bool {
 }
 
 func (e *LokiEngine) Search(ctx context.Context, req EngineRequest) (*EngineResult, error) {
-	now := time.Now().UnixMilli()
-	end := req.ToMS
-	if end == 0 {
-		end = now
-	}
-	start := req.FromMS
-	if start == 0 {
-		start = end - time.Hour.Milliseconds() // default window: last hour
-	}
-	limit := req.MaxHits
-	if limit <= 0 {
-		// Count mode (dashboard totals): fetch up to Loki's per-request cap —
-		// best-effort total, capped at 5000 lines.
-		limit = 5000
-	}
-	if limit > 5000 {
-		limit = 5000
-	}
+	start, end, limit := lokiWindow(req)
 
-	path := "/loki/api/v1/query_range"
-	if e.tenant != "" {
-		path = "/loki/api/v1/tenant/" + url.PathEscape(e.tenant) + "/query_range"
-	}
 	vals := url.Values{}
 	vals.Set("query", e.logQL(req))
 	vals.Set("start", strconv.FormatInt(start*1_000_000, 10)) // ms → ns
@@ -92,7 +134,7 @@ func (e *LokiEngine) Search(ctx context.Context, req EngineRequest) (*EngineResu
 	vals.Set("limit", strconv.Itoa(limit))
 	vals.Set("direction", "backward") // newest first, like the other engines
 
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, e.baseURL+path+"?"+vals.Encode(), nil)
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, e.baseURL+e.queryRangePath()+"?"+vals.Encode(), nil)
 	if err != nil {
 		return nil, fmt.Errorf("build loki request: %w", err)
 	}
@@ -109,37 +151,14 @@ func (e *LokiEngine) Search(ctx context.Context, req EngineRequest) (*EngineResu
 
 	var parsed struct {
 		Data struct {
-			Result []struct {
-				Stream map[string]string `json:"stream"`
-				Values [][]string        `json:"values"`
-			} `json:"result"`
+			Result []lokiStream `json:"result"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(body, &parsed); err != nil {
 		return nil, fmt.Errorf("decode Loki response: %w", err)
 	}
 
-	hits := make([]map[string]interface{}, 0, limit)
-	for _, r := range parsed.Data.Result {
-		for _, v := range r.Values {
-			if len(v) < 2 {
-				continue
-			}
-			tsNS, _ := strconv.ParseInt(v[0], 10, 64)
-			hits = append(hits, normHit(
-				tsNS/1_000_000,
-				"",
-				v[1],
-				labelAny(r.Stream, "ip", "source_ip"),
-				labelAny(r.Stream, "host", "pod", "instance"),
-				labelAny(r.Stream, "job", "service_name", "app"),
-				"loki",
-			))
-			if len(hits) >= limit {
-				return &EngineResult{Hits: hits, Total: uint64(len(hits))}, nil
-			}
-		}
-	}
+	hits := collectLokiHits(parsed.Data.Result, limit)
 	return &EngineResult{Hits: hits, Total: uint64(len(hits))}, nil
 }
 

@@ -28,6 +28,19 @@ func countAdmins(db *gorm.DB) (int64, error) {
 	return n, err
 }
 
+// guardLastAdmin reports the given error message when touching `target`
+// would leave the system with zero admins.
+func guardLastAdmin(db *gorm.DB, target models.User, message string) (string, bool) {
+	if target.Role != "admin" {
+		return "", false
+	}
+	admins, _ := countAdmins(db)
+	if admins <= 1 {
+		return message, true
+	}
+	return "", false
+}
+
 // actorIsUser reports whether the authenticated actor is the referenced user.
 func actorIsUser(c *gin.Context, id uint) bool {
 	actorID, _ := c.Get("userID")
@@ -71,11 +84,9 @@ func HandleUserDelete(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		if target.Role == "admin" {
-			if admins, _ := countAdmins(db); admins <= 1 {
-				c.JSON(http.StatusBadRequest, gin.H{"error": "Cannot delete the last admin"})
-				return
-			}
+		if msg, blocked := guardLastAdmin(db, target, "Cannot delete the last admin"); blocked {
+			c.JSON(http.StatusBadRequest, gin.H{"error": msg})
+			return
 		}
 
 		if err := db.Delete(&target).Error; err != nil {
@@ -121,9 +132,9 @@ func HandleUserRoleUpdate(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		if target.Role == "admin" && input.Role == "user" {
-			if admins, _ := countAdmins(db); admins <= 1 {
-				c.JSON(http.StatusBadRequest, gin.H{"error": "Cannot demote the last admin"})
+		if input.Role == "user" {
+			if msg, blocked := guardLastAdmin(db, target, "Cannot demote the last admin"); blocked {
+				c.JSON(http.StatusBadRequest, gin.H{"error": msg})
 				return
 			}
 		}

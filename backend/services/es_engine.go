@@ -41,6 +41,16 @@ func NewElasticsearchEngine(baseURL, username, password, timeField string) *Elas
 
 func (e *ElasticsearchEngine) ID() string { return "elasticsearch" }
 
+// readAPIBody reads a (capped) response body and turns non-2xx
+// responses into an error, shared by every engine.
+func readAPIBody(resp *http.Response, limit int64, name string) ([]byte, error) {
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, limit))
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, fmt.Errorf("%s API error %d: %s", name, resp.StatusCode, truncate(string(body), 200))
+	}
+	return body, nil
+}
+
 // ListIndices returns data index names (internal "." indices excluded) for
 // the frontend index dropdown.
 func (e *ElasticsearchEngine) ListIndices(ctx context.Context) ([]string, error) {
@@ -58,9 +68,9 @@ func (e *ElasticsearchEngine) ListIndices(ctx context.Context) ([]string, error)
 	}
 	defer resp.Body.Close()
 
-	body, _ := io.ReadAll(io.LimitReader(resp.Body, 8<<20))
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("Elasticsearch API error %d: %s", resp.StatusCode, truncate(string(body), 200))
+	body, err := readAPIBody(resp, 8<<20, "Elasticsearch")
+	if err != nil {
+		return nil, err
 	}
 	var rows []struct {
 		Index string `json:"index"`
@@ -78,7 +88,21 @@ func (e *ElasticsearchEngine) ListIndices(ctx context.Context) ([]string, error)
 	return out, nil
 }
 
-func (e *ElasticsearchEngine) Search(ctx context.Context, req EngineRequest) (*EngineResult, error) {
+// esSearchParams are the concrete values for one _search call.
+type esSearchParams struct {
+	index  string
+	size   int
+	fromMS int64
+	toMS   int64
+}
+
+// esHit is one hit of an ES _search response.
+type esHit struct {
+	Source json.RawMessage `json:"_source"`
+}
+
+// searchParams normalizes the request into concrete search parameters.
+func (e *ElasticsearchEngine) searchParams(req EngineRequest) esSearchParams {
 	index := strings.TrimSpace(req.Source)
 	if index == "" {
 		index = "*"
@@ -91,8 +115,6 @@ func (e *ElasticsearchEngine) Search(ctx context.Context, req EngineRequest) (*E
 	if size > 10000 {
 		size = 10000
 	}
-
-	query := strings.TrimSpace(req.Query)
 	now := time.Now().UnixMilli()
 	to := req.ToMS
 	if to == 0 {
@@ -102,45 +124,53 @@ func (e *ElasticsearchEngine) Search(ctx context.Context, req EngineRequest) (*E
 	if from == 0 {
 		from = to - time.Hour.Milliseconds()
 	}
+	return esSearchParams{index: index, size: size, fromMS: from, toMS: to}
+}
 
-	// Primary body: query_string + time range + newest-first sort.
-	buildBody := func(withTime bool) []byte {
-		must := []interface{}{}
-		if query != "" {
-			must = append(must, map[string]interface{}{"query_string": map[string]interface{}{"query": query}})
-		} else {
-			must = append(must, map[string]interface{}{"match_all": map[string]interface{}{}})
-		}
-		boolQ := map[string]interface{}{"must": must}
-		if withTime {
-			boolQ["filter"] = []interface{}{
-				map[string]interface{}{"range": map[string]interface{}{
-					e.timeField: map[string]interface{}{"gte": from, "lte": to},
-				}},
-			}
-		}
-		body := map[string]interface{}{"size": size, "query": map[string]interface{}{"bool": boolQ}}
-		if withTime {
-			body["sort"] = []interface{}{map[string]interface{}{e.timeField: map[string]interface{}{"order": "desc"}}}
-		}
-		raw, _ := json.Marshal(body)
-		return raw
+// buildBody assembles the _search body — query_string plus an optional
+// time-range filter and newest-first sort.
+func (e *ElasticsearchEngine) buildBody(p esSearchParams, query string, withTime bool) []byte {
+	must := []interface{}{}
+	if query != "" {
+		must = append(must, map[string]interface{}{"query_string": map[string]interface{}{"query": query}})
+	} else {
+		must = append(must, map[string]interface{}{"match_all": map[string]interface{}{}})
 	}
-
-	direct := func(body []byte) (*http.Response, error) {
-		httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost,
-			e.baseURL+"/"+index+"/_search", bytes.NewReader(body)) // index names are [a-z0-9_-]; * is valid
-		if err != nil {
-			return nil, err
+	boolQ := map[string]interface{}{"must": must}
+	if withTime {
+		boolQ["filter"] = []interface{}{
+			map[string]interface{}{"range": map[string]interface{}{
+				e.timeField: map[string]interface{}{"gte": p.fromMS, "lte": p.toMS},
+			}},
 		}
-		httpReq.Header.Set("Content-Type", "application/json")
-		if e.username != "" {
-			httpReq.SetBasicAuth(e.username, e.password)
-		}
-		return e.http.Do(httpReq)
 	}
+	body := map[string]interface{}{"size": p.size, "query": map[string]interface{}{"bool": boolQ}}
+	if withTime {
+		body["sort"] = []interface{}{map[string]interface{}{e.timeField: map[string]interface{}{"order": "desc"}}}
+	}
+	raw, _ := json.Marshal(body)
+	return raw
+}
 
-	resp, err := direct(buildBody(true))
+// searchOnce performs a single _search request.
+func (e *ElasticsearchEngine) searchOnce(ctx context.Context, index string, body []byte) (*http.Response, error) {
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost,
+		e.baseURL+"/"+index+"/_search", bytes.NewReader(body)) // index names are [a-z0-9_-]; * is valid
+	if err != nil {
+		return nil, err
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+	if e.username != "" {
+		httpReq.SetBasicAuth(e.username, e.password)
+	}
+	return e.http.Do(httpReq)
+}
+
+func (e *ElasticsearchEngine) Search(ctx context.Context, req EngineRequest) (*EngineResult, error) {
+	p := e.searchParams(req)
+	query := strings.TrimSpace(req.Query)
+
+	resp, err := e.searchOnce(ctx, p.index, e.buildBody(p, query, true))
 	if err != nil {
 		return nil, fmt.Errorf("cannot reach Elasticsearch (%s): %w", e.baseURL, err)
 	}
@@ -150,40 +180,42 @@ func (e *ElasticsearchEngine) Search(ctx context.Context, req EngineRequest) (*E
 	// once without the range filter / sort so a plain full-text search works.
 	if resp.StatusCode == http.StatusBadRequest {
 		resp.Body.Close()
-		resp, err = direct(buildBody(false))
+		resp, err = e.searchOnce(ctx, p.index, e.buildBody(p, query, false))
 		if err != nil {
 			return nil, fmt.Errorf("cannot reach Elasticsearch (%s): %w", e.baseURL, err)
 		}
 		defer resp.Body.Close()
 	}
 
-	body, _ := io.ReadAll(io.LimitReader(resp.Body, 64<<20))
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("Elasticsearch API error %d: %s", resp.StatusCode, truncate(string(body), 200))
+	body, err := readAPIBody(resp, 64<<20, "Elasticsearch")
+	if err != nil {
+		return nil, err
 	}
 
 	var parsed struct {
 		Hits struct {
 			Total interface{} `json:"total"` // number (ES<7) or {value: n} (ES7+)
-			Hits  []struct {
-				Source json.RawMessage `json:"_source"`
-			} `json:"hits"`
+			Hits  []esHit     `json:"hits"`
 		} `json:"hits"`
 	}
 	if err := json.Unmarshal(body, &parsed); err != nil {
 		return nil, fmt.Errorf("decode Elasticsearch response: %w", err)
 	}
 
-	total := totalValue(parsed.Hits.Total)
-	hits := make([]map[string]interface{}, 0, len(parsed.Hits.Hits))
-	for _, h := range parsed.Hits.Hits {
+	return &EngineResult{Hits: e.normalizeHits(parsed.Hits.Hits, p.index), Total: totalValue(parsed.Hits.Total)}, nil
+}
+
+// normalizeHits maps parsed _source documents onto the canonical hit shape.
+func (e *ElasticsearchEngine) normalizeHits(raw []esHit, index string) []map[string]interface{} {
+	hits := make([]map[string]interface{}, 0, len(raw))
+	for _, h := range raw {
 		var src map[string]interface{}
 		if err := json.Unmarshal(h.Source, &src); err != nil {
 			continue
 		}
 		hits = append(hits, normalizeESSrc(src, e.timeField, index))
 	}
-	return &EngineResult{Hits: hits, Total: total}, nil
+	return hits
 }
 
 // normalizeESSrc maps an ES _source document onto the canonical hit shape.
