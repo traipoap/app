@@ -13,6 +13,13 @@ import (
 	"gorm.io/gorm"
 )
 
+// Route paths for the owner's CV backend. Kept as constants so the
+// registered paths cannot drift from one another.
+const (
+	resumePath          = "/resume"
+	resumePublishedPath = "/resume/published"
+)
+
 // HandleHome returns a welcome message with API usage information
 func HandleHome(c *gin.Context) {
 	port := config.AppConfig.Port
@@ -54,13 +61,13 @@ func setupAuthRoutes(r *gin.Engine, jwtService *services.JWTService, db *gorm.DB
 		api.POST("/logout", controllers.HandleLogout(db, jwtService))
 
 		// Admin-only CV backend — the owner's resume builder data.
-		api.GET("/resume", middleware.RoleAuth("admin"), controllers.HandleResumeGet(db))
-		api.PUT("/resume", middleware.RoleAuth("admin"), controllers.HandleResumePut(db))
-		api.DELETE("/resume", middleware.RoleAuth("admin"), controllers.HandleResumeDelete(db))
+		api.GET(resumePath, middleware.RoleAuth("admin"), controllers.HandleResumeGet(db))
+		api.PUT(resumePath, middleware.RoleAuth("admin"), controllers.HandleResumePut(db))
+		api.DELETE(resumePath, middleware.RoleAuth("admin"), controllers.HandleResumeDelete(db))
 
 		// Publish the CV store to the public /cv page.
-		api.PUT("/resume/published", middleware.RoleAuth("admin"), controllers.HandlePublishedPut(db))
-		api.DELETE("/resume/published", middleware.RoleAuth("admin"), controllers.HandlePublishedDelete(db))
+		api.PUT(resumePublishedPath, middleware.RoleAuth("admin"), controllers.HandlePublishedPut(db))
+		api.DELETE(resumePublishedPath, middleware.RoleAuth("admin"), controllers.HandlePublishedDelete(db))
 
 		// User administration (admin only)
 		api.GET("/users", middleware.RoleAuth("admin"), controllers.HandleUsersList(db))
