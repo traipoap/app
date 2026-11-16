@@ -5,9 +5,8 @@
 ![Astro](https://img.shields.io/badge/Frontend-Astro%207-ff5d01)
 ![Docker](https://img.shields.io/badge/Docker-GHCR-2496ed)
 ![Trivy](https://img.shields.io/badge/Security-Gitleaks%20%7C%20SonarQube%20%7C%20Trivy-13773d)
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
-The **application** layer of the K3s GitOps log platform: a Go API backend and an Astro dashboard for searching, filtering, and exporting platform logs stored in [Quickwit](https://quickwit.io/).
+The application layer of the K3s GitOps log platform: a Go API and an Astro dashboard for searching and exporting logs stored in [Quickwit](https://quickwit.io/).
 
 ## Features
 
@@ -29,7 +28,7 @@ flowchart LR
     A --> FS["exports/ · CSV, JSON, NDJSON files + hash registry"]
 ```
 
-The frontend is static-first: it calls same-origin `/api/*`, which the Astro dev server (or a reverse proxy in the cluster) forwards to the backend. The backend in turn proxies search queries to Quickwit and materializes exports as files.
+The frontend is static-first: it calls same-origin `/api/*`, which the Astro dev server (or a reverse proxy in the cluster) forwards to the backend. The backend proxies search queries to Quickwit and writes exports as files.
 
 ## Tech Stack
 
@@ -98,7 +97,7 @@ bash start-app.sh
 - **Backend** → <http://localhost:8080>
 - **Frontend** → <http://localhost:4321> (dev server proxies `/api/*` to the backend)
 
-Prefer manual steps?
+Or manually:
 
 ```bash
 (cd backend && go run main.go) &        # API on :8080
@@ -170,16 +169,14 @@ Both images are multi-stage and run as a non-root user. The backend image requir
 
 ## CI/CD Pipeline
 
-The pipeline uses GitHub Actions (`.github/workflows/pipeline.yml`). On each push to `main` (or any PR):
+GitHub Actions (`.github/workflows/pipeline.yml`) runs on every push to `main` and every PR:
 
-1. **Security gate** — Gitleaks (secret scan of the full history) + SonarQube (code quality and security analysis). If either fails, the builds are skipped entirely.
-2. **Build** — only for services whose paths changed (`backend/**` + `docker/backend/**`, `frontend/**` + `docker/frontend/**`).
-3. **Trivy scan** — vulnerability scan of the local image **before** push. Fixable CRITICAL/HIGH findings block the push; the SARIF report lands in the GitHub Security tab.
-4. **Push** — the image goes to GHCR (`ghcr.io/traipoap/backend`, `ghcr.io/traipoap/frontend`, tagged `0.0.<run_number>`).
+1. **Security gate** — Gitleaks (secrets, full history) + SonarQube (quality gate). Either failure skips the builds.
+2. **Build** — only for changed services (`backend/**` + `docker/backend/**`, `frontend/**` + `docker/frontend/**`).
+3. **Trivy scan** — scan the image before push; fixable CRITICAL/HIGH findings block the push (SARIF lands in the GitHub Security tab).
+4. **Push** — to GHCR (`ghcr.io/traipoap/backend`, `ghcr.io/traipoap/frontend`, tag `0.0.<run_number>`).
 
-> The pipeline stops at a verified, pushed image. Cluster-side deployment is driven by ArgoCD in the [gitops repository](https://github.com/traipoap/gitops).
-
-A `workflow_dispatch` trigger with `force_build = true` rebuilds both services on demand (e.g., after docs-only changes or SonarQube fixes).
+Manual trigger: `workflow_dispatch` with `force_build = true` rebuilds both services (e.g., after docs-only changes).
 
 ```mermaid
 flowchart LR
@@ -209,7 +206,7 @@ flowchart LR
 
 ## Deployment
 
-This repository intentionally contains **no cluster manifests**. ArgoCD lives in the [gitops repository](https://github.com/traipoap/gitops), whose Applications reference the GHCR images this pipeline publishes. ArgoCD detects the new tag and rolls the update in-cluster — the pipeline's job ends at a verified, pushed image.
+No cluster manifests in this repo — the pipeline stops at a verified, pushed image. ArgoCD in the [gitops repository](https://github.com/traipoap/gitops) consumes those GHCR images and rolls them in-cluster.
 
 ## Security
 
@@ -267,17 +264,3 @@ curl "$QUICKWIT_URL/api/v1/indexes"
 | [traipoap/infra](https://github.com/traipoap/infra) | Infrastructure — Proxmox VMs (Terraform) + K3s cluster setup (Ansible) |
 | [traipoap/app](https://github.com/traipoap/app) | Application — this repository (Go/Gin API + Astro dashboard) |
 | [traipoap/gitops](https://github.com/traipoap/gitops) | GitOps — ArgoCD manifests (Applications, AppProjects) |
-
-> ArgoCD in the gitops repo picks up the GHCR images published by this repo's pipeline — that is the entire deployment loop.
-
-## Contributing
-
-Contributions are welcome!
-- Open an [issue](https://github.com/traipoap/app/issues) for bugs or ideas
-- Submit a [pull request](https://github.com/traipoap/app/pulls) for improvements
-
-Please keep changes consistent with the existing style and update the documentation.
-
-## License
-
-This project is licensed under the Apache 2.0 license — see the [LICENSE](LICENSE) file.
