@@ -127,6 +127,12 @@ type Unit = {
 
 type Measured = Unit & { h: number; t: number; b: number };
 
+// Height added by a unit on top of the previous box's trailing margin
+// (same collapse model as the browser).
+function unitCost(m: Measured, pending: number): number {
+    return Math.max(pending, m.t) - pending + m.h + m.b;
+}
+
 // Greedy A4 pagination with the same keep-together rules as print:
 // headings stay with their first item, entries/pairs are not split.
 // `used` always includes the last box's trailing margin (collapsed
@@ -143,10 +149,8 @@ function paginate(
     let cur: Measured[] = [];
     let used = firstOffset;
     let lastB = topMargin;
-    const cost = (m: Measured, pending: number) =>
-        Math.max(pending, m.t) - pending + m.h + m.b;
     const add = (m: Measured) => {
-        used += cost(m, lastB);
+        used += unitCost(m, lastB);
         cur.push(m);
         lastB = m.b;
     };
@@ -156,27 +160,22 @@ function paginate(
         used = 0;
         lastB = 0;
     };
-    let i = 0;
-    while (i < ms.length) {
+    for (let i = 0; i < ms.length; i++) {
         const m = ms[i];
         // An explicit "start on new page" wins over packing heuristics.
-        if (m.heading && cur.length > 0 && forceBreak(m.section))
-            flush();
+        if (m.heading && cur.length > 0 && forceBreak(m.section)) flush();
         const pair = m.heading && i + 1 < ms.length ? ms[i + 1] : null;
-        const unitCost = cost(m, lastB) + (pair ? cost(pair, m.b) : 0);
+        const pairCost = unitCost(m, lastB) + (pair ? unitCost(pair, m.b) : 0);
         // Only force a page break if the pair actually fits a fresh page.
         const pairFitsPage =
             !pair ||
-            m.t + m.h + Math.max(m.b, pair.t) + pair.h + pair.b <=
-                cap + 0.5;
-        if (cur.length && unitCost > cap - used && pairFitsPage)
-            flush();
+            m.t + m.h + Math.max(m.b, pair.t) + pair.h + pair.b <= cap + 0.5;
+        if (cur.length && pairCost > cap - used && pairFitsPage) flush();
         add(m);
         if (pair) {
             add(pair);
             i++;
         }
-        i++;
     }
     flush();
     return pages;
@@ -187,7 +186,7 @@ function pageCost(ms: Measured[]): number {
     let used = 0;
     let lastB = 0;
     for (const m of ms) {
-        used += Math.max(lastB, m.t) - lastB + m.h + m.b;
+        used += unitCost(m, lastB);
         lastB = m.b;
     }
     return used;
@@ -238,6 +237,16 @@ function pullSplitSection(pages: Measured[][]): Measured[][] {
     return pages.filter((page) => page.length > 0);
 }
 
+// Append a run of same-kind nodes the way that kind renders.
+function appendRun(target: HTMLElement, run: Measured[]): void {
+    if (!run.length) return;
+    const nodes = run.map((m) => m.node);
+    if (run[0].kind === "entry") target.append(el("div", null, ...nodes));
+    else if (run[0].kind === "pair")
+        target.append(el("div", { class: "cv-pairgrid" }, ...nodes));
+    else nodes.forEach((n) => target.append(n));
+}
+
 // Group a page's units back into <section> blocks; a section that
 // continues onto a new page simply re-opens without its heading.
 function renderSectioned(ms: Measured[]): Node[] {
@@ -247,18 +256,11 @@ function renderSectioned(ms: Measured[]): Node[] {
     let run: Measured[] = [];
     const flushRun = () => {
         const target = sec;
-        if (!run.length || !target) {
+        if (!target) {
             run = [];
             return;
         }
-        const nodes = run.map((m) => m.node);
-        if (run[0].kind === "entry")
-            target.append(el("div", null, ...nodes));
-        else if (run[0].kind === "pair")
-            target.append(
-                el("div", { class: "cv-pairgrid" }, ...nodes),
-            );
-        else nodes.forEach((n) => target.append(n));
+        appendRun(target, run);
         run = [];
     };
     for (const m of ms) {
@@ -285,16 +287,34 @@ function renderSectioned(ms: Measured[]): Node[] {
     return out;
 }
 
-/**
- * Render a full A4-paginated sheet into `sheet`.
- * The caller is responsible for any scaling/fitting afterwards.
- */
-export function renderSheetInto(sheet: HTMLElement, data: CVData): void {
-    sheet.style.setProperty("--cv-accent", data.accent);
-    sheet.classList.toggle("ats", data.template === "ats");
-    let headNode: HTMLElement | null = null;
-    const secs: Array<Sec> = [];
+// ── Section builders ─────────────────────────────────────────────
+// Each builder returns null for an empty block, so renderSheetInto
+// can collect them in canonical order and filter the nulls.
 
+function expHasContent(e: ExperienceItem): boolean {
+    return Boolean(
+        e.role ||
+            e.company ||
+            e.location ||
+            e.start ||
+            e.end ||
+            bullets(e.description).length,
+    );
+}
+
+function buildSheetHead(data: CVData): HTMLElement | null {
+    if (!data.name && !data.title && !data.summary) return null;
+    const showPhoto = Boolean(data.photo) && data.template !== "ats";
+    const head = el("header", {
+        class: showPhoto ? "cv-sheet-head has-photo" : "cv-sheet-head",
+    });
+    const headText = el("div", { class: "cv-head-text" });
+    headText.append(el("div", { class: "cv-headbar" }));
+    if (showPhoto)
+        head.append(el("img", { class: "cv-photo", src: data.photo, alt: "" }));
+    if (data.name) headText.append(el("h1", { class: "cv-name" }, data.name));
+    if (data.title)
+        headText.append(el("p", { class: "cv-roletitle" }, data.title));
     const contact = [
         data.email,
         data.phone,
@@ -303,333 +323,205 @@ export function renderSheetInto(sheet: HTMLElement, data: CVData): void {
         data.github,
         data.linkedin,
     ].filter(Boolean);
-
-    const hasIdentity = Boolean(
-        data.name || data.title || data.summary,
-    );
-    const showPhoto = Boolean(data.photo) && data.template !== "ats";
-
-    if (hasIdentity) {
-        const head = el("header", {
-            class: showPhoto
-                ? "cv-sheet-head has-photo"
-                : "cv-sheet-head",
+    if (contact.length) {
+        const line = el("p", { class: "cv-contact" });
+        contact.forEach((c, i) => {
+            if (i > 0)
+                line.append(
+                    el("span", { class: "sep", "aria-hidden": true }, "•"),
+                );
+            line.append(document.createTextNode(String(c)));
         });
-        const headText = el("div", { class: "cv-head-text" });
-        headText.append(el("div", { class: "cv-headbar" }));
-        if (showPhoto)
-            head.append(
-                el("img", {
-                    class: "cv-photo",
-                    src: data.photo,
-                    alt: "",
-                }),
-            );
-        if (data.name)
-            headText.append(el("h1", { class: "cv-name" }, data.name));
-        if (data.title)
-            headText.append(
-                el("p", { class: "cv-roletitle" }, data.title),
-            );
-        if (contact.length) {
-            const line = el("p", { class: "cv-contact" });
-            contact.forEach((c, i) => {
-                if (i > 0)
-                    line.append(
-                        el(
-                            "span",
-                            { class: "sep", "aria-hidden": true },
-                            "•",
-                        ),
-                    );
-                line.append(document.createTextNode(String(c)));
-            });
-            headText.append(line);
-        }
-        head.append(headText);
-        headNode = head;
+        headText.append(line);
     }
+    head.append(headText);
+    return head;
+}
 
-    if (data.summary.trim())
-        secs.push({
-            col: "main",
-            title: "Profile",
-            kind: "single",
-            nodes: [el("p", { class: "cv-para" }, data.summary.trim())],
-        });
+function buildProfile(data: CVData): Sec | null {
+    if (!data.summary.trim()) return null;
+    return {
+        col: "main",
+        title: "Profile",
+        kind: "single",
+        nodes: [el("p", { class: "cv-para" }, data.summary.trim())],
+    };
+}
 
-    const expItems = data.experience.filter(
-        (e) =>
-            e.role ||
-            e.company ||
-            e.location ||
-            e.start ||
-            e.end ||
-            bullets(e.description).length,
-    );
-    if (expItems.length) {
-        const list: Node[] = [];
-        for (const e of expItems) {
-            const item = el("div", { class: "cv-entry" });
-            const headLine = el("div", { class: "cv-entry-head" });
-            headLine.append(
-                el(
-                    "span",
-                    { class: "cv-entry-main" },
-                    e.role &&
-                        el(
-                            "strong",
-                            { class: "cv-entry-role" },
-                            e.role,
-                        ),
-                    e.company &&
-                        el(
-                            "span",
-                            { class: "cv-entry-company" },
-                            (e.role ? " · " : "") + e.company,
-                        ),
-                    e.location &&
-                        el(
-                            "span",
-                            { class: "cv-entry-loc" },
-                            " · " + e.location,
-                        ),
-                ),
-                entryDate(e.start, e.end, e.current) &&
+function buildExperience(data: CVData): Sec | null {
+    const items = data.experience.filter(expHasContent);
+    if (!items.length) return null;
+    const list: Node[] = [];
+    for (const e of items) {
+        const item = el("div", { class: "cv-entry" });
+        const headLine = el("div", { class: "cv-entry-head" });
+        headLine.append(
+            el(
+                "span",
+                { class: "cv-entry-main" },
+                e.role && el("strong", { class: "cv-entry-role" }, e.role),
+                e.company &&
                     el(
                         "span",
-                        { class: "cv-entry-date" },
-                        entryDate(e.start, e.end, e.current),
+                        { class: "cv-entry-company" },
+                        (e.role ? " · " : "") + e.company,
                     ),
-            );
-            item.append(headLine);
-            const lines = bullets(e.description);
-            if (lines.length) {
-                const ul = el("ul", { class: "cv-bullets" });
-                for (const l of lines) ul.append(el("li", null, l));
-                item.append(ul);
-            }
-            list.push(item);
+                e.location &&
+                    el("span", { class: "cv-entry-loc" }, " · " + e.location),
+            ),
+            entryDate(e.start, e.end, e.current) &&
+                el(
+                    "span",
+                    { class: "cv-entry-date" },
+                    entryDate(e.start, e.end, e.current),
+                ),
+        );
+        item.append(headLine);
+        const lines = bullets(e.description);
+        if (lines.length) {
+            const ul = el("ul", { class: "cv-bullets" });
+            for (const l of lines) ul.append(el("li", null, l));
+            item.append(ul);
         }
-        secs.push({
-            col: "main",
-            title: "Experience",
-            kind: "entry",
-            nodes: list,
-        });
+        list.push(item);
     }
+    return { col: "main", title: "Experience", kind: "entry", nodes: list };
+}
 
-    const projItems = data.projects.filter(
+function buildProjects(data: CVData): Sec | null {
+    const items = data.projects.filter(
         (p) => p.name || p.link || p.description,
     );
-    if (projItems.length) {
-        const list: Node[] = [];
-        for (const p of projItems) {
-            const item = el("div", { class: "cv-entry" });
-            item.append(
-                el(
-                    "span",
-                    { class: "cv-entry-main" },
-                    p.name &&
-                        el(
-                            "strong",
-                            { class: "cv-entry-role" },
-                            p.name,
-                        ),
-                    p.link &&
-                        el(
-                            "span",
-                            { class: "cv-entry-company" },
-                            (p.name ? " · " : "") + p.link,
-                        ),
-                ),
-            );
-            if (p.description.trim()) {
-                const pLines = bullets(p.description);
-                if (pLines.length > 1) {
-                    const ul = el("ul", { class: "cv-bullets" });
-                    for (const l of pLines)
-                        ul.append(el("li", null, l));
-                    item.append(ul);
-                } else {
-                    item.append(
-                        el(
-                            "p",
-                            { class: "cv-entry-desc" },
-                            p.description.trim(),
-                        ),
-                    );
-                }
+    if (!items.length) return null;
+    const list: Node[] = [];
+    for (const p of items) {
+        const item = el("div", { class: "cv-entry" });
+        item.append(
+            el(
+                "span",
+                { class: "cv-entry-main" },
+                p.name && el("strong", { class: "cv-entry-role" }, p.name),
+                p.link &&
+                    el(
+                        "span",
+                        { class: "cv-entry-company" },
+                        (p.name ? " · " : "") + p.link,
+                    ),
+            ),
+        );
+        if (p.description.trim()) {
+            const pLines = bullets(p.description);
+            if (pLines.length > 1) {
+                const ul = el("ul", { class: "cv-bullets" });
+                for (const l of pLines) ul.append(el("li", null, l));
+                item.append(ul);
+            } else {
+                item.append(
+                    el("p", { class: "cv-entry-desc" }, p.description.trim()),
+                );
             }
-            list.push(item);
         }
-        secs.push({
-            col: "main",
-            title: "Projects",
-            kind: "entry",
-            nodes: list,
-        });
+        list.push(item);
     }
+    return { col: "main", title: "Projects", kind: "entry", nodes: list };
+}
 
-    const eduItems = data.education.filter(
+function buildEducation(data: CVData): Sec | null {
+    const items = data.education.filter(
         (e) => e.degree || e.school || e.start || e.end,
     );
-    if (eduItems.length) {
-        const list: Node[] = [];
-        for (const e of eduItems) {
-            list.push(
-                el(
-                    "div",
-                    { class: "cv-entry" },
-                    el(
-                        "div",
-                        { class: "cv-entry-head" },
-                        el(
-                            "span",
-                            { class: "cv-entry-main" },
-                            e.degree &&
-                                el(
-                                    "strong",
-                                    { class: "cv-entry-role" },
-                                    e.degree,
-                                ),
-                            e.school &&
-                                el(
-                                    "span",
-                                    { class: "cv-entry-company" },
-                                    (e.degree ? " · " : "") + e.school,
-                                ),
-                        ),
-                        entryDate(e.start, e.end) &&
-                            el(
-                                "span",
-                                { class: "cv-entry-date" },
-                                entryDate(e.start, e.end),
-                            ),
-                    ),
-                ),
-            );
-        }
-        secs.push({
-            col: "side",
-            title: "Education",
-            kind: "entry",
-            nodes: list,
-        });
-    }
-
-    if (data.skills.length) {
-        const chips = el("div", { class: "cv-chips" });
-        for (const s of data.skills)
-            chips.append(el("span", { class: "cv-chip" }, s));
-        secs.push({
-            col: "side",
-            title: "Skills",
-            kind: "single",
-            nodes: [chips],
-        });
-    }
-
-    const langItems = data.languages.filter((l) => l.name || l.level);
-    if (langItems.length) {
-        const pairs: Node[] = [];
-        for (const l of langItems)
-            pairs.push(
-                el(
-                    "div",
-                    { class: "cv-pair" },
-                    el(
-                        "span",
-                        { class: "cv-pair-name" },
-                        l.name || "—",
-                    ),
-                    l.level
-                        ? el("span", { class: "cv-pair-meta" }, l.level)
-                        : null,
-                ),
-            );
-        secs.push({
-            col: "side",
-            title: "Languages",
-            kind: "pair",
-            nodes: pairs,
-        });
-    }
-
-    const certItems = data.certifications.filter(
-        (c) => c.name || c.issuer || c.year,
-    );
-    if (certItems.length) {
-        const pairs: Node[] = [];
-        for (const c of certItems)
-            pairs.push(
-                el(
-                    "div",
-                    { class: "cv-pair" },
-                    el(
-                        "span",
-                        { class: "cv-pair-name" },
-                        c.name || "—",
-                    ),
-                    [c.issuer, c.year].filter(Boolean).length
-                        ? el(
-                              "span",
-                              { class: "cv-pair-meta" },
-                              [c.issuer, c.year]
-                                  .filter(Boolean)
-                                  .join(" · "),
-                          )
-                        : null,
-                ),
-            );
-        secs.push({
-            col: "side",
-            title: "Certifications",
-            kind: "pair",
-            nodes: pairs,
-        });
-    }
-
-    // ── Flows ──
-    if (data.template === "ats") {
-        // Canonical order ATS parsers expect.
-        const order: Record<string, number> = {
-            Profile: 0,
-            Experience: 1,
-            Projects: 2,
-            Education: 3,
-            Skills: 4,
-            Languages: 5,
-            Certifications: 6,
-        };
-        secs.sort(
-            (a, b) => (order[a.title] ?? 9) - (order[b.title] ?? 9),
-        );
-    }
-    const mainSecs = secs.filter((s) => s.col === "main");
-    const sideSecs = secs.filter((s) => s.col === "side");
-    const modern = data.template === "modern" && sideSecs.length > 0;
-
-    if (!headNode && secs.length === 0) {
-        const page = el("div", { class: "cv-a4" });
-        page.append(el("span", { class: "cv-a4-num" }, "1"));
-        page.append(
+    if (!items.length) return null;
+    const list: Node[] = [];
+    for (const e of items) {
+        list.push(
             el(
                 "div",
-                { class: "cv-sheet-empty" },
-                el("strong", null, "Your CV preview"),
+                { class: "cv-entry" },
                 el(
-                    "p",
-                    null,
-                    "Start filling the form on the left, or press “Load my data” to pre-fill your profile.",
+                    "div",
+                    { class: "cv-entry-head" },
+                    el(
+                        "span",
+                        { class: "cv-entry-main" },
+                        e.degree &&
+                            el("strong", { class: "cv-entry-role" }, e.degree),
+                        e.school &&
+                            el(
+                                "span",
+                                { class: "cv-entry-company" },
+                                (e.degree ? " · " : "") + e.school,
+                            ),
+                    ),
+                    entryDate(e.start, e.end) &&
+                        el(
+                            "span",
+                            { class: "cv-entry-date" },
+                            entryDate(e.start, e.end),
+                        ),
                 ),
             ),
         );
-        sheet.replaceChildren(page);
-        return;
     }
+    return { col: "side", title: "Education", kind: "entry", nodes: list };
+}
 
-    const mkUnits = (s: Sec): Unit[] => [
+function buildSkills(data: CVData): Sec | null {
+    if (!data.skills.length) return null;
+    const chips = el("div", { class: "cv-chips" });
+    for (const s of data.skills)
+        chips.append(el("span", { class: "cv-chip" }, s));
+    return { col: "side", title: "Skills", kind: "single", nodes: [chips] };
+}
+
+function buildLanguages(data: CVData): Sec | null {
+    const items = data.languages.filter((l) => l.name || l.level);
+    if (!items.length) return null;
+    const pairs: Node[] = [];
+    for (const l of items)
+        pairs.push(
+            el(
+                "div",
+                { class: "cv-pair" },
+                el("span", { class: "cv-pair-name" }, l.name || "—"),
+                l.level ? el("span", { class: "cv-pair-meta" }, l.level) : null,
+            ),
+        );
+    return { col: "side", title: "Languages", kind: "pair", nodes: pairs };
+}
+
+function buildCertifications(data: CVData): Sec | null {
+    const items = data.certifications.filter(
+        (c) => c.name || c.issuer || c.year,
+    );
+    if (!items.length) return null;
+    const pairs: Node[] = [];
+    for (const c of items)
+        pairs.push(
+            el(
+                "div",
+                { class: "cv-pair" },
+                el("span", { class: "cv-pair-name" }, c.name || "—"),
+                [c.issuer, c.year].filter(Boolean).length
+                    ? el(
+                          "span",
+                          { class: "cv-pair-meta" },
+                          [c.issuer, c.year].filter(Boolean).join(" · "),
+                      )
+                    : null,
+            ),
+        );
+    return {
+        col: "side",
+        title: "Certifications",
+        kind: "pair",
+        nodes: pairs,
+    };
+}
+
+// ── Layout, measurement, pagination ──────────────────────────────
+
+function mkUnits(s: Sec): Unit[] {
+    return [
         {
             node: el("h3", null, s.title),
             section: s.title,
@@ -643,107 +535,107 @@ export function renderSheetInto(sheet: HTMLElement, data: CVData): void {
             kind: s.kind,
         })),
     ];
+}
+
+function attachMeasured(box: Element, ss: Sec[], units: Unit[]): void {
+    let i = 0;
+    for (const s of ss) {
+        const sec = el("section", { class: "cv-section" });
+        sec.append(units[i].node); // heading
+        if (s.kind === "pair") {
+            const grid = el("div", { class: "cv-pairgrid" });
+            for (const n of s.nodes) grid.append(n);
+            sec.append(grid);
+        } else {
+            for (const n of s.nodes) sec.append(n);
+        }
+        box.append(sec);
+        i += 1 + s.nodes.length;
+    }
+}
+
+function unitTopMargin(u: Unit, node: HTMLElement): number {
+    const target = u.heading ? node.parentElement ?? node : node;
+    return parseFloat(getComputedStyle(target).marginTop) || 0;
+}
+
+function toMeasured(units: Unit[]): Measured[] {
+    return units.map((u) => {
+        const node = u.node as HTMLElement;
+        const cs = getComputedStyle(node);
+        return {
+            ...u,
+            h: node.offsetHeight,
+            t: unitTopMargin(u, node),
+            b: parseFloat(cs.marginBottom) || 0,
+        };
+    });
+}
+
+function paginateColumn(
+    sheet: HTMLElement,
+    headNode: HTMLElement | null,
+    secs: Sec[],
+    mainSecs: Sec[],
+    sideSecs: Sec[],
+    modern: boolean,
+    wantsBreak: (title: string) => boolean,
+): { mainPages: Measured[][]; sidePages: Measured[][] } {
     const mainUnits = mainSecs.flatMap(mkUnits);
     const sideUnits = sideSecs.flatMap(mkUnits);
     // Single-column templates flow every section in canonical order.
     const singleUnits = modern ? mainUnits : secs.flatMap(mkUnits);
 
-    // ── Measure units at their final width (exact final structure) ──
+    // Measure units at their final width (exact final structure).
     const measureBox = el("div", { class: "cv-measure" });
     if (headNode) measureBox.append(headNode);
-    const attach = (box: Element, ss: Sec[], units: Unit[]) => {
-        let i = 0;
-        for (const s of ss) {
-            const sec = el("section", { class: "cv-section" });
-            sec.append(units[i].node); // heading
-            if (s.kind === "pair") {
-                const grid = el("div", { class: "cv-pairgrid" });
-                for (const n of s.nodes) grid.append(n);
-                sec.append(grid);
-            } else {
-                for (const n of s.nodes) sec.append(n);
-            }
-            box.append(sec);
-            i += 1 + s.nodes.length;
-        }
-    };
     if (modern) {
         const cols = el("div", { class: "cv-cols" });
         const mainC = el("div", { class: "cv-col-main" });
+        attachMeasured(mainC, mainSecs, mainUnits);
         const sideC = el("div", { class: "cv-col-side" });
-        attach(mainC, mainSecs, mainUnits);
-        attach(sideC, sideSecs, sideUnits);
+        attachMeasured(sideC, sideSecs, sideUnits);
         cols.append(mainC, sideC);
         measureBox.append(cols);
     } else {
-        attach(measureBox, secs, singleUnits);
+        attachMeasured(measureBox, secs, singleUnits);
     }
     sheet.append(measureBox);
 
-    const toMeasured = (units: Unit[]): Measured[] =>
-        units.map((u) => {
-            const node = u.node as HTMLElement;
-            const cs = getComputedStyle(node);
-            return {
-                ...u,
-                h: node.offsetHeight,
-                t: u.heading
-                    ? parseFloat(
-                          getComputedStyle(node.parentElement ?? node)
-                              .marginTop,
-                      ) || 0
-                    : parseFloat(cs.marginTop) || 0,
-                b: parseFloat(cs.marginBottom) || 0,
-            };
-        });
-
-    const mainMs = toMeasured(singleUnits);
-    const sideMs = modern ? toMeasured(sideUnits) : [];
     const headMs = headNode
-        ? (() => {
-              const n = headNode as HTMLElement;
-              const cs = getComputedStyle(n);
-              return {
-                  h: n.offsetHeight,
-                  t: parseFloat(cs.marginTop) || 0,
-                  b: parseFloat(cs.marginBottom) || 0,
-              };
-          })()
+        ? {
+              h: headNode.offsetHeight,
+              t: parseFloat(getComputedStyle(headNode).marginTop) || 0,
+              b: parseFloat(getComputedStyle(headNode).marginBottom) || 0,
+          }
         : null;
     measureBox.remove();
 
-    // ── Split into A4 pages and render one card per page ──
-    const wantsBreak = (t: string) => data.breaks[t] === true;
     const firstOffset = headMs ? headMs.t + headMs.h + headMs.b : 0;
     const topMargin = headMs ? headMs.b : 0;
-    const mainPages = pullSplitSection(
-        rescueOrphan(
-            paginate(
-                mainMs,
+    const paginateAll = (ms: Measured[]): Measured[][] =>
+        pullSplitSection(
+            rescueOrphan(
+                paginate(ms, PAGE_CAP, firstOffset, topMargin, wantsBreak),
                 PAGE_CAP,
-                firstOffset,
-                topMargin,
                 wantsBreak,
             ),
-            PAGE_CAP,
-            wantsBreak,
-        ),
-    );
-    const sidePages = pullSplitSection(
-        rescueOrphan(
-            paginate(
-                sideMs,
-                PAGE_CAP,
-                firstOffset,
-                topMargin,
-                wantsBreak,
-            ),
-            PAGE_CAP,
-            wantsBreak,
-        ),
-    );
-    const total = Math.max(mainPages.length, sidePages.length, 1);
+        );
 
+    return {
+        mainPages: paginateAll(toMeasured(singleUnits)),
+        sidePages: modern ? paginateAll(toMeasured(sideUnits)) : [],
+    };
+}
+
+function renderPages(
+    sheet: HTMLElement,
+    headNode: HTMLElement | null,
+    modern: boolean,
+    mainPages: Measured[][],
+    sidePages: Measured[][],
+): void {
+    const total = Math.max(mainPages.length, sidePages.length, 1);
     const pageEls: HTMLElement[] = [];
     for (let k = 0; k < total; k++) {
         const page = el("div", { class: "cv-a4" });
@@ -765,6 +657,77 @@ export function renderSheetInto(sheet: HTMLElement, data: CVData): void {
     sheet.replaceChildren(...pageEls);
 }
 
+function renderEmptySheet(sheet: HTMLElement): void {
+    const page = el("div", { class: "cv-a4" });
+    page.append(el("span", { class: "cv-a4-num" }, "1"));
+    page.append(
+        el(
+            "div",
+            { class: "cv-sheet-empty" },
+            el("strong", null, "Your CV preview"),
+            el(
+                "p",
+                null,
+                "Start filling the form on the left, or press “Load my data” to pre-fill your profile.",
+            ),
+        ),
+    );
+    sheet.replaceChildren(page);
+}
+
+/**
+ * Render a full A4-paginated sheet into `sheet`.
+ * The caller is responsible for any scaling/fitting afterwards.
+ */
+export function renderSheetInto(sheet: HTMLElement, data: CVData): void {
+    sheet.style.setProperty("--cv-accent", data.accent);
+    sheet.classList.toggle("ats", data.template === "ats");
+
+    const headNode = buildSheetHead(data);
+    const secs = [
+        buildProfile(data),
+        buildExperience(data),
+        buildProjects(data),
+        buildEducation(data),
+        buildSkills(data),
+        buildLanguages(data),
+        buildCertifications(data),
+    ].filter((s): s is Sec => s !== null);
+
+    // Canonical order ATS parsers expect.
+    if (data.template === "ats") {
+        const order: Record<string, number> = {
+            Profile: 0,
+            Experience: 1,
+            Projects: 2,
+            Education: 3,
+            Skills: 4,
+            Languages: 5,
+            Certifications: 6,
+        };
+        secs.sort((a, b) => (order[a.title] ?? 9) - (order[b.title] ?? 9));
+    }
+    const mainSecs = secs.filter((s) => s.col === "main");
+    const sideSecs = secs.filter((s) => s.col === "side");
+    const modern = data.template === "modern" && sideSecs.length > 0;
+
+    if (!headNode && secs.length === 0) {
+        renderEmptySheet(sheet);
+        return;
+    }
+
+    const wantsBreak = (t: string) => data.breaks[t] === true;
+    const { mainPages, sidePages } = paginateColumn(
+        sheet,
+        headNode,
+        secs,
+        mainSecs,
+        sideSecs,
+        modern,
+        wantsBreak,
+    );
+    renderPages(sheet, headNode, modern, mainPages, sidePages);
+}
 // ── Preset: Traipoap Hunthong ("Load my data") — EN / TH versions ──
 export function presetShared(): Pick<
     CVData,
