@@ -106,7 +106,7 @@ export function bullets(text: string): string[] {
 
 export function entryDate(start: string, end: string, current?: boolean) {
     const to = current ? "Present" : end.trim();
-    if (start.trim() && to) return `${start.trim()} — ${to}`;
+    if (start.trim() && to) return `${start.trim()} – ${to}`;
     return start.trim() || to || "";
 }
 
@@ -392,7 +392,7 @@ export function renderSheetInto(sheet: HTMLElement, data: CVData): void {
                         el(
                             "span",
                             { class: "cv-entry-loc" },
-                            " — " + e.location,
+                            " · " + e.location,
                         ),
                 ),
                 entryDate(e.start, e.end, e.current) &&
@@ -621,7 +621,7 @@ export function renderSheetInto(sheet: HTMLElement, data: CVData): void {
                 el(
                     "p",
                     null,
-                    "Start filling the form on the left — or press “Load my data” to pre-fill your profile.",
+                    "Start filling the form on the left, or press “Load my data” to pre-fill your profile.",
                 ),
             ),
         );
@@ -810,13 +810,13 @@ export function presetShared(): Pick<
         certifications: [
             {
                 id: uid(),
-                name: "CKA — Certified Kubernetes Administrator",
+                name: "CKA: Certified Kubernetes Administrator",
                 issuer: "Linux Foundation",
                 year: "2026 – 2028",
             },
             {
                 id: uid(),
-                name: "CKAD — Certified Kubernetes Application Developer",
+                name: "CKAD: Certified Kubernetes Application Developer",
                 issuer: "Linux Foundation",
                 year: "2026 – 2028",
             },
@@ -835,49 +835,49 @@ export function sampleDataEN(): CVData {
         location: "Nonthaburi, Thailand",
         ...presetShared(),
         summary:
-            "Network Administrator (Tier-2) building toward a DevOps Engineer role. CKA & CKAD certified (Linux Foundation). Designed and operate a production stack in a personal lab — a Go/Astro log platform on a 6-node K3s HA cluster with Istio, Argo CD GitOps, and CI/CD security gates — plus a multi-region failover DR site on AWS. Current role applies the same fundamentals: incident response, monitoring pipelines, automation.",
+            "Network Administrator (Tier-2) building toward a DevOps Engineer role. CKA & CKAD certified (Linux Foundation). Designed and operate a production stack in a personal lab: a Go/Astro log platform on a 7-node K3s HA cluster with Istio, Argo CD GitOps, and CI/CD security gates, plus a multi-region failover DR site on AWS. Current role applies the same fundamentals: incident response, monitoring pipelines, automation.",
         experience: [
             {
                 id: uid(),
-                role: "Network Administrator — Tier-2 Support",
+                role: "Network Administrator (Tier-2 Support)",
                 company:
-                    "360 Bizmate Co., Ltd. (NT — National Telecom)",
-                location: "Nonthaburi",
+                    "360 Bizmate Co., Ltd. (NT, National Telecom)",
+                location: "",
                 start: "Jan 2022",
                 end: "",
                 current: true,
                 description:
-                    "Owned Tier-2 incident escalation — root-cause analysis and vendor/team coordination to keep SLAs.\nManage the Zabbix stack end-to-end, including patching against published CVEs — proactive N-S monitoring (Zabbix → Telegram) catches issues E-W alerts miss, reducing MTTR.\nAutomated switch PSU status checks, replacing daily manual inspections.\nBuilt a scheduled hardware lifecycle automation (Google Apps Script): parses CSV license/EOL records, flags expirations, alerts via Telegram.\nExecuted change management (VLAN, load balancer) with configuration backups as a safe baseline.\nResolved IPv6 policy conflicts by disabling unintended auto-configuration and restoring firewall compliance.\nDiagnosed load-balancing failures — root cause: exposing the backend port in the container image — and restored the customer's service.\nTrained Tier-1 staff and prepared monthly operational reports.",
+                    "Owned Tier-2 incident escalation, with root-cause analysis and vendor/team coordination to keep SLAs.\nManage the Zabbix stack end-to-end, including patching against published CVEs; proactive N-S monitoring (Zabbix → Telegram) catches issues E-W alerts miss, reducing MTTR.\nAutomated switch PSU status checks, replacing daily manual inspections.\nBuilt a scheduled hardware lifecycle automation (Google Apps Script): parses CSV license/EOL records, flags expirations, alerts via Telegram.\nExecuted change management (VLAN, load balancer) with configuration backups as a safe baseline.\nResolved IPv6 policy conflicts by disabling unintended auto-configuration and restoring firewall compliance.\nDiagnosed load-balancing failures (root cause: exposing the backend port in the container image) and restored the customer's service.\nTrained Tier-1 staff and prepared monthly operational reports.",
             },
         ],
         projects: [
             {
                 id: uid(),
-                name: "infra — K3s Platform on Proxmox",
+                name: "infra: K3s Platform on Proxmox",
                 link: "github.com/traipoap/infra",
                 description:
-                    "Automated K3s platform: Terraform (VM templates, HCP remote state), Ansible (6 idempotent playbooks, kernel tuning), K3s HA (embedded etcd), Istio ambient, Gateway API, Argo CD GitOps via Helm.\nFrom-scratch provisioning in under an hour: super-node (HAProxy L7, syslog, NFS, S3), 3 control-plane nodes (etcd quorum), 2 workers — repeatable, destroyable via terraform destroy.\nMulti-runtime support: crun as default, youki exposed as a RuntimeClass.\nMonthly chaos drills (node removal) with postmortems keep failure modes known.\n14 ADRs plus deployment and troubleshooting runbooks.",
+                    "Automated K3s platform: Terraform (VM templates, HCP remote state), Ansible (6 idempotent playbooks, kernel tuning), K3s HA (embedded etcd), Istio ambient, Gateway API, Argo CD GitOps via Helm.\nFrom-scratch provisioning in under an hour: super-node (HAProxy L7, syslog, NFS, S3), 3 control-plane nodes (etcd quorum), 3 workers; repeatable, torn down via terraform destroy.\nMulti-runtime support: crun as default, youki exposed as a RuntimeClass.\nMonthly chaos drills (node removal) with postmortems keep failure modes known.\n14 ADRs plus deployment and troubleshooting runbooks.",
             },
             {
                 id: uid(),
-                name: "app — Go/GIN + Astro Log Platform",
+                name: "app: Go/GIN + Astro Log Platform",
                 link: "app.traipoap.com · github.com/traipoap/app",
                 description:
-                    "Self-hosted log-search platform in a personal production environment — Go API (JWT, Quickwit, CSV export) and Astro dashboard.\nGitHub Actions CI/CD: Gitleaks secret scan, SonarQube SAST gate, path-filtered builds, Trivy CRITICAL/HIGH scans (SARIF), GHCR publish, Argo CD auto-deploy.",
+                    "Self-hosted log-search platform in a personal production environment: Go API (JWT, Quickwit, CSV export) and Astro dashboard.\nGitHub Actions CI/CD: Gitleaks secret scan, SonarQube SAST gate, path-filtered builds, Trivy CRITICAL/HIGH scans (SARIF), GHCR publish, Argo CD auto-deploy.",
             },
             {
                 id: uid(),
-                name: "gitops — ArgoCD GitOps",
+                name: "gitops: ArgoCD GitOps",
                 link: "github.com/traipoap/argocd-bootstrap",
                 description:
-                    "Git as the source of truth — Argo CD reconciles cluster state and corrects configuration drift.\nDeployed Google's microservices-demo (10 services) as Argo CD applications on the Istio cluster — a real multi-service workload for mesh and observability validation.\nExternal Secrets Operator with AWS Secrets Manager — credentials in-cluster, never in Git.\nImage Updater: new image versions → semver tag updates → auto-deploy.\nLimitRange defaults and schema validation for Argo CD Applications.\nObservability with Prometheus and Grafana; logs routed via Otel to Loki.",
+                    "Git as the source of truth: Argo CD reconciles cluster state and corrects configuration drift.\nDeployed Google's microservices-demo (10 services) as Argo CD applications on the Istio cluster, a real multi-service workload for mesh and observability validation.\nExternal Secrets Operator with AWS Secrets Manager, keeping credentials in-cluster, never in Git.\nImage Updater: new image versions → semver tag updates → auto-deploy.\nLimitRange defaults and schema validation for Argo CD Applications.\nObservability with Prometheus and Grafana; logs routed via Otel to Loki.",
             },
             {
                 id: uid(),
-                name: "aws — Multi-region Failover DR",
+                name: "aws: Multi-region Failover DR",
                 link: "github.com/traipoap/infra/tree/main/aws",
                 description:
-                    "Multi-region DR: K3s as the primary CloudFront origin, failing over on 4xx/5xx to a Go/Gin Lambda (ECR) and an S3 static site across ap-southeast-1/7 — app.traipoap.com stays up.\nMonthly origin-failover drills keep the DR path validated.\nTerraform modules for CloudFront, ECR, IAM, S3, ACM + CloudFront Function for clean-URL routing, OAC/SigV4 for private S3.",
+                    "Multi-region DR: K3s as the primary CloudFront origin, failing over on 4xx/5xx to a Go/Gin Lambda (ECR) and an S3 static site across ap-southeast-1/7, keeping app.traipoap.com up.\nMonthly origin-failover drills keep the DR path validated.\nTerraform modules for CloudFront, ECR, IAM, S3, ACM + CloudFront Function for clean-URL routing, OAC/SigV4 for private S3.",
             },
         ],
         education: [
@@ -908,49 +908,49 @@ export function sampleDataTH(): CVData {
         location: "นนทบุรี, ประเทศไทย",
         ...presetShared(),
         summary:
-            "Network Administrator (Tier-2) กำลังขยายความเชี่ยวชาญสู่ DevOps Engineer — ผ่านการรับรอง CKA และ CKAD (Linux Foundation) สร้างระบบใช้งานจริงด้วยตนเอง ทั้งแพลตฟอร์มค้นหา log บน K3s HA (homelab) และระบบ Disaster Recovery ข้าม region บน AWS งานประจำใช้หลัก DevOps ในระบบจริง — เฝ้าระวังเชิงรุก แก้ที่ต้นตอ และ automate งานที่ซ้ำซาก",
+            "Network Administrator (Tier-2) กำลังขยายความเชี่ยวชาญสู่ DevOps Engineer ผ่านการรับรอง CKA และ CKAD (Linux Foundation) สร้างระบบใช้งานจริงด้วยตนเอง ทั้งแพลตฟอร์มค้นหา log บน K3s HA (homelab) และระบบ Disaster Recovery ข้าม region บน AWS งานประจำใช้หลัก DevOps ในระบบจริง: เฝ้าระวังเชิงรุก แก้ที่ต้นตอ และ automate งานที่ซ้ำซาก",
         experience: [
             {
                 id: uid(),
                 role: "Network Administrator (Tier-2)",
                 company:
-                    "บริษัท 360 Bizmate จำกัด (NT — กสท โทรคมนาคม)",
-                location: "นนทบุรี",
+                    "บริษัท 360 Bizmate จำกัด (NT, กสท โทรคมนาคม)",
+                location: "",
                 start: "ม.ค. 2022",
                 end: "",
                 current: true,
                 description:
-                    "ดูแลเหตุขัดข้องระดับ Tier-2 วิเคราะห์สาเหตุที่แท้จริง และประสานทีมภายใน/หน่วยงานภายนอกให้ปิดงานได้ตาม SLA\nดูแลระบบ Zabbix — เฝ้าระวังเชิงรุกจับปัญหาแฝงฝั่ง North-South ที่ระบบการแจ้งเตือนฝั่ง East-West มองไม่เห็น แจ้งเตือนผ่าน Telegram ช่วยลด MTTR และติดตั้ง patch ตามช่องโหว่ (CVE) ที่ประกาศออกมา\nเขียนสคริปต์ตรวจสอบ PSU status switch อัตโนมัติ แทนการตรวจด้วยมือทุกวัน\nพัฒนาระบบติดตาม Hardware License และ EOL ด้วย Google Apps Script — ประมวลผล CSV ตามเวลาที่กำหนด ตรวจ License ใกล้หมดอายุและอุปกรณ์ใกล้สิ้นสุดการสนับสนุน แจ้งเตือนผ่าน Telegram\nดำเนินการเปลี่ยนแปลงระบบ (change) เช่น VLAN, Load-Balancing พร้อมสำรองค่าการตั้งค่าให้เป็นปัจจุบัน\nแก้ไขความขัดแย้งนโยบาย IPv6 — ปิด auto-configuration ที่ไม่พึงประสงค์ ทำให้ firewall เป็นไปตามข้อกำหนดความปลอดภัย\nชี้ต้นตอปัญหาการกระจายโหลดให้ลูกค้าเห็น — การ expose port backend ใน container image — จนระบบลูกค้าใช้งานได้\nถ่ายทอดความรู้ให้ทีม Tier-1 และจัดทำรายงานประจำเดือน",
+                    "ดูแลเหตุขัดข้องระดับ Tier-2 วิเคราะห์สาเหตุที่แท้จริง และประสานทีมภายใน/หน่วยงานภายนอกให้ปิดงานได้ตาม SLA\nดูแลระบบ Zabbix และเฝ้าระวังเชิงรุก, จับปัญหาแฝงฝั่ง North-South ที่ระบบการแจ้งเตือนฝั่ง East-West มองไม่เห็น แจ้งเตือนผ่าน Telegram ช่วยลด MTTR และติดตั้ง patch ตามช่องโหว่ (CVE) ที่ประกาศออกมา\nเขียนสคริปต์ตรวจสอบ PSU status switch อัตโนมัติ แทนการตรวจด้วยมือทุกวัน\nพัฒนาระบบติดตาม Hardware License และ EOL ด้วย Google Apps Script, ประมวลผล CSV ตามเวลาที่กำหนด ตรวจ License ใกล้หมดอายุและอุปกรณ์ใกล้สิ้นสุดการสนับสนุน แจ้งเตือนผ่าน Telegram\nดำเนินการเปลี่ยนแปลงระบบ (change) เช่น VLAN, Load-Balancing พร้อมสำรองค่าการตั้งค่าให้เป็นปัจจุบัน\nแก้ไขความขัดแย้งนโยบาย IPv6 โดยปิด auto-configuration ที่ไม่พึงประสงค์ ทำให้ firewall เป็นไปตามข้อกำหนดความปลอดภัย\nชี้ต้นตอปัญหาการกระจายโหลดให้ลูกค้าเห็น (การ expose port backend ใน container image) จนระบบลูกค้าใช้งานได้\nถ่ายทอดความรู้ให้ทีม Tier-1 และจัดทำรายงานประจำเดือน",
             },
         ],
         projects: [
             {
                 id: uid(),
-                name: "infra — K3s Platform บน Proxmox",
+                name: "infra: K3s Platform บน Proxmox",
                 link: "github.com/traipoap/infra",
                 description:
-                    "สร้าง K3s platform แบบอัตโนมัติ — Terraform (VM templates, state บน HCP Terraform), Ansible (6 playbooks, kernel tuning), K3s HA (embedded etcd), Istio ambient, Gateway API และ ArgoCD สำหรับ GitOps\nติดตั้งจากศูนย์ได้ภายใน 1 ชั่วโมง — super-node (HAProxy L7, syslog, NFS, S3), control plane 3 โหนด (etcd quorum), worker 3 โหนด สร้างซ้ำ/รื้อด้วย terraform destroy\nรองรับ container runtime หลายตัว — crun เป็นค่าเริ่มต้น, youki เป็น RuntimeClass\nซ้อม chaos drill รายเดือน (เช่น ถอดโหนด) พร้อมจดบันทึกว่าอะไรพัง ซ่อมอย่างไร\nจัดทำ ADR 14 ข้อ คู่มือติดตั้ง และ runbook",
+                    "สร้าง K3s platform แบบอัตโนมัติ: Terraform (VM templates, state บน HCP Terraform), Ansible (6 playbooks, kernel tuning), K3s HA (embedded etcd), Istio ambient, Gateway API และ ArgoCD สำหรับ GitOps\nติดตั้งจากศูนย์ได้ภายใน 1 ชั่วโมง: super-node (HAProxy L7, syslog, NFS, S3), control plane 3 โหนด (etcd quorum), worker 3 โหนด สร้างซ้ำ/รื้อด้วย terraform destroy\nรองรับ container runtime หลายตัว, ใช้ crun เป็นค่าเริ่มต้น และ youki เป็น RuntimeClass\nซ้อม chaos drill รายเดือน (เช่น ถอดโหนด) พร้อมจดบันทึกว่าอะไรพัง ซ่อมอย่างไร\nจัดทำ ADR 14 ข้อ คู่มือติดตั้ง และ runbook",
             },
             {
                 id: uid(),
-                name: "app — Go/GIN + Astro Log Platform",
+                name: "app: Go/GIN + Astro Log Platform",
                 link: "app.traipoap.com · github.com/traipoap/app",
                 description:
-                    "พัฒนา log search export platform บน Go API (JWT, Quickwit, CSV export) กับ Astro dashboard \nCI/CD ด้วย GitHub Actions — Gitleaks สแกน secret, SonarQube SAST, build เฉพาะส่วนที่เปลี่ยน, Trivy สแกน CRITICAL/HIGH (SARIF), push GHCR แล้ว ArgoCD deploy อัตโนมัติ",
+                    "พัฒนา log search platform บน Go API (JWT, Quickwit, CSV export) กับ Astro dashboard\nCI/CD ด้วย GitHub Actions: Gitleaks สแกน secret, SonarQube SAST, build เฉพาะส่วนที่เปลี่ยน, Trivy สแกน CRITICAL/HIGH (SARIF), push GHCR แล้ว ArgoCD deploy อัตโนมัติ",
             },
             {
                 id: uid(),
-                name: "gitops — ArgoCD GitOps",
+                name: "gitops: ArgoCD GitOps",
                 link: "github.com/traipoap/argocd-bootstrap",
                 description:
-                    "ใช้ Git เป็น source of truth ของคลัสเตอร์ — ArgoCD ซิงก์สถานะต่อเนื่องและแก้ configuration drift อัตโนมัติ\nรัน Google microservices-demo (10 services) เป็น Argo CD Application บนคลัสเตอร์ Istio — workload multi-service จริงสำหรับตรวจสอบ service mesh และ observability\nเชื่อม External Secrets Operator กับ AWS Secrets Manager — credentials เข้าคลัสเตอร์โดยไม่เก็บใน Git\nArgoCD Image Updater — ตรวจ image ใหม่ อัปเดต tag ตาม semver และ deploy อัตโนมัติ\nกำหนด LimitRange defaults และ schema validation สำหรับ ArgoCD Application\nObservability ด้วย Prometheus และ Grafana ส่ง log ผ่าน Otel ไปยัง Loki",
+                    "ใช้ Git เป็น source of truth ของคลัสเตอร์, ArgoCD ซิงก์สถานะต่อเนื่องและแก้ configuration drift อัตโนมัติ\nรัน Google microservices-demo (10 services) เป็น Argo CD Application บนคลัสเตอร์ Istio, workload multi-service จริงสำหรับตรวจสอบ service mesh และ observability\nเชื่อม External Secrets Operator กับ AWS Secrets Manager, credentials เข้าคลัสเตอร์โดยไม่เก็บใน Git\nArgoCD Image Updater, ตรวจ image ใหม่ อัปเดต tag ตาม semver และ deploy อัตโนมัติ\nกำหนด LimitRange defaults และ schema validation สำหรับ ArgoCD Application\nObservability ด้วย Prometheus และ Grafana ส่ง log ผ่าน Otel ไปยัง Loki",
             },
             {
                 id: uid(),
-                name: "aws — Multi-region Failover DR",
+                name: "aws: Multi-region Failover DR",
                 link: "github.com/traipoap/infra/tree/main/aws",
                 description:
-                    "ระบบ DR ข้าม region — K3s เป็น origin หลักของ CloudFront เมื่อได้ 4xx/5xx failover ไปยัง Lambda (Go/Gin บน ECR) และ static build บน S3 ใน ap-southeast-1/7 ให้ app.traipoap.com ทำงานต่อได้\nซ้อม origin failover รายเดือน ให้มั่นใจว่าเส้นทาง DR ใช้งานได้จริง\nTerraform modules สำหรับ CloudFront, ECR, IAM, S3, ACM พร้อม CloudFront Function (clean-URL routing) และ OAC/SigV4 เข้า S3 แบบส่วนตัว",
+                    "ระบบ DR ข้าม region: K3s เป็น origin หลักของ CloudFront เมื่อได้ 4xx/5xx failover ไปยัง Lambda (Go/Gin บน ECR) และ static build บน S3 ใน ap-southeast-1/7 ให้ app.traipoap.com ทำงานต่อได้\nซ้อม origin failover รายเดือน ให้มั่นใจว่าเส้นทาง DR ใช้งานได้จริง\nTerraform modules สำหรับ CloudFront, ECR, IAM, S3, ACM พร้อม CloudFront Function (clean-URL routing) และ OAC/SigV4 เข้า S3 แบบส่วนตัว",
             },
         ],
         education: [
