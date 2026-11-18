@@ -117,31 +117,11 @@ func HandleExport(c *gin.Context) {
 
 // runExport pages through Quickwit and streams CSV rows directly to disk.
 func runExport(ctx context.Context, params models.SearchParams) error {
-	// Page size: honor the client's max_hits when it is smaller, but never
-	// exceed Quickwit's per-request cap.
-	pageSize := exportPageSize
-	if params.MaxHits != nil && *params.MaxHits > 0 && *params.MaxHits < exportPageSize {
-		pageSize = *params.MaxHits
-	}
-
-	// runExport — replace the local block with:
 	if err := os.MkdirAll(exportDirPath, 0755); err != nil {
 		return fmt.Errorf("create exports directory: %w", err)
 	}
 
-	base := "any"
-	if params.SourceIP != nil && *params.SourceIP != "" {
-		base = sanitizeFileName(*params.SourceIP)
-	}
-	// Bangkok time (UTC+7, no DST) for the filename.
-	bangkokLoc, err := time.LoadLocation("Asia/Bangkok")
-	if err != nil {
-		bangkokLoc = time.FixedZone("ICT", 7*60*60)
-	}
-	now := time.Now().In(bangkokLoc)
-	fileName := fmt.Sprintf("%s_%s.csv", base, now.Format("20060102_150405"))
-	filePath := filepath.Join(exportDirPath, fileName)
-
+	filePath := filepath.Join(exportDirPath, exportFileName(params))
 	file, err := os.Create(filePath)
 	if err != nil {
 		return fmt.Errorf("create export file: %w", err)
@@ -153,9 +133,46 @@ func runExport(ctx context.Context, params models.SearchParams) error {
 	bufw := bufio.NewWriterSize(file, 1<<20)
 	wtr := csv.NewWriter(bufw)
 
-	var processed int
+	processed, err := exportRows(ctx, params, exportPageSizeFor(params), wtr)
+	if err != nil {
+		return fmt.Errorf("export rows: %w", err)
+	}
+	if err := finalizeExport(file, bufw, wtr, filePath, processed); err != nil {
+		return err
+	}
+
+	fmt.Printf("exported %d logs to %s\n", processed, filePath)
+	return nil
+}
+
+// exportPageSizeFor honors the client's max_hits when it is smaller, but
+// never exceeds Quickwit's per-request cap.
+func exportPageSizeFor(params models.SearchParams) int {
+	if params.MaxHits != nil && *params.MaxHits > 0 && *params.MaxHits < exportPageSize {
+		return *params.MaxHits
+	}
+	return exportPageSize
+}
+
+// exportFileName builds "<source|any>_<bangkok time>.csv".
+func exportFileName(params models.SearchParams) string {
+	base := "any"
+	if params.SourceIP != nil && *params.SourceIP != "" {
+		base = sanitizeFileName(*params.SourceIP)
+	}
+	// Bangkok time (UTC+7, no DST) for the filename.
+	loc, err := time.LoadLocation("Asia/Bangkok")
+	if err != nil {
+		loc = time.FixedZone("ICT", 7*60*60)
+	}
+	return fmt.Sprintf("%s_%s.csv", base, time.Now().In(loc).Format("20060102_150405"))
+}
+
+// csvRowSink returns a sink that writes one hit per CSV row, adding the
+// header on the first row.
+func csvRowSink(wtr *csv.Writer) func(map[string]json.RawMessage) error {
 	headerWritten := false
-	sink := func(hit map[string]json.RawMessage) error {
+	return func(hit map[string]json.RawMessage) error {
 		if !headerWritten {
 			if err := wtr.Write([]string{"message"}); err != nil {
 				return fmt.Errorf("write CSV header: %w", err)
@@ -165,29 +182,30 @@ func runExport(ctx context.Context, params models.SearchParams) error {
 		if err := wtr.Write([]string{csvMessage(hit)}); err != nil {
 			return fmt.Errorf("write CSV row: %w", err)
 		}
-		processed++
 		return nil
 	}
+}
 
-	f := fieldsForIndex(deref(params.IndexID))
+// exportRows streams the matched rows — whole-index offset paging when no
+// time window is supplied, windowed export otherwise.
+func exportRows(ctx context.Context, params models.SearchParams, pageSize int, wtr *csv.Writer) (int, error) {
+	sink := csvRowSink(wtr)
 	from, okFrom := parseMS(params.FromTimestamp)
 	to, okTo := parseMS(params.ToTimestamp)
-
-	err = nil
 	if !okFrom || !okTo {
 		// No time window supplied — the whole index is capped by Quickwit's
 		// 10k start_offset limit (newest ~20k rows).
 		fmt.Printf("export: no time window — capped at %d rows (Quickwit start_offset limit)\n", pageSize+quickwitOffsetCap)
-		_, err = writeOffsetPages(ctx, buildLuceneQuery(params), params.IndexID, pageSize, sink)
-	} else {
-		// Windowed export: chunk + bounded offset paging (fully covered,
-		// no dups, no skips — see exportWindow).
-		_, err = exportWindow(ctx, params, f, params.IndexID, from, to, pageSize, sink)
+		return writeOffsetPages(ctx, buildLuceneQuery(params), params.IndexID, pageSize, sink)
 	}
-	if err != nil {
-		return fmt.Errorf("export rows: %w", err)
-	}
+	// Windowed export: chunk + bounded offset paging (fully covered, no
+	// dups, no skips — see exportWindow).
+	return exportWindow(ctx, params, fieldsForIndex(deref(params.IndexID)), params.IndexID, from, to, pageSize, sink)
+}
 
+// finalizeExport flushes the writer, drops the file if it is empty, and
+// otherwise registers its SHA256 hash in the registry.
+func finalizeExport(file *os.File, bufw *bufio.Writer, wtr *csv.Writer, filePath string, processed int) error {
 	wtr.Flush()
 	if err := wtr.Error(); err != nil {
 		return fmt.Errorf("csv writer: %w", err)
@@ -206,8 +224,6 @@ func runExport(ctx context.Context, params models.SearchParams) error {
 	if err := file.Sync(); err != nil {
 		return fmt.Errorf("sync file: %w", err)
 	}
-
-	fmt.Printf("exported %d logs to %s\n", processed, filePath)
 	return nil
 }
 
@@ -310,7 +326,8 @@ func exportWindow(ctx context.Context, params models.SearchParams, f indexFields
 		if err != nil {
 			return n1, err
 		}
-		return exportWindow(ctx, params, f, indexID, mid+1, toMs, pageSize, sink)
+		n2, err := exportWindow(ctx, params, f, indexID, mid+1, toMs, pageSize, sink)
+		return n1 + n2, err
 	}
 
 	if probe.NumHits > uint64(maxRows) {
@@ -400,7 +417,6 @@ func appendHashRecord(hash, source string) error {
 		return fmt.Errorf("marshal hash record: %w", err)
 	}
 
-	// appendHashRecord — replace the local declaration with:
 	registryPath := filepath.Join(exportDirPath, ".hash_registry.jsonl")
 
 	file, err := os.OpenFile(registryPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
