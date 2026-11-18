@@ -819,7 +819,7 @@ export function sampleDataEN(): CVData {
                 name: "infra: K3s Platform on Proxmox",
                 link: "github.com/traipoap/infra",
                 description:
-                    "Automated K3s platform: Terraform (VM templates, HCP remote state), Ansible (6 idempotent playbooks, kernel tuning), K3s HA (embedded etcd), Istio ambient, Gateway API, Argo CD GitOps via Helm.\nFrom-scratch provisioning in under an hour: super-node (HAProxy L7, syslog, NFS, S3), 3 control-plane nodes (etcd quorum), 3 workers; repeatable, torn down via terraform destroy.\nMulti-runtime support: crun as default, youki exposed as a RuntimeClass.\nMonthly chaos drills (node removal) with postmortems keep failure modes known.\n14 ADRs plus deployment and troubleshooting runbooks.",
+                    "Automated K3s platform: Terraform (VM templates, HCP remote state), Ansible (6 idempotent playbooks, kernel tuning), K3s HA (embedded etcd), Istio ambient, Gateway API, Argo CD GitOps via Helm.\nFrom-scratch provisioning in under an hour: super-node (HAProxy L7, syslog, NFS, S3), 3 control-plane nodes (etcd quorum), 3 workers; repeatable, torn down via terraform destroy.\nMulti-runtime support: crun as default, youki exposed as a RuntimeClass..",
             },
             {
                 id: uid(),
@@ -892,7 +892,7 @@ export function sampleDataTH(): CVData {
                 name: "infra: K3s Platform บน Proxmox",
                 link: "github.com/traipoap/infra",
                 description:
-                    "สร้าง K3s platform แบบอัตโนมัติ: Terraform (VM templates, state บน HCP Terraform), Ansible (6 playbooks, kernel tuning), K3s HA (embedded etcd), Istio ambient, Gateway API และ ArgoCD สำหรับ GitOps\nติดตั้งจากศูนย์ได้ภายใน 1 ชั่วโมง: super-node (HAProxy L7, syslog, NFS, S3), control plane 3 โหนด (etcd quorum), worker 3 โหนด สร้างซ้ำ/รื้อด้วย terraform destroy\nรองรับ container runtime หลายตัว, ใช้ crun เป็นค่าเริ่มต้น และ youki เป็น RuntimeClass\nซ้อม chaos drill รายเดือน (เช่น ถอดโหนด) พร้อมจดบันทึกว่าอะไรพัง ซ่อมอย่างไร\nจัดทำ ADR 14 ข้อ คู่มือติดตั้ง และ runbook",
+                    "สร้าง K3s platform แบบอัตโนมัติ: Terraform (VM templates, state บน HCP Terraform), Ansible (6 playbooks, kernel tuning), K3s HA (embedded etcd), Istio ambient, Gateway API และ ArgoCD สำหรับ GitOps\nติดตั้งจากศูนย์ได้ภายใน 1 ชั่วโมง: super-node (HAProxy L7, syslog, NFS, S3), control plane 3 โหนด (etcd quorum), worker 3 โหนด สร้างซ้ำ/รื้อด้วย terraform destroy\nรองรับ container runtime หลายตัว, ใช้ crun เป็นค่าเริ่มต้น และ youki เป็น RuntimeClass.",
             },
             {
                 id: uid(),

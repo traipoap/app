@@ -218,79 +218,99 @@ func (e *ElasticsearchEngine) normalizeHits(raw []esHit, index string) []map[str
 	return hits
 }
 
+// firstKey returns the first non-nil value among the given keys.
+func firstKey(src map[string]interface{}, keys ...string) interface{} {
+	for _, k := range keys {
+		if v, ok := src[k]; ok && v != nil {
+			return v
+		}
+	}
+	return nil
+}
+
+// strValue renders a JSON value as a string ("" for nil).
+func strValue(v interface{}) string {
+	switch t := v.(type) {
+	case string:
+		return t
+	case float64:
+		return strconv.FormatFloat(t, 'f', -1, 64)
+	}
+	if v == nil {
+		return ""
+	}
+	b, _ := json.Marshal(v)
+	return string(b)
+}
+
+// epochToMS coerces a timestamp value (RFC3339 string, or epoch in
+// s/µs/ms/ns) to Unix milliseconds; 0 when unparseable.
+func epochToMS(raw interface{}) int64 {
+	switch t := raw.(type) {
+	case float64:
+		f := t
+		if f > 1e17 {
+			f /= 1e6 // ns → ms
+		} else if f > 1e14 {
+			f /= 1e3 // µs → ms
+		} else if f < 1e11 {
+			f *= 1e3 // s → ms
+		}
+		return int64(f)
+	case string:
+		if p, err := time.Parse(time.RFC3339Nano, t); err == nil {
+			return p.UnixMilli()
+		}
+	}
+	return 0
+}
+
+// nestedString reads src[parent][key] when parent is a JSON object.
+func nestedString(src map[string]interface{}, parent, key string) string {
+	m, ok := src[parent].(map[string]interface{})
+	if !ok {
+		return ""
+	}
+	return strValue(m[key])
+}
+
+// hitTimestamp resolves the hit's Unix-millis timestamp, falling back to now.
+func hitTimestamp(src map[string]interface{}, timeField string) int64 {
+	if ts := epochToMS(firstKey(src, timeField, "@timestamp", "timestamp", "time_unix_nano", "timeUnixNano", "log.time")); ts != 0 {
+		return ts
+	}
+	return time.Now().UnixMilli()
+}
+
+// hitMessage finds the log message: top-level keys, or OTel body.message.
+func hitMessage(src map[string]interface{}) string {
+	if m := strValue(firstKey(src, "message", "msg", "content", "line", "log")); m != "" {
+		return m
+	}
+	return nestedString(src, "body", "message")
+}
+
+// hitHost and hitSource prefer flat keys, then the nested
+// host.name / client.ip objects.
+func hitHost(src map[string]interface{}) string {
+	host := strValue(firstKey(src, "host.name", "hostname", "host", "pod.name", "container.name"))
+	return firstString(host, nestedString(src, "host", "name"))
+}
+
+func hitSource(src map[string]interface{}) string {
+	source := strValue(firstKey(src, "source_ip", "source", "client.ip", "ip"))
+	return firstString(source, nestedString(src, "client", "ip"))
+}
+
 // normalizeESSrc maps an ES _source document onto the canonical hit shape.
 func normalizeESSrc(src map[string]interface{}, timeField, index string) map[string]interface{} {
-	get := func(keys ...string) interface{} {
-		for _, k := range keys {
-			if v, ok := src[k]; ok && v != nil {
-				return v
-			}
-		}
-		return nil
-	}
-	str := func(v interface{}) string {
-		switch t := v.(type) {
-		case string:
-			return t
-		case float64:
-			return strconv.FormatFloat(t, 'f', -1, 64)
-		default:
-			if v != nil {
-				b, _ := json.Marshal(v)
-				return string(b)
-			}
-			return ""
-		}
-	}
-
-	// timestamp: string (RFC3339) or epoch (s/ms/ns) under several names
-	var tsMS int64
-	if raw := get(timeField, "@timestamp", "timestamp", "time_unix_nano", "timeUnixNano", "log.time"); raw != nil {
-		switch t := raw.(type) {
-		case float64:
-			f := t
-			if f > 1e17 {
-				f /= 1e6 // ns → ms
-			} else if f > 1e14 {
-				f /= 1e3 // µs → ms
-			} else if f < 1e11 {
-				f *= 1e3 // s → ms
-			}
-			tsMS = int64(f)
-		case string:
-			if p, err := time.Parse(time.RFC3339Nano, t); err == nil {
-				tsMS = p.UnixMilli()
-			}
-		}
-	}
-	if tsMS == 0 {
-		tsMS = time.Now().UnixMilli()
-	}
-
-	// message: plain string, OTel {message}, or `body`
-	message := str(get("message", "msg", "content", "line", "log"))
-	if message == "" {
-		if body, ok := src["body"].(map[string]interface{}); ok {
-			message = str(body["message"])
-		}
-	}
-
-	host := str(get("host.name", "hostname", "host", "pod.name", "container.name"))
-	if h, ok := src["host"].(map[string]interface{}); ok {
-		host = firstString(host, str(h["name"]))
-	}
-	source := str(get("source_ip", "source", "client.ip", "ip"))
-	if s, ok := src["client"].(map[string]interface{}); ok {
-		source = firstString(source, str(s["ip"]))
-	}
-
 	return normHit(
-		tsMS,
-		str(get("level", "severity", "severityText", "log.level")),
-		message,
-		source,
-		host,
-		str(get("service.name", "service_name", "service", "app")),
+		hitTimestamp(src, timeField),
+		strValue(firstKey(src, "level", "severity", "severityText", "log.level")),
+		hitMessage(src),
+		hitSource(src),
+		hitHost(src),
+		strValue(firstKey(src, "service.name", "service_name", "service", "app")),
 		index,
 	)
 }
