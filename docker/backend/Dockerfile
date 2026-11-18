@@ -1,6 +1,9 @@
 # syntax=docker/dockerfile:1.7
 
-FROM golang:1.27.3-alpine3.24 AS backend-builder
+# Lambda (and the ECR tooling that consumes this image) only runs
+# linux/amd64 — pin the platform so the image is amd64 no matter which
+# machine builds it (e.g. an Apple Silicon Mac).
+FROM --platform=linux/amd64 golang:1.27.4-alpine3.24 AS backend-builder
 
 WORKDIR /src
 
@@ -24,7 +27,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 
 # =====================================================
 
-FROM alpine:3.24.4
+FROM --platform=linux/amd64 alpine:3.24.4
 
 RUN apk add --no-cache ca-certificates sqlite-libs tzdata \
  && addgroup -g 10001 app \

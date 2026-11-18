@@ -1,7 +1,9 @@
 # syntax=docker/dockerfile:1.7
 
 # ---- builder ----
-FROM node:26.10.0-alpine3.24 AS builder
+# Pin linux/amd64 so the image matches the cluster/ECR target no matter
+# which machine builds it (e.g. an Apple Silicon Mac).
+FROM --platform=linux/amd64 node:26.10.0-alpine3.24 AS builder
 
 WORKDIR /app
 
@@ -12,7 +14,7 @@ COPY frontend/ .
 RUN npm run build
 
 # ---- runtime (nginx serve static) -----
-FROM nginx:1.30.6-alpine3.24
+FROM --platform=linux/amd64 nginx:1.30.6-alpine3.24
 
 # Pull latest security fixes for the base image's packages from the
 # current Alpine 3.24 repos (fixes e.g. pcre2 10.49-r0, libexpat 2.8.5-r0
