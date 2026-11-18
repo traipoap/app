@@ -810,7 +810,7 @@ export function sampleDataEN(): CVData {
                 end: "",
                 current: true,
                 description:
-                    "Owned Tier-2 incident escalation, with root-cause analysis and vendor/team coordination to keep SLAs.\nManage the Zabbix stack end-to-end, including patching against published CVEs; proactive N-S monitoring (Zabbix → Telegram) catches issues E-W alerts miss, reducing MTTR.\nAutomated switch PSU status checks, replacing daily manual inspections.\nBuilt a scheduled hardware lifecycle automation (Google Apps Script): parses CSV license/EOL records, flags expirations, alerts via Telegram.\nExecuted change management (VLAN, load balancer) with configuration backups as a safe baseline.\nResolved IPv6 policy conflicts by disabling unintended auto-configuration and restoring firewall compliance.\nDiagnosed load-balancing failures (root cause: exposing the backend port in the container image) and restored the customer's service.\nTrained Tier-1 staff and prepared monthly operational reports.",
+                    "Owned Tier-2 incident escalation, with root-cause analysis, vendor/team coordination to keep SLAs.\nManage the Zabbix stack, including patching against published CVEs, proactive north-south monitoring (Zabbix → Telegram) catches issues east-west alerts miss, reducing MTTR.\nAutomated PSU (power supply) checks for network switches with Ansible, replacing daily manual checks.\nBuilt a scheduled hardware lifecycle automation (Google Apps Script): parses CSV license/EOL records, flags expirations, alerts via Telegram.\nExecuted system changes (load balancing, routing, VLAN) with configuration backups.\nResolved IPv6 policy conflicts by disabling auto-configuration (the IPv6 default) and restoring firewall compliance.\nWorked with the customer on integrating their systems with the cloud Load Balancer.\nTrained Tier-1 staff and prepared monthly operational reports.",
             },
         ],
         projects: [
@@ -871,7 +871,7 @@ export function sampleDataTH(): CVData {
         location: "นนทบุรี, ประเทศไทย",
         ...presetShared(),
         summary:
-            "Network Administrator (Tier-2) กำลังขยายความเชี่ยวชาญสู่ DevOps Engineer ผ่านการรับรอง CKA และ CKAD (Linux Foundation) สร้างระบบใช้งานจริงด้วยตนเอง ทั้งแพลตฟอร์มค้นหา log บน K3s HA (homelab) และระบบ Disaster Recovery ข้าม region บน AWS งานประจำใช้หลัก DevOps ในระบบจริง: เฝ้าระวังเชิงรุก แก้ที่ต้นตอ และ automate งานที่ซ้ำซาก",
+            "Network Administrator (Tier-2) กำลังขยายความเชี่ยวชาญสู่ DevOps Engineer ผ่านการรับรอง CKA และ CKAD (Linux Foundation) สร้างระบบใช้งานจริงด้วยตนเอง ทั้งแพลตฟอร์มค้นหา log บน Kubernetes HA (homelab) และระบบ Disaster Recovery ข้าม region บน AWS งานประจำใช้หลัก DevOps ในระบบจริง: เฝ้าระวังเชิงรุก แก้ที่ต้นตอ และ automate งานที่ซ้ำซาก",
         experience: [
             {
                 id: uid(),
@@ -883,7 +883,7 @@ export function sampleDataTH(): CVData {
                 end: "",
                 current: true,
                 description:
-                    "ดูแลเหตุขัดข้องระดับ Tier-2 วิเคราะห์สาเหตุที่แท้จริง และประสานทีมภายใน/หน่วยงานภายนอกให้ปิดงานได้ตาม SLA\nดูแลระบบ Zabbix และเฝ้าระวังเชิงรุก, จับปัญหาแฝงฝั่ง North-South ที่ระบบการแจ้งเตือนฝั่ง East-West มองไม่เห็น แจ้งเตือนผ่าน Telegram ช่วยลด MTTR และติดตั้ง patch ตามช่องโหว่ (CVE) ที่ประกาศออกมา\nเขียนสคริปต์ตรวจสอบ PSU status switch อัตโนมัติ แทนการตรวจด้วยมือทุกวัน\nพัฒนาระบบติดตาม Hardware License และ EOL ด้วย Google Apps Script, ประมวลผล CSV ตามเวลาที่กำหนด ตรวจ License ใกล้หมดอายุและอุปกรณ์ใกล้สิ้นสุดการสนับสนุน แจ้งเตือนผ่าน Telegram\nดำเนินการเปลี่ยนแปลงระบบ (change) เช่น VLAN, Load-Balancing พร้อมสำรองค่าการตั้งค่าให้เป็นปัจจุบัน\nแก้ไขความขัดแย้งนโยบาย IPv6 โดยปิด auto-configuration ที่ไม่พึงประสงค์ ทำให้ firewall เป็นไปตามข้อกำหนดความปลอดภัย\nชี้ต้นตอปัญหาการกระจายโหลดให้ลูกค้าเห็น (การ expose port backend ใน container image) จนระบบลูกค้าใช้งานได้\nถ่ายทอดความรู้ให้ทีม Tier-1 และจัดทำรายงานประจำเดือน",
+                    "ดูแลเหตุขัดข้องระดับ Tier-2 วิเคราะห์สาเหตุที่แท้จริง และประสานทีมภายใน/หน่วยงานภายนอกให้ปิดงานได้ตาม SLA\nดูแลระบบ Zabbix และเฝ้าระวังเชิงรุก, จับปัญหาแฝงฝั่ง North-South ที่ระบบการแจ้งเตือนฝั่ง East-West มองไม่เห็น แจ้งเตือนผ่าน Telegram ช่วยลด MTTR และติดตั้ง patch ตามช่องโหว่ (CVE) ที่ประกาศออกมา\nใช้ Ansible ตรวจสอบ Power supply ของอุปกรณ์ Network switch อัตโนมัติ แทนการ manual\nพัฒนาระบบติดตาม Hardware License และ EOL ด้วย Google Apps Script โดยประมวลผล CSV ตาม schedule ตรวจ License ใกล้หมดอายุและอุปกรณ์ใกล้สิ้นสุดการ Support โดยแจ้งเตือนผ่าน Telegram\nดำเนินการเปลี่ยนแปลงระบบ (change) เช่น Load-Balancing, Routing, VLAN พร้อม Backup configure\nแก้ไข Policy conflict IPv6 โดยปิด auto-configuration ที่เป็นค่าเริ่มของของ IPv6 ทำให้ firewall เป็นไปตามข้อกำหนดความปลอดภัย\nเข้าประชุมกับลูกค้าหารือการ Integrate ระบบของลูกค้ากับระบบ Load-Balance ในระบบ Cloud\nถ่ายทอดความรู้ให้ทีม Tier-1 และจัดทำรายงานประจำเดือน",
             },
         ],
         projects: [
