@@ -76,25 +76,30 @@ export const uid = (): string => {
 };
 
 // ── DOM helpers (all user content is escaped via text nodes) ──
-export function el<K extends keyof HTMLElementTagNameMap>(
-    tag: K,
-    attrs?: Record<string, string | boolean | number | null> | null,
-    ...children: Array<Node | string | null | undefined>
-): HTMLElementTagNameMap[K] {
-    const node = document.createElement(tag);
-    if (attrs) {
-        for (const [key, value] of Object.entries(attrs)) {
-            if (
-                value === null ||
-                value === false ||
-                value === undefined
-            )
-                continue;
-            if (key === "class") node.className = String(value);
-            else if (value === true) node.setAttribute(key, "");
-            else node.setAttribute(key, String(value));
+// applyAttrs writes an attribute map: "class" → className, `true` → empty
+// attribute, null/false/undefined → skipped.
+function applyAttrs(
+    node: Element,
+    attrs: Record<string, string | boolean | number | null>,
+): void {
+    for (const [key, value] of Object.entries(attrs)) {
+        if (value === null || value === false || value === undefined) continue;
+        if (key === "class") {
+            node.className = String(value);
+        } else if (value === true) {
+            node.setAttribute(key, "");
+        } else {
+            node.setAttribute(key, String(value));
         }
     }
+}
+
+// appendChildren appends children, coercing strings into text nodes and
+// skipping nullish entries.
+function appendChildren(
+    node: ParentNode,
+    children: Array<Node | string | null | undefined>,
+): void {
     for (const child of children) {
         if (child === null || child === undefined) continue;
         node.append(
@@ -103,6 +108,16 @@ export function el<K extends keyof HTMLElementTagNameMap>(
                 : document.createTextNode(String(child)),
         );
     }
+}
+
+export function el<K extends keyof HTMLElementTagNameMap>(
+    tag: K,
+    attrs?: Record<string, string | boolean | number | null> | null,
+    ...children: Array<Node | string | null | undefined>
+): HTMLElementTagNameMap[K] {
+    const node = document.createElement(tag);
+    if (attrs) applyAttrs(node, attrs);
+    appendChildren(node, children);
     return node;
 }
 
@@ -142,6 +157,27 @@ function unitCost(m: Measured, pending: number): number {
     return Math.max(pending, m.t) - pending + m.h + m.b;
 }
 
+// needsBreakBefore decides whether a page break is required before placing
+// `m`: an explicit "start on new page" always wins; otherwise break when
+// the heading + first-item pair won't fit the remainder but does fit a
+// fresh page.
+function needsBreakBefore(
+    m: Measured,
+    pair: Measured | null,
+    curLen: number,
+    used: number,
+    lastB: number,
+    cap: number,
+    forceBreak: (title: string) => boolean,
+): boolean {
+    if (m.heading && curLen > 0 && forceBreak(m.section)) return true;
+    const pairCost = unitCost(m, lastB) + (pair ? unitCost(pair, m.b) : 0);
+    // Only force a page break if the pair actually fits a fresh page.
+    const pairFitsPage =
+        !pair || m.t + m.h + Math.max(m.b, pair.t) + pair.h + pair.b <= cap + 0.5;
+    return curLen > 0 && pairCost > cap - used && pairFitsPage;
+}
+
 // Greedy A4 pagination with the same keep-together rules as print:
 // headings stay with their first item, entries/pairs are not split.
 // `used` always includes the last box's trailing margin (collapsed
@@ -171,15 +207,19 @@ function paginate(
     };
     for (let i = 0; i < ms.length; i++) {
         const m = ms[i];
-        // An explicit "start on new page" wins over packing heuristics.
-        if (m.heading && cur.length > 0 && forceBreak(m.section)) flush();
         const pair = m.heading && i + 1 < ms.length ? ms[i + 1] : null;
-        const pairCost = unitCost(m, lastB) + (pair ? unitCost(pair, m.b) : 0);
-        // Only force a page break if the pair actually fits a fresh page.
-        const pairFitsPage =
-            !pair ||
-            m.t + m.h + Math.max(m.b, pair.t) + pair.h + pair.b <= cap + 0.5;
-        if (cur.length && pairCost > cap - used && pairFitsPage) flush();
+        if (
+            needsBreakBefore(
+                m,
+                pair,
+                cur.length,
+                used,
+                lastB,
+                cap,
+                forceBreak,
+            )
+        )
+            flush();
         add(m);
         if (pair) {
             add(pair);
