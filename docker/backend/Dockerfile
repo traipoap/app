@@ -39,7 +39,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 # =====================================================
 # Adapter base is Amazon Linux 2023 (dnf, not apk).
 # Pin the adapter tag after verifying it works.
-FROM public.ecr.aws/awslabs/aws-lambda-adapter:latest
+FROM public.ecr.aws/awsguru/aws-lambda-adapter:1.1.0
 
 RUN dnf install -y --setopt=install_weak_deps=False \
         sqlite-libs ca-certificates tzdata \
