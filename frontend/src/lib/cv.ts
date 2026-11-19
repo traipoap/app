@@ -437,41 +437,42 @@ function buildExperience(data: CVData): Sec | null {
     return { col: "main", title: "Experience", kind: "entry", nodes: list };
 }
 
+function projectMain(p: ProjectItem): Node {
+    const nodes: Node[] = [];
+    if (p.name) nodes.push(el("strong", { class: "cv-entry-role" }, p.name));
+    if (p.link)
+        nodes.push(
+            el("span", { class: "cv-entry-company" }, (p.name ? " · " : "") + p.link),
+        );
+    return el("span", { class: "cv-entry-main" }, ...nodes);
+}
+
+function projectDesc(p: ProjectItem): Node | null {
+    if (!p.description.trim()) return null;
+    const pLines = bullets(p.description);
+    if (pLines.length > 1) {
+        const ul = el("ul", { class: "cv-bullets" });
+        for (const l of pLines) ul.append(el("li", null, l));
+        return ul;
+    }
+    return el("p", { class: "cv-entry-desc" }, p.description.trim());
+}
+
+function buildProjectItem(p: ProjectItem): Node {
+    const item = el("div", { class: "cv-entry" });
+    item.append(projectMain(p));
+    const desc = projectDesc(p);
+    if (desc) item.append(desc);
+    return item;
+}
+
 function buildProjects(data: CVData): Sec | null {
     const items = data.projects.filter(
         (p) => p.name || p.link || p.description,
     );
     if (!items.length) return null;
     const list: Node[] = [];
-    for (const p of items) {
-        const item = el("div", { class: "cv-entry" });
-        item.append(
-            el(
-                "span",
-                { class: "cv-entry-main" },
-                p.name && el("strong", { class: "cv-entry-role" }, p.name),
-                p.link &&
-                    el(
-                        "span",
-                        { class: "cv-entry-company" },
-                        (p.name ? " · " : "") + p.link,
-                    ),
-            ),
-        );
-        if (p.description.trim()) {
-            const pLines = bullets(p.description);
-            if (pLines.length > 1) {
-                const ul = el("ul", { class: "cv-bullets" });
-                for (const l of pLines) ul.append(el("li", null, l));
-                item.append(ul);
-            } else {
-                item.append(
-                    el("p", { class: "cv-entry-desc" }, p.description.trim()),
-                );
-            }
-        }
-        list.push(item);
-    }
+    for (const p of items) list.push(buildProjectItem(p));
     return { col: "main", title: "Projects", kind: "entry", nodes: list };
 }
 
