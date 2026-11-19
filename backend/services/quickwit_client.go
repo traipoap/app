@@ -12,6 +12,13 @@ import (
 	"time"
 )
 
+const (
+	apiPrefix       = "/api/v1/"
+	searchSuffix    = "/search"
+	contentTypeKey  = "Content-Type"
+	contentTypeJSON = "application/json"
+)
+
 type QuickwitClient struct {
 	baseURL    string
 	httpClient *http.Client
@@ -79,14 +86,14 @@ func (c *QuickwitClient) Search(ctx context.Context, query string, max_hits *int
 	req, err := http.NewRequestWithContext(
 		ctx,
 		http.MethodPost,
-		c.baseURL+"/api/v1/"+*index_id+"/search",
+		c.baseURL+apiPrefix+*index_id+searchSuffix,
 		bytes.NewReader(body),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("create request: %w", err)
 	}
 
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set(contentTypeKey, contentTypeJSON)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -138,13 +145,13 @@ func (c *QuickwitClient) SearchRaw(ctx context.Context, query string, maxHits *i
 	req, err := http.NewRequestWithContext(
 		ctx,
 		http.MethodPost,
-		c.baseURL+"/api/v1/"+*indexID+"/search",
+		c.baseURL+apiPrefix+*indexID+searchSuffix,
 		bytes.NewReader(body),
 	)
 	if err != nil {
 		return nil, 0, fmt.Errorf("create request: %w", err)
 	}
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set(contentTypeKey, contentTypeJSON)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -204,13 +211,13 @@ func (c *QuickwitClient) SearchPage(ctx context.Context, query string, maxHits i
 	req, err := http.NewRequestWithContext(
 		ctx,
 		http.MethodPost,
-		c.baseURL+"/api/v1/"+*indexID+"/search",
+		c.baseURL+apiPrefix+*indexID+searchSuffix,
 		bytes.NewReader(body),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("create request: %w", err)
 	}
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set(contentTypeKey, contentTypeJSON)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
