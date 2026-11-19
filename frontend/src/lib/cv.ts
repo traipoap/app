@@ -606,7 +606,7 @@ function attachMeasured(box: Element, ss: Sec[], units: Unit[]): void {
 
 function unitTopMargin(u: Unit, node: HTMLElement): number {
     const target = u.heading ? node.parentElement ?? node : node;
-    return parseFloat(getComputedStyle(target).marginTop) || 0;
+    return Number.parseFloat(getComputedStyle(target).marginTop) || 0;
 }
 
 function toMeasured(units: Unit[]): Measured[] {
@@ -617,7 +617,7 @@ function toMeasured(units: Unit[]): Measured[] {
             ...u,
             h: node.offsetHeight,
             t: unitTopMargin(u, node),
-            b: parseFloat(cs.marginBottom) || 0,
+            b: Number.parseFloat(cs.marginBottom) || 0,
         };
     });
 }
@@ -655,8 +655,8 @@ function paginateColumn(
     const headMs = headNode
         ? {
               h: headNode.offsetHeight,
-              t: parseFloat(getComputedStyle(headNode).marginTop) || 0,
-              b: parseFloat(getComputedStyle(headNode).marginBottom) || 0,
+              t: Number.parseFloat(getComputedStyle(headNode).marginTop) || 0,
+              b: Number.parseFloat(getComputedStyle(headNode).marginBottom) || 0,
           }
         : null;
     measureBox.remove();

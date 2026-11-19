@@ -13,7 +13,7 @@
     --border-strong: rgba(148, 163, 184, 0.3);
     --text: #e7ecf5;
     --muted: #9aa7bd;
-    --faint: #64748b;
+    --faint: #7d8ea6; /* ≥4.5:1 on --bg and --panel (was #64748b ≈ 4.1:1) */
     --accent: #818cf8;
     --accent-strong: #6366f1;
     --accent-2: #22d3ee;
