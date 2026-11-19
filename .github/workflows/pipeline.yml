@@ -91,12 +91,9 @@ jobs:
       - name: Analyze with SonarQube
         uses: SonarSource/sonarqube-scan-action@v8
         env:
-          # Server/auth from repo Variable/Secret; project key in the committed sonar-project.properties
           SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_SCANNER_ARGS: '-Dproject.settings=./sonar-project.properties'
-          # Fail on new security issues — makes the gate meaningful
-          SONAR_QUALITY_GATE: true
 
       - name: SonarQube Quality Gate Check
         id: sonarqube-quality-gate
