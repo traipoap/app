@@ -15,7 +15,9 @@
     --muted: #9aa7bd;
     --faint: #7d8ea6; /* ≥4.5:1 on --bg and --panel (was #64748b ≈ 4.1:1) */
     --accent: #818cf8;
-    --accent-strong: #3d49dd; /* ≥4.5:1 with white text (was #6366f1 ≈ 4.5:1) */
+    /* text/border/focus role on dark bg — must stay light (5.6:1 on --bg).
+       White-text button backgrounds use #3d49dd directly in component CSS. */
+    --accent-strong: #767cf8; /* was #3d49dd (3.9:1 as color on --bg) */
     --accent-2: #22d3ee;
     --success: #34d399;
     --warning: #fbbf24;
@@ -80,7 +82,8 @@ body {
 }
 
 ::selection {
-    background: rgba(99, 102, 241, 0.35);
+    /* dark indigo rgb so white text passes ≥4.5:1 even with alpha ignored */
+    background: rgba(61, 73, 221, 0.35);
     color: #fff;
 }
 

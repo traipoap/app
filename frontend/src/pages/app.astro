@@ -1388,7 +1388,7 @@ import Layout from "../layouts/Layout.astro";
         --muted: #9aa7bd;
         --faint: #7d8ea6;
         --accent: #818cf8;
-        --accent-strong: #3d49dd;
+        --accent-strong: #767cf8;
         --accent-2: #22d3ee;
         --success: #34d399;
         --warning: #fbbf24;
@@ -1583,7 +1583,8 @@ import Layout from "../layouts/Layout.astro";
     }
 
     .btn-primary {
-        background: var(--accent-strong);
+        /* white text needs ≥4.5:1 — #3d49dd gives 5.3:1 */
+        background: #3d49dd;
         color: #fff;
         box-shadow:
             0 1px 0 rgba(255, 255, 255, 0.12) inset,
@@ -1591,7 +1592,8 @@ import Layout from "../layouts/Layout.astro";
     }
 
     .btn-primary:hover {
-        background: #7478f3;
+        /* white text — #4a52e0 gives 5.9:1 (was #7478f3 ≈ 3.7:1) */
+        background: #4a52e0;
         transform: translateY(-1px);
         box-shadow:
             0 1px 0 rgba(255, 255, 255, 0.14) inset,

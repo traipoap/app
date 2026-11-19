@@ -259,10 +259,10 @@
 }
 
 .page-btn.active {
-  /* white text needs ≥4.5:1 — was var(--accent-blue) #818cf8 (3.0:1) */
-  background: var(--accent-strong);
+  /* white text needs ≥4.5:1 — #3d49dd gives 5.3:1 */
+  background: #3d49dd;
   color: white;
-  border-color: var(--accent-strong);
+  border-color: #3d49dd;
 }
 
 .page-btn:disabled {

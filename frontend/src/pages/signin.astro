@@ -589,7 +589,7 @@ interface Props {
             --muted: #9aa7bd;
             --faint: #7d8ea6;
             --accent: #818cf8;
-            --accent-strong: #3d49dd;
+            --accent-strong: #767cf8;
             --accent-2: #22d3ee;
             --success: #34d399;
             --danger: #f87171;
@@ -932,8 +932,9 @@ interface Props {
         }
 
         .checkbox-wrapper input[type="checkbox"]:checked ~ .checkmark {
-            background: var(--accent-strong);
-            border-color: var(--accent-strong);
+            /* white check glyph — #3d49dd gives 5.3:1 */
+            background: #3d49dd;
+            border-color: #3d49dd;
         }
 
         .checkbox-wrapper input[type="checkbox"]:checked ~ .checkmark::after {
@@ -968,7 +969,8 @@ interface Props {
             padding: 0.8125rem 1.5rem;
             border: none;
             border-radius: 10px;
-            background: var(--accent-strong);
+            /* white text needs ≥4.5:1 — #3d49dd gives 5.3:1 */
+            background: #3d49dd;
             color: #fff;
             font-size: 0.9375rem;
             font-weight: 600;
