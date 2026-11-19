@@ -55,4 +55,3 @@ ansible/logs/
 backend/lumina-local
 backend/lumina-local.log
 backend/test/
-docker/lambda/
