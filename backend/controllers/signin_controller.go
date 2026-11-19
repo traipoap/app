@@ -37,6 +37,38 @@ func findUser(db *gorm.DB, username string) (*models.User, error) {
 	return &user, nil
 }
 
+// errAuthFail marks bad-credential cases (401) so handlers can tell them
+// apart from database failures (500).
+var errAuthFail = errors.New("invalid credentials")
+
+// authenticateUser loads the account and checks its password.
+func authenticateUser(db *gorm.DB, username, password string) (*models.User, error) {
+	user, err := findUser(db, username)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errAuthFail
+		}
+		return nil, err
+	}
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
+		return nil, errAuthFail
+	}
+	return user, nil
+}
+
+// upgradeHash rehashes the password at the target bcrypt cost when the
+// stored hash uses a different one (best-effort, fire-and-forget). This
+// lets accounts registered with cost-14 hashes migrate to cost-10 without
+// a password reset.
+func upgradeHash(db *gorm.DB, user *models.User, password string) {
+	if bcryptCost(user.PasswordHash) == targetBCryptCost {
+		return
+	}
+	if newHash, err := bcrypt.GenerateFromPassword([]byte(password), targetBCryptCost); err == nil {
+		db.Model(user).Update("password_hash", string(newHash)) // best-effort
+	}
+}
+
 // issueTokens mints the access + refresh token pair for a user.
 func issueTokens(jwtService *services.JWTService, user *models.User) (string, string, error) {
 	userID := fmt.Sprintf("%d", user.ID)
@@ -60,8 +92,8 @@ func HandleSignIn(db *gorm.DB, jwtService *services.JWTService) gin.HandlerFunc 
 			return
 		}
 
-		user, err := findUser(db, username)
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+		user, err := authenticateUser(db, username, password)
+		if errors.Is(err, errAuthFail) {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
 			return
 		}
@@ -70,20 +102,8 @@ func HandleSignIn(db *gorm.DB, jwtService *services.JWTService) gin.HandlerFunc 
 			return
 		}
 
-		if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
-			return
-		}
-
-		// Lazy rehash: if the stored hash uses a different bcrypt cost than
-		// our target, upgrade it in the background (fire-and-forget). This
-		// lets users who registered with cost-14 hashes transparently
-		// migrate to cost-10 without needing to reset their password.
-		if cost := bcryptCost(user.PasswordHash); cost != targetBCryptCost {
-			if newHash, err := bcrypt.GenerateFromPassword([]byte(password), targetBCryptCost); err == nil {
-				db.Model(user).Update("password_hash", string(newHash)) // best-effort
-			}
-		}
+		// Lazy rehash: migrate older hashes to the target bcrypt cost.
+		upgradeHash(db, user, password)
 
 		accessToken, refreshToken, err := issueTokens(jwtService, user)
 		if err != nil {
@@ -116,6 +136,71 @@ type refreshRequest struct {
 	RefreshToken string `json:"refresh_token" binding:"required"`
 }
 
+// errTokenInvalid marks 401 refresh-token cases (bad signature, already
+// used, unknown user) so the handler can distinguish them from db errors.
+var errTokenInvalid = errors.New("invalid refresh token")
+
+// isRevoked reports whether a refresh token JTI has already been used.
+func isRevoked(db *gorm.DB, jti string) (bool, error) {
+	var count int64
+	if err := db.Model(&models.RevokedToken{}).Where("jti = ?", jti).Count(&count).Error; err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
+// findUserByID loads the account for a numeric user id taken from a claim.
+func findUserByID(db *gorm.DB, userID string) (*models.User, error) {
+	idUint, err := strconv.ParseUint(userID, 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	var user models.User
+	if err := db.First(&user, idUint).Error; err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
+// refreshSubject validates a refresh token — signature/expiry, single-use
+// check, user lookup — and returns the JTI + expiry needed for the
+// revocation record.
+func refreshSubject(db *gorm.DB, jwtService *services.JWTService, token string) (string, time.Time, *models.User, error) {
+	claims, err := jwtService.ParseRefreshToken(token)
+	if err != nil {
+		return "", time.Time{}, nil, errTokenInvalid
+	}
+
+	used, err := isRevoked(db, claims.ID)
+	if err != nil {
+		return "", time.Time{}, nil, err
+	}
+	if used {
+		return "", time.Time{}, nil, errTokenInvalid
+	}
+
+	user, err := findUserByID(db, claims.Subject)
+	if err != nil {
+		return "", time.Time{}, nil, errTokenInvalid
+	}
+
+	expiry := time.Now()
+	if claims.ExpiresAt != nil {
+		expiry = claims.ExpiresAt.Time
+	}
+	return claims.ID, expiry, user, nil
+}
+
+// recordRevocation marks the refresh token as used, then prunes revocation
+// rows whose tokens have already expired (best-effort).
+func recordRevocation(db *gorm.DB, jti string, expiry time.Time) error {
+	if err := db.Create(&models.RevokedToken{JTI: jti, ExpiresAt: expiry}).Error; err != nil {
+		return err
+	}
+	db.Where("expires_at < ?", time.Now()).Delete(&models.RevokedToken{}) // best-effort
+	return nil
+}
+
 // HandleRefresh validates a refresh token and issues new access + refresh tokens.
 //
 // Refresh tokens are single-use: the presented token is recorded as revoked
@@ -130,61 +215,35 @@ func HandleRefresh(db *gorm.DB, jwtService *services.JWTService) gin.HandlerFunc
 			return
 		}
 
-		// 1. Validate the refresh token (signing method, signature, expiry)
-		claims, err := jwtService.ParseRefreshToken(req.RefreshToken)
-		if err != nil {
+		// 1–3. Validate the token (signature/expiry), reject already-used
+		// copies, and load the user.
+		jti, expiry, user, err := refreshSubject(db, jwtService, req.RefreshToken)
+		if errors.Is(err, errTokenInvalid) {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired refresh token"})
 			return
 		}
-		userID := claims.Subject
-
-		// 2. Reject tokens already revoked (rotated away or logged out)
-		var revoked int64
-		if err := db.Model(&models.RevokedToken{}).Where("jti = ?", claims.ID).Count(&revoked).Error; err != nil {
+		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 			return
 		}
-		if revoked > 0 {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Refresh token already used"})
-			return
-		}
 
-		// 3. Look up user by ID
-		var user models.User
-		idUint, _ := strconv.ParseUint(userID, 10, 64)
-		if err := db.First(&user, idUint).Error; err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
-			return
-		}
-
-		// 4. Revoke the presented token (single-use rotation), then prune
-		//    revocation rows whose tokens have already expired.
-		expiry := time.Now()
-		if claims.ExpiresAt != nil {
-			expiry = claims.ExpiresAt.Time
-		}
-		if err := db.Create(&models.RevokedToken{JTI: claims.ID, ExpiresAt: expiry}).Error; err != nil {
+		// 4. Revoke the presented token (single-use rotation) + prune
+		//    expired revocation rows.
+		if err := recordRevocation(db, jti, expiry); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to record token revocation"})
 			return
 		}
-		db.Where("expires_at < ?", time.Now()).Delete(&models.RevokedToken{}) // best-effort
 
-		// 5. Issue the replacement tokens
-		accessToken, err := jwtService.GenerateToken(userID, user.Username, user.Role)
+		// 5. Issue the replacement token pair.
+		accessToken, refreshToken, err := issueTokens(jwtService, user)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate access token"})
-			return
-		}
-
-		newRefreshToken, err := jwtService.GenerateRefreshToken(userID)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate refresh token"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate tokens"})
 			return
 		}
 
 		c.JSON(http.StatusOK, gin.H{
 			"token":         accessToken,
-			"refresh_token": newRefreshToken,
+			"refresh_token": refreshToken,
 		})
 	}
 }

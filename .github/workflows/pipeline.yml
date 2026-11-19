@@ -98,6 +98,14 @@ jobs:
           # Fail on new security issues — makes the gate meaningful
           SONAR_QUALITY_GATE: true
 
+      - name: SonarQube Quality Gate Check
+        id: sonarqube-quality-gate
+        uses: SonarSource/sonarqube-quality-gate-action@v1.2.1
+        timeout-minutes: 5
+        env:
+          SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
   build-backend:
     name: Backend — build, Trivy scan, push
     # Skipped if the security gate (gitleaks/sonarqube) failed.
