@@ -521,7 +521,8 @@ select {
 }
 
 .search-btn:hover:not(:disabled) {
-    background: #7478f3;
+    /* white text needs ≥4.5:1 — was #7478f3 (3.7:1) */
+    background: #4a52e0;
 }
 
 .search-btn:disabled {
@@ -1122,7 +1123,8 @@ select {
 }
 
 .page-btn:disabled {
-    color: rgba(100, 116, 139, 0.45);
+    /* ≥4.5:1 over --bg — was rgba(100,116,139,.45) ≈ 2.2:1 */
+    color: rgba(100, 116, 139, 0.62);
     cursor: not-allowed;
 }
 
@@ -1323,7 +1325,8 @@ select {
 }
 
 .btn-primary:hover {
-    background: #7478f3;
+    /* white text needs ≥4.5:1 — was #7478f3 (3.7:1) */
+    background: #4a52e0;
 }
 
 .btn-secondary {

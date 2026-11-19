@@ -90,7 +90,7 @@
 
 .log-level-badge.critical {
   background: var(--critical-bg);
-  color: #dc2626;
+  color: #ef4444; /* ≥4.5:1 on --critical-bg (was #dc2626 ≈ 3.1:1) */
 }
 
 /* Stats Bar */
@@ -259,9 +259,10 @@
 }
 
 .page-btn.active {
-  background: var(--accent-blue);
+  /* white text needs ≥4.5:1 — was var(--accent-blue) #818cf8 (3.0:1) */
+  background: var(--accent-strong);
   color: white;
-  border-color: var(--accent-blue);
+  border-color: var(--accent-strong);
 }
 
 .page-btn:disabled {

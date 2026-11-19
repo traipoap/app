@@ -135,11 +135,8 @@ body {
 .logo-icon {
     width: 64px;
     height: 64px;
-    background: linear-gradient(
-        135deg,
-        var(--accent-blue),
-        var(--accent-purple)
-    );
+    /* white glyph needs ≥4.5:1 — light accents gave ≈ 2.7–3.0:1 */
+    background: linear-gradient(135deg, var(--accent-strong), #7c3aed);
     border-radius: 16px;
     display: inline-flex;
     align-items: center;
@@ -307,8 +304,9 @@ body {
 }
 
 .checkbox-wrapper input[type="checkbox"]:checked ~ .checkmark {
-    background: var(--accent-blue);
-    border-color: var(--accent-blue);
+    /* white check glyph needs ≥3:1 — was var(--accent-blue) (3.0:1) */
+    background: var(--accent-strong);
+    border-color: var(--accent-strong);
 }
 
 .checkmark::after {
@@ -349,11 +347,8 @@ body {
 
 /* Submit Button */
 .btn-signup {
-    background: linear-gradient(
-        135deg,
-        var(--accent-blue),
-        var(--accent-blue-hover)
-    );
+    /* white text needs ≥4.5:1 — was accent-blue→accent-blue-hover (≈2.7:1) */
+    background: linear-gradient(135deg, var(--accent-strong), #4a52e0);
     color: white;
     border: none;
     padding: 14px;
