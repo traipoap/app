@@ -1,19 +1,3 @@
-# syntax=docker/dockerfile:1.7
-#
-# Lambda-compatible image for the DR failover site (function: gin-api).
-#
-# AWS Lambda only runs images that implement the Lambda Runtime API.
-# The Lambda Web Adapter (awslabs/aws-lambda-adapter) provides it:
-# its ENTRYPOINT speaks the API, and it proxies every invocation to
-# this app's HTTP server (Gin on :8080) — the app itself is unchanged.
-#
-# Build:   docker build -t backend:lambda -f docker/lambda/Dockerfile .
-# Push:    docker push 881050426069.dkr.ecr.ap-southeast-1.amazonaws.com/backend:lambda
-# Deploy:  Lambda console → gin-api → Image → Deploy new image
-#
-# The plain docker/backend/Dockerfile stays for the K3s deployment
-# (ArgoCD) — do not merge the two.
-
 FROM golang:1.27.4-alpine3.24 AS backend-builder
 
 WORKDIR /src
@@ -37,27 +21,32 @@ RUN --mount=type=cache,target=/go/pkg/mod \
       -o /out/app .
 
 # =====================================================
-# Adapter base is Amazon Linux 2023 (dnf, not apk).
-# Pin the adapter tag after verifying it works.
-FROM public.ecr.aws/awsguru/aws-lambda-adapter:1.1.0
 
-RUN dnf install -y --setopt=install_weak_deps=False \
-        sqlite-libs ca-certificates tzdata \
-    && dnf clean all
+FROM alpine:3.24.4
 
-WORKDIR /var/task
+RUN apk add --no-cache ca-certificates sqlite-libs tzdata \
+ && addgroup -g 10001 app \
+ && adduser -u 10001 -G app -s /sbin/nologin -D app \
+ && mkdir -p /backend/data /backend/exports \
+ && chown -R app:app /backend
 
-COPY --from=backend-builder /out/app /var/task/app
+WORKDIR /backend
+
+COPY --from=backend-builder --chown=app:app /out/app /backend/app
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:1.1.0 /lambda-adapter /opt/extensions/lambda-adapter
+
+USER app
+
+EXPOSE 8080
 
 ENV GIN_MODE=release \
     BACKEND_PORT=8080 \
-    AWS_LAMBDA_ADAPTER_HTTP_PORT=8080 \
-    DATABASE_PATH=/tmp/users.db \
+    DATABASE_PATH=/backend/data/users.db \
     JWT_SECRET="" \
+    BASE_PATH="./" \
     CORS_ORIGINS="*"
 
-# State on Lambda is ephemeral: /tmp is the 10 GiB per-invocation
-# mount, so the SQLite DB and exports/ do NOT survive cold starts.
-# This DR site is a degraded mode — see README (Deployment).
+# COPY cors-config.json /etc/app/cors-config.json
+# ENV CORS_CONFIG_FILE=/etc/app/cors-config.json
 
-CMD ["/var/task/app"]
+CMD ["/backend/app"]
