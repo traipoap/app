@@ -200,7 +200,15 @@ func exportRows(ctx context.Context, params models.SearchParams, pageSize int, w
 	}
 	// Windowed export: chunk + bounded offset paging (fully covered, no
 	// dups, no skips — see exportWindow).
-	return exportWindow(ctx, params, fieldsForIndex(deref(params.IndexID)), params.IndexID, from, to, pageSize, sink)
+	job := windowJob{
+		params:   params,
+		indexID:  params.IndexID,
+		fromMs:   from,
+		toMs:     to,
+		pageSize: pageSize,
+		sink:     sink,
+	}
+	return exportWindow(ctx, job)
 }
 
 // finalizeExport flushes the writer, drops the file if it is empty, and
@@ -293,25 +301,36 @@ func writeOffsetPages(ctx context.Context, query string, indexID *string, pageSi
 	return rows, nil
 }
 
-// exportWindow fully exports [fromMs, toMs]: it counts the window and, when
+// windowJob bundles everything exportWindow needs, so the recursion
+// passes one value instead of a long argument list.
+type windowJob struct {
+	params   models.SearchParams
+	indexID  *string
+	fromMs   int64
+	toMs     int64
+	pageSize int
+	sink     func(map[string]json.RawMessage) error
+}
+
+// exportWindow fully exports [job.fromMs, job.toMs]: it counts the window and, when
 // the row count exceeds Quickwit's deep-paging ceiling, splits the window
 // in half and recurses on both halves. The slices are disjoint and together
 // cover the range exactly, so no row is lost or duplicated — unlike timestamp
 // cursors, which are unreliable here because these indexes store event times
 // at ms resolution (a bound-1 cursor re-includes the boundary row).
-func exportWindow(ctx context.Context, params models.SearchParams, f indexFields, indexID *string, fromMs, toMs int64, pageSize int, sink func(map[string]json.RawMessage) error) (int, error) {
+func exportWindow(ctx context.Context, job windowJob) (int, error) {
 	if err := ctx.Err(); err != nil {
 		return 0, err
 	}
 
-	fromStr := strconv.FormatInt(fromMs, 10)
-	toStr := strconv.FormatInt(toMs, 10)
-	win := params
+	fromStr := strconv.FormatInt(job.fromMs, 10)
+	toStr := strconv.FormatInt(job.toMs, 10)
+	win := job.params
 	win.FromTimestamp = &fromStr
 	win.ToTimestamp = &toStr
 	query := buildLuceneQuery(win)
 
-	probe, err := quickwitClient.SearchPage(ctx, query, 1, indexID, 0, true)
+	probe, err := quickwitClient.SearchPage(ctx, query, 1, job.indexID, 0, true)
 	if err != nil {
 		return 0, fmt.Errorf("search Quickwit: %w", err)
 	}
@@ -319,21 +338,25 @@ func exportWindow(ctx context.Context, params models.SearchParams, f indexFields
 		return 0, nil
 	}
 
-	maxRows := pageSize + quickwitOffsetCap
-	if probe.NumHits > uint64(maxRows) && toMs-fromMs > minExportWindowMs {
-		mid := (fromMs + toMs) / 2
-		n1, err := exportWindow(ctx, params, f, indexID, fromMs, mid, pageSize, sink)
+	maxRows := job.pageSize + quickwitOffsetCap
+	if probe.NumHits > uint64(maxRows) && job.toMs-job.fromMs > minExportWindowMs {
+		mid := (job.fromMs + job.toMs) / 2
+		left := job
+		left.toMs = mid
+		n1, err := exportWindow(ctx, left)
 		if err != nil {
 			return n1, err
 		}
-		n2, err := exportWindow(ctx, params, f, indexID, mid+1, toMs, pageSize, sink)
+		right := job
+		right.fromMs = mid + 1
+		n2, err := exportWindow(ctx, right)
 		return n1 + n2, err
 	}
 
 	if probe.NumHits > uint64(maxRows) {
 		fmt.Printf("export: %d rows in the smallest window (> %d); exporting the first %d\n", probe.NumHits, maxRows, maxRows)
 	}
-	return writeOffsetPages(ctx, query, indexID, pageSize, sink)
+	return writeOffsetPages(ctx, query, job.indexID, job.pageSize, job.sink)
 }
 
 // csvCell renders a raw JSON value as a CSV cell without boxing it into
