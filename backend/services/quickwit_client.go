@@ -70,11 +70,11 @@ func sortFieldForIndex(indexID string) string {
 	}
 }
 
-func (c *QuickwitClient) Search(ctx context.Context, query string, max_hits *int, index_id *string) (*models.SearchResponse, error) {
-	sortBy := "+" + sortFieldForIndex(derefString(index_id))
+func (c *QuickwitClient) Search(ctx context.Context, query string, maxHits *int, indexId *string) (*models.SearchResponse, error) {
+	sortBy := "+" + sortFieldForIndex(derefString(indexId))
 	payload := models.QuickwitSearchRequest{
 		Query:   query,
-		MaxHits: *max_hits,
+		MaxHits: *maxHits,
 		SortBy:  sortBy, // "+" = newest first
 	}
 
@@ -86,7 +86,7 @@ func (c *QuickwitClient) Search(ctx context.Context, query string, max_hits *int
 	req, err := http.NewRequestWithContext(
 		ctx,
 		http.MethodPost,
-		c.baseURL+apiPrefix+*index_id+searchSuffix,
+		c.baseURL+apiPrefix+*indexId+searchSuffix,
 		bytes.NewReader(body),
 	)
 	if err != nil {
