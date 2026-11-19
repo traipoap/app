@@ -61,10 +61,19 @@ export interface CVData {
 export const SHEET_W = (210 / 25.4) * 96; // A4 width @96dpi ≈ 793.7
 export const PAGE_CAP = (269 / 25.4) * 96 - 4; // A4 content height (297 − 28mm) − 4px slack
 
-export const uid = () =>
-    typeof crypto !== "undefined" && "randomUUID" in crypto
-        ? crypto.randomUUID()
-        : "id-" + Math.random().toString(36).slice(2, 10);
+// uid mints ids for CV list items (DOM keying only, never security-sensitive).
+// WebCrypto throughout — Math.random() is deliberately not used.
+export const uid = (): string => {
+    if (typeof crypto === "undefined") {
+        throw new Error("WebCrypto is unavailable");
+    }
+    if (typeof crypto.randomUUID === "function") {
+        return crypto.randomUUID();
+    }
+    const buf = new Uint32Array(4);
+    crypto.getRandomValues(buf);
+    return "id-" + Array.from(buf, (n) => n.toString(16).padStart(8, "0")).join("");
+};
 
 // ── DOM helpers (all user content is escaped via text nodes) ──
 export function el<K extends keyof HTMLElementTagNameMap>(
