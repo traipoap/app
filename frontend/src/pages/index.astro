@@ -743,8 +743,8 @@ function shotSrc(name: string): string | null {
                                 nodes
                             </li>
                             <li>
-                                <b>syslog relay</b> fan-out เข้า pipeline Vector
-                                → Quickwit
+                                <b>syslog relay</b> fan-out เข้า pipeline Otel →
+                                Loki
                             </li>
                             <li>
                                 <b>NFS + Garage S3</b> เป็น shared storage
@@ -792,8 +792,8 @@ function shotSrc(name: string): string | null {
                                 ที่ app.traipoap.com
                             </li>
                             <li>
-                                <b>Prometheus + Grafana + Kiali</b> เฝ้า metric
-                                และ Otel → Loki เก็บ log
+                                <b>Prometheus + Grafana</b> เฝ้า metric และ Otel
+                                → Loki เก็บ log
                             </li>
                             <li>
                                 <b>ArgoCD</b> reconcile จาก Git ต่อเนื่อง — drift
@@ -1274,7 +1274,7 @@ function shotSrc(name: string): string | null {
                         <span>สถานะแอปในคลัสเตอร์ตอนนี้</span>
                     </h2>
                     <p class="sub">
-                        แอปทั้งหมดในคลัสเตอร์ — แถว kiali เป็นตัวอย่าง drift
+                        แอปทั้งหมดในคลัสเตอร์ — แถว grafana เป็นตัวอย่าง drift
                         พร้อมเดโมการ sync
                     </p>
                 </div>
@@ -1322,21 +1322,8 @@ function shotSrc(name: string): string | null {
                                 </td>
                                 <td></td>
                             </tr>
-                            <tr>
-                                <td>grafana</td>
-                                <td>
-                                    <span class="badge sync">SYNCED</span>
-                                </td>
-                                <td>
-                                    <span class="badge health">HEALTHY</span>
-                                </td>
-                                <td class="mono" style="font-size:12px">
-                                    3 วันที่แล้ว
-                                </td>
-                                <td></td>
-                            </tr>
                             <tr id="rowCert">
-                                <td>kiali</td>
+                                <td>grafana</td>
                                 <td>
                                     <span class="badge drift" id="certBadge">
                                         OUTOFSYNC
@@ -1361,19 +1348,6 @@ function shotSrc(name: string): string | null {
                                         SYNC
                                     </button>
                                 </td>
-                            </tr>
-                            <tr>
-                                <td>sonarqube</td>
-                                <td>
-                                    <span class="badge sync">SYNCED</span>
-                                </td>
-                                <td>
-                                    <span class="badge health">HEALTHY</span>
-                                </td>
-                                <td class="mono" style="font-size:12px">
-                                    9 วันที่แล้ว
-                                </td>
-                                <td></td>
                             </tr>
                         </tbody>
                     </table>
@@ -1656,13 +1630,11 @@ function shotSrc(name: string): string | null {
                     <div>
                         <div class="num">05</div>
                         <h3>เฝ้าให้เหมือนมีเวรยาม</h3>
-                        <div class="tool">
-                            PROMETHEUS + GRAFANA + KIALI + QUICKWIT
-                        </div>
+                        <div class="tool">PROMETHEUS + GRAFANA</div>
                         <p>
                             metric ระดับโหนดยัน service mesh, pipeline log
-                            มาตรฐานเดียว Vector → Quickwit —
-                            แจ้งเตือนเฉพาะตอนที่ต้องตื่นจริง ไม่ใช่ทุกเรื่องจนคนชาชิน
+                            มาตรฐานเดียว Otel → Loki — แจ้งเตือนเฉพาะตอนที่ต้องตื่นจริง
+                            ไม่ใช่ทุกเรื่องจนคนชาชิน
                         </p>
                         <div class="quote">
                             "Alert ที่ดี คือ alert ที่ปลุกเฉพาะตอนที่ต้องตื่น"
@@ -1844,9 +1816,9 @@ function shotSrc(name: string): string | null {
                         <span class="ev-tag">04 · OBSERVABILITY</span>
                         <h3>เห็นระบบจากข้างใน — metrics · traces · logs</h3>
                         <p>
-                            Prometheus + Grafana + Kiali ติดตามสถานะระบบ ·
-                            OpenTelemetry ส่ง trace และ log ไปยัง Loki · Quickwit
-                            ค้นหา log ทั้งหมด — ลองเองได้ที่หน้า Query ของเว็บนี้
+                            Prometheus + Grafana ติดตามสถานะระบบ · OpenTelemetry
+                            ส่ง trace และ log ไปยัง Loki · Grafana ค้นหา log ทั้งหมด
+                            — ลองเองได้ที่หน้า Query ของเว็บนี้
                         </p>
                         <a
                             class="ev-link"
@@ -4527,7 +4499,7 @@ function shotSrc(name: string): string | null {
                         $("#certBadge").textContent = "SYNCED";
                         $("#certSync").textContent = "เมื่อสักครู่";
                         this.textContent = "✓ แล้ว";
-                        toast("✓ kiali synced — image ใหม่เข้าคลัสเตอร์เรียบร้อย");
+                        toast("✓ grafana synced — image ใหม่เข้าคลัสเตอร์เรียบร้อย");
                     });
 
                 /* sparkline charts */
