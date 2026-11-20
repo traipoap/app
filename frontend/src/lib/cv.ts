@@ -65,7 +65,7 @@ export const PAGE_CAP = (269 / 25.4) * 96 - 4; // A4 content height (297 − 28m
 // WebCrypto throughout — Math.random() is deliberately not used.
 export const uid = (): string => {
     if (typeof crypto === "undefined") {
-        throw new Error("WebCrypto is unavailable");
+        throw new TypeError("WebCrypto is unavailable");
     }
     if (typeof crypto.randomUUID === "function") {
         return crypto.randomUUID();
@@ -249,8 +249,8 @@ function rescueOrphan(
     forceBreak: (title: string) => boolean,
 ): Measured[][] {
     if (pages.length < 2) return pages;
-    const last = pages[pages.length - 1];
-    const prev = pages[pages.length - 2];
+    const last = pages.at(-1);
+    const prev = pages.at(-2);
     if (!last || !prev) return pages;
     // Respect an explicit "start on new page" on that section.
     const first = last[0];
@@ -813,7 +813,7 @@ export function presetShared(): Pick<
             "Prometheus / Grafana / Zabbix",
             "SLO / error budget / chaos engineering / blameless postmortem",
             "Trivy / Gitleaks / SonarQube",
-            "HAProxy / Keepalived",
+            "HAProxy / Keepalived / WAF",
             "NFS / Garage (S3)",
             "Cloudflare Tunnel / Tailscale",
             "Go / Python / Bash",
