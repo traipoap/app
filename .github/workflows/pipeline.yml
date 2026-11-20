@@ -1,8 +1,6 @@
-# SPDX-License-Identifier: Apache-2.0
-
 # Pipeline: security gate (Gitleaks + SonarQube) → per-service build
 # (only changed paths) via the reusable build-and-push.yml
-# (build → Trivy gate → push GHCR, ECR [backend] / S3 [frontend]).
+# (build → Trivy gate → push GHCR, ECR [backend + frontend] / S3 [frontend]).
 #
 # Config (Settings → Secrets and variables → Actions):
 #   Variable : SONAR_HOST_URL
