@@ -848,7 +848,7 @@ export function sampleDataEN(): CVData {
         location: "Nonthaburi, Thailand",
         ...presetShared(),
         summary:
-            "Network Administrator (Tier-2) building toward a DevOps Engineer role. CKA & CKAD certified (Linux Foundation). Designed and operate a production stack in a personal lab: a Go/Astro log platform on a 7-node K3s HA cluster with Istio, Argo CD GitOps, and CI/CD security gates, plus a multi-region failover DR site on AWS. Current role applies the same fundamentals: incident response, monitoring pipelines, automation.",
+            "Infrastructure and DevOps Engineer with nearly 5 years of experience in network and cloud infrastructure operations, holding CKA and CKAD certifications from the Linux Foundation.\nHands-on experience designing and building an end-to-end Kubernetes platform using Terraform, Ansible, K3s HA, Istio, and Argo CD. Built automated CI/CD pipelines with security scanning, GitOps-based deployments, centralized logging, and an AWS disaster recovery solution.\nStrong foundation in infrastructure troubleshooting, network reliability, automation, and production operations, with a focus on building scalable, secure, and resilient platforms.",
         experience: [
             {
                 id: uid(),
@@ -921,7 +921,7 @@ export function sampleDataTH(): CVData {
         location: "นนทบุรี, ประเทศไทย",
         ...presetShared(),
         summary:
-            "Network Administrator (Tier-2) กำลังขยายความเชี่ยวชาญสู่ DevOps Engineer ผ่านการรับรอง CKA และ CKAD (Linux Foundation) สร้างระบบใช้งานจริงด้วยตนเอง ทั้งแพลตฟอร์มค้นหา log บน Kubernetes HA (homelab) และระบบ Disaster Recovery ข้าม region บน AWS งานประจำใช้หลัก DevOps ในระบบจริง: เฝ้าระวังเชิงรุก แก้ที่ต้นตอ และ automate งานที่ซ้ำซาก",
+            "วิศวกรด้าน Infrastructure และ DevOps ที่มีประสบการณ์เกือบ 5 ปีในการดูแลระบบเครือข่ายและ Cloud Infrastructure พร้อมใบรับรอง CKA และ CKAD จาก Linux Foundation\nมีประสบการณ์ลงมือออกแบบและสร้าง Kubernetes Platform ตั้งแต่ต้นจนจบ โดยใช้ Terraform, Ansible, K3s HA, Istio และ Argo CD รวมถึงพัฒนา CI/CD Pipeline ที่มีระบบตรวจสอบช่องโหว่และความปลอดภัย ใช้ GitOps ในการ Deploy ระบบ และจัดการ Log จากส่วนกลาง นอกจากนี้ยังสร้างระบบ Disaster Recovery บน AWS ที่รองรับการสำรองและสลับการให้บริการข้าม Region\nมีพื้นฐานด้านการวิเคราะห์และแก้ไขปัญหา Infrastructure, การดูแลความเสถียรของระบบเครือข่าย และการทำงานอัตโนมัติเพื่อลดงานซ้ำซ้อน โดยมุ่งเน้นการสร้างระบบที่รองรับการขยายตัว มีความปลอดภัย และพร้อมให้บริการอย่างต่อเนื่อง",
         experience: [
             {
                 id: uid(),
@@ -976,7 +976,7 @@ export function sampleDataTH(): CVData {
             },
         ],
         languages: [
-            { id: uid(), name: "ไทย", level: "ภาษาแม่" },
+            { id: uid(), name: "ไทย", level: "Native" },
             {
                 id: uid(),
                 name: "อังกฤษ",
