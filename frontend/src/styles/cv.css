@@ -47,7 +47,7 @@
     margin-top: 0.5rem;
     font-size: 0.8125rem;
     font-weight: 500;
-    color: var(--accent, #6366f1);
+    color: var(--accent, #818cf8); /* fallback must be the light indigo (5.6:1 on dark), not #6366f1 */
     text-decoration: none;
 }
 
@@ -224,7 +224,7 @@
 
 /* ═══════════ A4 sheet (screen) ═══════════ */
 .cv-sheet {
-    --cv-accent: #6366f1;
+    --cv-accent: #4f46e5; /* accent is also TEXT on the white sheet — #4f46e5 = 6.3:1 (was #6366f1 = 4.51:1 borderline) */
     width: 210mm;
     color: #1f2937;
     font-family:
@@ -317,7 +317,7 @@
 
 .cv-contact .sep {
     margin: 0 8px;
-    color: #cbd5e1;
+    color: #64748b; /* ≥4.5:1 on white (was #cbd5e1 ≈ 1.5:1) */
 }
 
 .cv-sheet-head.has-photo {

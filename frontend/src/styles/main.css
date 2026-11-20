@@ -845,8 +845,8 @@ select {
 }
 
 .log-message .highlight {
-    background: rgba(99, 102, 241, 0.28);
-    color: #c7d2fe;
+    background: rgba(79, 70, 229, 0.3); /* indigo-700 base: passes even with alpha ignored (6.3:1 for #fff) */
+    color: #fff; /* was #c7d2fe on #6366f1-based wash — fails under strict checkers */
     border-radius: 3px;
     padding: 0 2px;
 }
