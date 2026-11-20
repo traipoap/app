@@ -30,4 +30,4 @@ USER nginx
 
 EXPOSE 4321
 
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["sh", "-c", "if [ -n \"$AWS_LAMBDA_RUNTIME_API\" ]; then mkdir -p /tmp/nginx/client_temp /tmp/nginx/proxy_temp /tmp/nginx/fastcgi_temp /tmp/nginx/uwsgi_temp /tmp/nginx/scgi_temp && sed \"s|http {|http {\\n    client_body_temp_path /tmp/nginx/client_temp;\\n    proxy_temp_path /tmp/nginx/proxy_temp;\\n    fastcgi_temp_path /tmp/nginx/fastcgi_temp;\\n    uwsgi_temp_path /tmp/nginx/uwsgi_temp;\\n    scgi_temp_path /tmp/nginx/scgi_temp;|\" /etc/nginx/nginx.conf | sed \"s|pid .*/nginx.pid;|pid /tmp/nginx/nginx.pid;|g\" > /tmp/nginx/nginx.conf && exec nginx -c /tmp/nginx/nginx.conf -g \"daemon off;\"; fi; exec nginx -g \"daemon off;\""]
