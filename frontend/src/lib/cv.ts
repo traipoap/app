@@ -834,7 +834,7 @@ export function presetShared(): Pick<
                 year: "2026 – 2028",
             },
         ],
-        accent: "#6366f1",
+        accent: "#4f46e5",
         photo: null,
         template: "classic",
         breaks: {},
