@@ -68,8 +68,8 @@ import "../styles/cv.css";
                     <button
                         type="button"
                         class="swatch is-active"
-                        data-accent="#6366f1"
-                        style="background: #6366f1"
+                        data-accent="#4f46e5"
+                        style="background: #4f46e5"
                         title="Indigo"
                     ></button>
                     <button
@@ -634,7 +634,7 @@ import "../styles/cv.css";
                 skills: [],
                 languages: [blankLanguage()],
                 certifications: [],
-                accent: "#6366f1",
+                accent: "#4f46e5",
                 photo: null,
                 template: "modern",
                 breaks: {},
@@ -1793,8 +1793,7 @@ import "../styles/cv.css";
                     const name = raw.trim();
                     if (!name) {
                         draftStatus.style.color = "var(--danger)";
-                        draftStatus.textContent =
-                            "ต้องตั้งชื่อเวอร์ชันก่อนบันทึก";
+                        draftStatus.textContent = "ต้องตั้งชื่อเวอร์ชันก่อนบันทึก";
                         return;
                     }
                     if (
@@ -1820,8 +1819,7 @@ import "../styles/cv.css";
                         draftStatus.textContent = `บันทึกเป็นเวอร์ชัน "${name}" แล้ว เมื่อ ${t}`;
                     } else {
                         draftStatus.style.color = "var(--danger)";
-                        draftStatus.textContent =
-                            "บันทึกไม่สำเร็จ — ลองอีกครั้ง";
+                        draftStatus.textContent = "บันทึกไม่สำเร็จ — ลองอีกครั้ง";
                     }
                 } else if (action === "load") {
                     const keys = Object.keys(versions);
@@ -1864,8 +1862,7 @@ import "../styles/cv.css";
                     const keys = Object.keys(versions);
                     if (!keys.length) {
                         draftStatus.style.color = "var(--danger)";
-                        draftStatus.textContent =
-                            "ยังไม่มีเวอร์ชันที่บันทึกไว้";
+                        draftStatus.textContent = "ยังไม่มีเวอร์ชันที่บันทึกไว้";
                         return;
                     }
                     const target =
@@ -1936,8 +1933,7 @@ import "../styles/cv.css";
                         draftStatus.textContent = `เผยแพร่แล้ว เมื่อ ${t} — ดูได้ที่ app.traipoap.com/cv`;
                     } else {
                         draftStatus.style.color = "var(--danger)";
-                        draftStatus.textContent =
-                            "เผยแพร่ไม่สำเร็จ — ลองอีกครั้ง";
+                        draftStatus.textContent = "เผยแพร่ไม่สำเร็จ — ลองอีกครั้ง";
                     }
                 } else if (action === "unpublish") {
                     if (
@@ -1966,9 +1962,7 @@ import "../styles/cv.css";
                     const isTH = action === "sample-th";
                     if (
                         isTH
-                            ? confirm(
-                                  "แทนที่ข้อมูลปัจจุบันด้วยโปรไฟล์ (เวอร์ชันภาษาไทย)?",
-                              )
+                            ? confirm("แทนที่ข้อมูลปัจจุบันด้วยโปรไฟล์ (เวอร์ชันภาษาไทย)?")
                             : confirm(
                                   "Replace the current form with the saved profile (Traipoap Hunthong)?",
                               )
