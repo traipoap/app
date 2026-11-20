@@ -451,8 +451,7 @@ select {
     text-transform: none;
     letter-spacing: 0;
     font-weight: 400;
-    color: var(--faint);
-    opacity: 0.8;
+    color: var(--faint); /* 5.5:1 over --panel — was ×0.8 opacity ≈ 3.9:1 */
 }
 
 .raw-actions {
@@ -488,8 +487,7 @@ select {
 }
 
 .raw-input::placeholder {
-    color: var(--faint);
-    opacity: 0.7;
+    color: var(--faint); /* 5.6:1 over --bg-elev — was ×0.7 opacity ≈ 3.3:1 */
 }
 
 .search-btn {
@@ -527,7 +525,8 @@ select {
 }
 
 .search-btn:disabled {
-    opacity: 0.6;
+    /* white text stays ≥4.5:1 when dimmed (≈5.1:1); was 0.6 ≈ 4.0:1 */
+    opacity: 0.75;
     cursor: not-allowed;
 }
 
@@ -842,7 +841,7 @@ select {
     font-size: 0.75rem;
     line-height: 1.6;
     color: var(--muted);
-    word-break: break-word;
+    overflow-wrap: anywhere; /* was word-break: break-word (deprecated) */
 }
 
 .log-message .highlight {
@@ -1124,8 +1123,8 @@ select {
 }
 
 .page-btn:disabled {
-    /* ≥4.5:1 over --bg — was rgba(100,116,139,.45) ≈ 2.2:1 */
-    color: rgba(100, 116, 139, 0.62);
+    /* ≥4.5:1 over --bg/--panel (5.5–5.9:1); was rgba(100,116,139,.62) ≈ 2.3:1 */
+    color: var(--faint);
     cursor: not-allowed;
 }
 
@@ -1188,7 +1187,7 @@ select {
 }
 
 #logModal .detail-value {
-    word-break: break-word;
+    overflow-wrap: anywhere; /* was word-break: break-word (deprecated) */
     white-space: pre-wrap;
     font-size: 0.9375rem;
     line-height: 1.7;
@@ -1375,7 +1374,7 @@ select {
 .detail-value {
     font-size: 0.875rem;
     color: var(--text);
-    word-break: break-word;
+    overflow-wrap: anywhere; /* was word-break: break-word (deprecated) */
 }
 
 .detail-value.full-width {

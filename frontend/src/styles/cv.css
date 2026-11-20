@@ -170,7 +170,9 @@
 }
 
 .cv-btn[disabled] {
-    opacity: 0.45;
+    color: var(--faint); /* 5.5–5.9:1 over dark surfaces; was opacity .45 ≈ 2.1:1 */
+    background: rgba(148, 163, 184, 0.03);
+    border-color: var(--border);
     cursor: not-allowed;
 }
 
@@ -632,7 +634,7 @@
 .entry input:disabled,
 .entry select:disabled,
 .entry textarea:disabled {
-    opacity: 0.45;
+    color: var(--faint); /* 5.6:1 over --bg-elev; was opacity .45 ≈ 2.1:1 */
     cursor: not-allowed;
 }
 
