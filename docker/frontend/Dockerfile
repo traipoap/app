@@ -22,6 +22,7 @@ FROM nginx:1.30.7-alpine3.24
 RUN apk update && apk upgrade --no-cache
 
 COPY --from=builder /app/dist /usr/share/nginx/html
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:1.1.0 /lambda-adapter /opt/extensions/lambda-adapter
 
 # COPY nginx-proxy.conf /etc/nginx/conf.d/default.conf
 
