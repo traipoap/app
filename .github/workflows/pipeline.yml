@@ -127,4 +127,7 @@ jobs:
       dockerfile: ./docker/frontend/Dockerfile
       # Runtime (nginx) image serves /usr/share/nginx/html; /app/dist is builder-only.
       dist_path: /usr/share/nginx/html
+      # Also produce the Lambda variant (read-only-fs configs, writes → /tmp)
+      # as frontend-lambda on GHCR + ECR.
+      build_lambda_image: true
     secrets: inherit
