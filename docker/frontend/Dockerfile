@@ -16,6 +16,11 @@ RUN npm run build
 # ---- runtime (nginx serve static) -----
 FROM nginx:1.30.7-alpine3.24
 
+# Lambda build: docker build --build-arg LAMBDA=true ...
+# On Lambda the filesystem is read-only except /tmp, so the configs in
+# lambda/ redirect everything nginx writes (pid, logs, temp paths) to /tmp.
+ARG LAMBDA=false
+
 # Pull latest security fixes for the base image's packages from the
 # current Alpine 3.24 repos (fixes e.g. pcre2 10.49-r0, libexpat 2.8.5-r0
 # so Trivy's scan gate passes).
@@ -23,6 +28,13 @@ RUN apk update && apk upgrade --no-cache
 
 COPY --from=builder /app/dist /usr/share/nginx/html
 COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:1.1.0 /lambda-adapter /opt/extensions/lambda-adapter
+
+# Lambda-only: swap in the read-only-fs-safe configs (pid/logs/temp → /tmp).
+COPY lambda/ /opt/nginx-lambda/
+RUN if [ "$LAMBDA" = "true" ]; then \
+        cp /opt/nginx-lambda/nginx.conf /etc/nginx/nginx.conf && \
+        cp /opt/nginx-lambda/default.conf /etc/nginx/conf.d/default.conf \
+    fi
 
 USER nginx
 
