@@ -90,7 +90,7 @@ jobs:
       # ---- Lambda variant (only if requested) — same Dockerfile, LAMBDA=true ----
       - name: Build Lambda image (LAMBDA=true)
         if: inputs.build_lambda_image
-        run: docker build -t ghcr.io/traipoap/${{ inputs.service }}-lambda:0.0.${{ github.run_number }} --provenance=false --sbom=false --platform linux/amd64 --build-arg LAMBDA=true -f ${{ inputs.dockerfile }} .
+        run: docker build -t ghcr.io/traipoap/${{ inputs.service }}:0.0.${{ github.run_number }} --provenance=false --sbom=false --platform linux/amd64 --build-arg LAMBDA=true -f ${{ inputs.dockerfile }} .
 
       # Same gate as the main image — a fixable HIGH/CRITICAL blocks the Lambda push too.
       - name: Run Trivy vulnerability scanner (Lambda image)
@@ -98,7 +98,7 @@ jobs:
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: 'image'
-          scan-ref: ghcr.io/traipoap/${{ inputs.service }}-lambda:0.0.${{ github.run_number }}
+          scan-ref: ghcr.io/traipoap/${{ inputs.service }}:0.0.${{ github.run_number }}
           format: 'sarif'
           output: 'trivy-results-lambda.sarif'
           severity: 'HIGH,CRITICAL'
@@ -117,15 +117,15 @@ jobs:
 
       - name: Push Lambda image to GHCR
         if: inputs.build_lambda_image
-        run: docker push ghcr.io/traipoap/${{ inputs.service }}-lambda:0.0.${{ github.run_number }}
+        run: docker push ghcr.io/traipoap/${{ inputs.service }}:0.0.${{ github.run_number }}
 
       - name: Tag Lambda image to AWS ECR
         if: inputs.build_lambda_image
-        run: docker tag ghcr.io/traipoap/${{ inputs.service }}-lambda:0.0.${{ github.run_number }} ${{ vars.AWS_ECR }}/${{ inputs.service }}-lambda:0.0.${{ github.run_number }}
+        run: docker tag ghcr.io/traipoap/${{ inputs.service }}:0.0.${{ github.run_number }} ${{ vars.AWS_ECR }}/${{ inputs.service }}:0.0.${{ github.run_number }}
 
       - name: Push Lambda image to AWS ECR
         if: inputs.build_lambda_image
-        run: docker push ${{ vars.AWS_ECR }}/${{ inputs.service }}-lambda:0.0.${{ github.run_number }}
+        run: docker push ${{ vars.AWS_ECR }}/${{ inputs.service }}:0.0.${{ github.run_number }}
 
       # Frontend only: copy dist out of the pushed image so S3 matches the registry artifact.
       # (S3 always gets the main image's dist — the Lambda variant serves the same files.)
