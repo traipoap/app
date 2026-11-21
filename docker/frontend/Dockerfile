@@ -28,9 +28,11 @@ RUN apk update && apk upgrade --no-cache
 
 COPY --from=builder /app/dist /usr/share/nginx/html
 COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:1.1.0 /lambda-adapter /opt/extensions/lambda-adapter
-
+# NOTE: build context is the repo root (see pipeline: `docker build -f docker/frontend/Dockerfile .`),
+# so COPY sources must be repo-root-relative.
+COPY docker/frontend/default.conf /etc/nginx/conf.d/default.conf
 # Lambda-only: swap in the read-only-fs-safe configs (pid/logs/temp → /tmp).
-COPY lambda/ /opt/nginx-lambda/
+COPY docker/frontend/lambda/ /opt/nginx-lambda/
 RUN if [ "$LAMBDA" = "true" ]; then \
         cp /opt/nginx-lambda/nginx.conf /etc/nginx/nginx.conf && \
         cp /opt/nginx-lambda/default.conf /etc/nginx/conf.d/default.conf \
