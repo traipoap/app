@@ -13,7 +13,7 @@
     --border-strong: rgba(148, 163, 184, 0.3);
     --text: #e7ecf5;
     --muted: #9aa7bd;
-    --faint: #7d8ea6; /* ≥4.5:1 on --bg and --panel (was #64748b ≈ 4.1:1) */
+    --faint: #8a99b0; /* 6.0–6.8:1 over all dark surfaces (was #7d8ea6 5.2–5.9:1; #64748b failed ≈4.1:1) */
     --accent: #818cf8;
     /* text/border/focus role on dark bg — must stay light (5.6:1 on --bg).
        White-text button backgrounds use #3d49dd directly in component CSS. */
