@@ -32,11 +32,9 @@ COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:1.1.0 /lambda-adapter /opt
 # so COPY sources must be repo-root-relative.
 COPY docker/frontend/default.conf /etc/nginx/conf.d/default.conf
 # Lambda-only: swap in the read-only-fs-safe configs (pid/logs/temp → /tmp).
-COPY docker/frontend/lambda/ /opt/nginx-lambda/
-RUN if [ "$LAMBDA" = "true" ]; then \
-        cp /opt/nginx-lambda/nginx.conf /etc/nginx/nginx.conf && \
-        cp /opt/nginx-lambda/default.conf /etc/nginx/conf.d/default.conf \
-    fi
+# Single line on purpose: BuildKit splices backslash continuations into one
+# line, which breaks `if/then/fi` unless every statement ends with `;`.
+RUN if [ "$LAMBDA" = "true" ]; then cp /opt/nginx-lambda/nginx.conf /etc/nginx/nginx.conf && cp /opt/nginx-lambda/default.conf /etc/nginx/conf.d/default.conf; fi
 
 USER nginx
 
