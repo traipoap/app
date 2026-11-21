@@ -726,11 +726,21 @@ function renderEmptySheet(sheet: HTMLElement): void {
 }
 
 /**
+ * Accent → contrast-safe equivalent on the white sheet.
+ * The old default #6366f1 (indigo-600) sits exactly on the WCAG 4.5:1
+ * borderline (4.51:1), which strict auditors flag — remap any saved data
+ * still carrying it to the current default (#4f46e5 = 6.29:1).
+ */
+const LEGACY_ACCENT: Record<string, string> = {
+    "#6366f1": "#4f46e5",
+};
+
+/**
  * Render a full A4-paginated sheet into `sheet`.
  * The caller is responsible for any scaling/fitting afterwards.
  */
 export function renderSheetInto(sheet: HTMLElement, data: CVData): void {
-    sheet.style.setProperty("--cv-accent", data.accent);
+    sheet.style.setProperty("--cv-accent", LEGACY_ACCENT[data.accent] ?? data.accent);
     sheet.classList.toggle("ats", data.template === "ats");
 
     const headNode = buildSheetHead(data);
