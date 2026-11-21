@@ -652,6 +652,15 @@ import "../styles/cv.css";
                 ...obj,
                 summary: typeof obj.summary === "string" ? obj.summary : "",
                 photo: typeof obj.photo === "string" ? obj.photo : null,
+                // Legacy default accent (#6366f1 = indigo-600) sits on the WCAG
+                // borderline on the white sheet (4.51:1) — remap to the current
+                // default so old saved data renders compliant (6.29:1).
+                accent:
+                    obj.accent === "#6366f1"
+                        ? "#4f46e5"
+                        : typeof obj.accent === "string" && obj.accent
+                          ? obj.accent
+                          : "#4f46e5",
                 template:
                     obj.template === "classic" || obj.template === "ats"
                         ? obj.template
