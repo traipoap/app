@@ -31,10 +31,14 @@ COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:1.1.0 /lambda-adapter /opt
 # NOTE: build context is the repo root (see pipeline: `docker build -f docker/frontend/Dockerfile .`),
 # so COPY sources must be repo-root-relative.
 COPY docker/frontend/default.conf /etc/nginx/conf.d/default.conf
-# Lambda-only: swap in the read-only-fs-safe configs (pid/logs/temp → /tmp).
+# Lambda-only: keep the read-only-fs-safe configs around and swap them in
+# when requested. File-level COPY (not directory) on purpose: a missing file
+# then fails loudly at COPY time instead of a silent empty dir + cp error later.
+COPY docker/frontend/lambda/nginx.conf /opt/nginx-lambda/nginx.conf
+COPY docker/frontend/lambda/default.conf /opt/nginx-lambda/default.conf
 # Single line on purpose: BuildKit splices backslash continuations into one
 # line, which breaks `if/then/fi` unless every statement ends with `;`.
-RUN if [ "$LAMBDA" = "true" ]; then cp /opt/nginx-lambda/nginx.conf /etc/nginx/nginx.conf && cp /opt/nginx-lambda/default.conf /etc/nginx/conf.d/default.conf; fi
+RUN if [ "$LAMBDA" = "true" ]; then [ -s /opt/nginx-lambda/nginx.conf ] && [ -s /opt/nginx-lambda/default.conf ] && cp /opt/nginx-lambda/nginx.conf /etc/nginx/nginx.conf && cp /opt/nginx-lambda/default.conf /etc/nginx/conf.d/default.conf; fi
 
 USER nginx
 
