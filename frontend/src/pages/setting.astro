@@ -15,7 +15,7 @@ import Layout from "../layouts/Layout.astro";
                 window.localStorage.getItem("authToken");
             if (!token) {
                 setTimeout(function () {
-                    window.location.href = "/signin";
+                    window.location.href = "/signin/";
                 }, 100);
             }
         })();
@@ -208,7 +208,7 @@ import Layout from "../layouts/Layout.astro";
                 }).catch(() => {});
             }
             clearTokens();
-            window.location.href = "/signin";
+            window.location.href = "/signin/";
         }
 
         // Coalesce concurrent 401s into a single refresh — the refresh token

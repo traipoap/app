@@ -5,7 +5,7 @@ interface Props {
     redirect?: string;
 }
 
-const { redirect = "/dashboard" } = Astro.props;
+const { redirect = "/dashboard/" } = Astro.props;
 ---
 
 <Layout title="Sign Up — LUMINA" bodyClass="auth">
@@ -395,7 +395,7 @@ const { redirect = "/dashboard" } = Astro.props;
         <div class="auth-footer">
             <p>
                 Already have an account?
-                <a href="/signin">Sign in</a>
+                <a href="/signin/">Sign in</a>
             </p>
         </div>
     </main>
@@ -432,7 +432,7 @@ const { redirect = "/dashboard" } = Astro.props;
     <script type="module">
         // Redirect target injected from the frontmatter (module scripts
         // can't see frontmatter scope directly).
-        const redirect = window.__LUMINA_REDIRECT__ || "/dashboard";
+        const redirect = window.__LUMINA_REDIRECT__ || "/dashboard/";
 
         const form = document.getElementById("signupForm");
         const errorEl = document.getElementById("signupError");
@@ -564,7 +564,7 @@ const { redirect = "/dashboard" } = Astro.props;
                     successEl.textContent = `Account created, but sign-in failed (${why}). Please sign in.`;
                     successEl.style.display = "block";
                     setTimeout(() => {
-                        window.location.href = "/signin";
+                        window.location.href = "/signin/";
                     }, 2000);
                     return;
                 }

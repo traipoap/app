@@ -17,7 +17,7 @@ import "../styles/cv.css";
                 window.localStorage.getItem("authToken");
             if (!token) {
                 setTimeout(function () {
-                    window.location.href = "/signin";
+                    window.location.href = "/signin/";
                 }, 100);
                 return;
             }
@@ -41,7 +41,7 @@ import "../styles/cv.css";
             }
             if (role !== "admin") {
                 setTimeout(function () {
-                    window.location.href = "/cv";
+                    window.location.href = "/cv/";
                 }, 100);
             }
         })();
