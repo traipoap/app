@@ -42,9 +42,8 @@ RUN if [ "$LAMBDA" = "true" ]; then [ -s /opt/nginx-lambda/nginx.conf ] && [ -s 
 
 USER nginx
 
-# nginx serves on 80 (k8s containerPort/Service targetPort = 80).
-# EXPOSE is image metadata only — the Lambda adapter still listens on 4321
-# by default (set by the Lambda function's port config, not by this image).
+# nginx serves on 80 — both the k8s Service and the Lambda adapter
+# target port 80 inside the container. EXPOSE is metadata only.
 EXPOSE 80
 
 CMD ["nginx", "-g", "daemon off;"]
