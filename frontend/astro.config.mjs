@@ -41,7 +41,7 @@ const ALLOWED_HOSTS = (process.env.ALLOWED_HOSTS || '*')
 export default defineConfig({
   // Routes are always generated with a trailing slash: /app/, /signin/, /cv/, ...
   // The dev server redirects slash-less URLs (/signin -> /signin/) automatically.
-  trailingSlash: 'always',
+  //trailingSlash: 'always',
   // /api/* is forwarded to the Go backend (dev/preview only — in production
   // the frontend is static and the Go backend serves the API directly,
   // with CORS_ORIGINS covering the frontend origin).
