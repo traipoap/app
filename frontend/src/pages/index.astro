@@ -57,6 +57,7 @@ function shotSrc(name: string): string | null {
                 <a href="#gitops">GitOps</a>
                 <a href="#obs">Observability</a>
                 <a href="#process">กระบวนการ</a>
+                <a href="#learn">เรียนรู้</a>
                 <a href="/methodology/">Mindset</a>
                 <a href="#resume">เรซูเม่</a>
                 <a href="#contact">ติดต่อ</a>
@@ -1170,8 +1171,9 @@ function shotSrc(name: string): string | null {
                         <span>สถานะแอปในคลัสเตอร์ตอนนี้</span>
                     </h2>
                     <p class="sub">
-                        แอปทั้งหมดในคลัสเตอร์ — แถว grafana เป็นตัวอย่าง drift
-                        พร้อมเดโมการ sync
+                        แอปทั้งหมดในคลัสเตอร์ — รวมถึง Google microservices-demo (10
+                        services) · แถว grafana เป็น ตัวอย่าง drift พร้อมเดโมการ
+                        sync
                     </p>
                 </div>
             </div>
@@ -1217,6 +1219,28 @@ function shotSrc(name: string): string | null {
                                     14 นาทีที่แล้ว
                                 </td>
                                 <td></td>
+                            </tr>
+                            <tr>
+                                <td>microservices-demo</td>
+                                <td>
+                                    <span class="badge sync">SYNCED</span>
+                                </td>
+                                <td>
+                                    <span class="badge health">HEALTHY</span>
+                                </td>
+                                <td class="mono" style="font-size:12px">
+                                    32 แค็ท่าไปเลด
+                                </td>
+                                <td>
+                                    <a
+                                        class="mini"
+                                        href="https://microservices-demo.traipoap.com/"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                    >
+                                        DEMO
+                                    </a>
+                                </td>
                             </tr>
                             <tr id="rowCert">
                                 <td>grafana</td>
@@ -1386,7 +1410,7 @@ function shotSrc(name: string): string | null {
 
             <div class="chaos rv">
                 <h3>
-                    Chaos Drill — ซ้อม Failover DR ข้ามภูมิภาคบน AWS{" "}
+                    Chaos Drill — ซ้อม Failover DR site AWS{" "}
                     <span class="mono">GAME-DAY</span>
                 </h3>
                 <p>
@@ -1425,7 +1449,7 @@ function shotSrc(name: string): string | null {
                         downtime รวม <b>6 วินาที</b>
                     </span>
                     <span class="cr">
-                        ภูมิภาคที่กระจาย <b>3</b>
+                        การกระจายภูมิภาค <b>2</b>
                     </span>
                     <span class="cr">
                         ข้อมูลหาย <b>0 ไบต์</b>
@@ -1543,9 +1567,9 @@ function shotSrc(name: string): string | null {
                         <h3>ทุบเพื่อเรียนรู้</h3>
                         <div class="tool">CHAOS DRILL + ADR</div>
                         <p>
-                            ทุกเดือนปิดอะไรสักอย่างในระบบโดยตั้งใจ — ซ้อม failover
-                            ข้ามภูมิภาคบน AWS, ถอดโหนด — แล้วจดทุกอย่างที่เรียนรู้
-                            ระบบทนขึ้นเรื่อย ๆ และค่อย ๆ ใจเย็นขึ้น (นิดหน่อย)
+                            ทุกเดือนปิดอะไรสักอย่างในระบบโดยตั้งใจ — ซ้อม failover AWS,
+                            ถอดโหนด — แล้วจดทุกอย่างที่เรียนรู้ ระบบทนขึ้นเรื่อย ๆ และค่อย ๆ
+                            ใจเย็นขึ้น (นิดหน่อย)
                         </p>
                         <div class="quote">
                             "ระบบที่ไม่เคยถูกทดสอบ จะถูกทดสอบในเวลาที่แย่ที่สุด"
@@ -1564,7 +1588,7 @@ function shotSrc(name: string): string | null {
                 <div>
                     <span class="sec-tag">EVIDENCE · CHECK IT YOURSELF</span>
                     <h2 class="lm">
-                        <span>หลักฐาน 5 ด้าน — กดตรวจสอบได้เอง</span>
+                        <span>หลักฐาน 6 ด้าน — กดตรวจสอบได้เอง</span>
                     </h2>
                     <p class="sub">
                         ไม่ใช่แค่ภาพ — แต่ละด้านมี link ไปที่ระบบจริง: repo ทั้ง 3 เป็น
@@ -1604,7 +1628,7 @@ function shotSrc(name: string): string | null {
                             target="_blank"
                             rel="noopener noreferrer"
                         >
-                            <span>ตรวจสอบจริง</span>
+                            <span>ตรวจสอบ</span>
                             <span class="mono">
                                 github.com/traipoap/app/actions
                             </span>
@@ -1645,7 +1669,7 @@ function shotSrc(name: string): string | null {
                             target="_blank"
                             rel="noopener noreferrer"
                         >
-                            <span>ตรวจสอบจริง</span>
+                            <span>ตรวจสอบ</span>
                             <span class="mono">
                                 github.com/traipoap/argocd-bootstrap
                             </span>
@@ -1685,7 +1709,7 @@ function shotSrc(name: string): string | null {
                             target="_blank"
                             rel="noopener noreferrer"
                         >
-                            <span>ตรวจสอบจริง</span>
+                            <span>ตรวจสอบ</span>
                             <span class="mono">github.com/traipoap/infra</span>
                             <span aria-hidden="true">→</span>
                         </a>
@@ -1718,12 +1742,12 @@ function shotSrc(name: string): string | null {
                         </p>
                         <a
                             class="ev-link"
-                            href="https://grafana.traipoap.com/"
+                            href="https://grafana.traipoap.com"
                             target="_blank"
                             rel="noopener noreferrer"
                         >
                             <span>ทดลองใช้งาน</span>
-                            <span class="mono">grafana.traipoap.com/</span>
+                            <span class="mono">grafana.traipoap.com</span>
                             <span aria-hidden="true">→</span>
                         </a>
                     </div>
@@ -1762,7 +1786,7 @@ function shotSrc(name: string): string | null {
                             target="_blank"
                             rel="noopener noreferrer"
                         >
-                            <span>ตรวจสอบจริง</span>
+                            <span>ตรวจสอบ</span>
                             <span class="mono">
                                 github.com/traipoap/infra · aws/
                             </span>
@@ -1796,7 +1820,7 @@ function shotSrc(name: string): string | null {
                 <div class="rv">
                     <div class="chips">
                         <span class="chip">
-                            Kubernetes / K3s / etcd / kubectl
+                            Kubernetes / K8s / K3s / etcd / kubectl
                         </span>
                         <span class="chip">Helm / Kustomize / ArgoCD</span>
                         <span class="chip">
@@ -1834,10 +1858,23 @@ function shotSrc(name: string): string | null {
                                 360 Bizmate Co., Ltd. — NT (National Telecom)
                             </div>
                             <p>
-                                4+ ปี Tier-2 ของ telco ระดับประเทศ —
-                                วิเคราะห์เหตุขัดข้องถึงต้นตอภายใต้ SLA ดูแล Zabbix
-                                (เฝ้าระวังเชิงรุก + patch ตาม CVE) และสคริปต์ตรวจ PSU
-                                status switch อัตโนมัติ จน MTTR ลดลง
+                                ประสบการณ์ทำงานของผม 6 ปี ส่วนใหญ่อยู่ในด้าน
+                                Infrastructure Operations โดยรับผิดชอบระบบ
+                                Production เช่น การแก้ไขปัญหาเครือข่าย การจัดการ
+                                Incident และการดูแลความเสถียรของระบบ ในส่วนของ
+                                DevOps ผมได้รับการรับรอง CKA และ CKAD จาก Linux
+                                Foundation และได้ลงมือออกแบบและสร้าง Kubernetes
+                                Platform ใน Lab ส่วนตัว โดยใช้ Terraform, Ansible,
+                                K3s HA และ Argo CD ผมยังได้ทดลอง Deploy
+                                Microservices Application ที่มี 10 Services ผ่าน
+                                Argo CD บน Kubernetes รวมถึงสร้าง CI/CD Pipeline
+                                ที่มี Security Scanning, Centralized Logging และ
+                                Monitoring นอกจากนี้ยังพัฒนาระบบ Disaster Recovery
+                                บน AWS แม้โปรเจกต์ DevOps เหล่านี้จะเป็น Personal Lab
+                                ไม่ใช่ Production ของบริษัท แต่ผมได้ลงมือออกแบบ ติดตั้ง
+                                ทดสอบ และแก้ไขปัญหาด้วยตัวเอง ทำให้มีความเข้าใจตั้งแต่
+                                Infrastructure ไปจนถึง Application Deployment
+                                และการดูแลระบบ
                             </p>
                         </div>
                     </div>
@@ -1868,6 +1905,192 @@ function shotSrc(name: string): string | null {
                             <p>อังกฤษ: สื่อสารเพื่อการทำงาน</p>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================= LEARNING · COURSES & E-BOOKS ================= -->
+    <section id="learn" style="border-block:1px solid var(--line)">
+        <div class="wrap">
+            <div class="sec-head rv">
+                <span class="sec-idx">10</span>
+                <div>
+                    <span class="sec-tag">
+                        SELF-LEARNING · COURSES & E-BOOKS
+                    </span>
+                    <h2 class="lm">
+                        <span>คอร์สที่เรียน · หนังสือที่อ่าน</span>
+                    </h2>
+                    <p class="sub">
+                        เรียนทุกคอร์สเพื่อลงมือทำ — skills จาก lab ถูกนำไปใช้ ตั้งระบบบน
+                        platform และหนังสือใช้เติมหลัก DevOps เพิ่มเติม
+                    </p>
+                </div>
+            </div>
+            <div class="learn-grid">
+                <div class="rv">
+                    <h3 class="learn-h">
+                        COURSES · <b>COMPLETED</b>
+                    </h3>
+                    <ul class="courses">
+                        <li class="course">
+                            <span class="ck">✓</span>
+                            <div>
+                                <b>CKA / CKAD Exam Prep — Hands-on labs</b>
+                                <span class="prov">
+                                    KILLER.SH + LINUX ACADEMY
+                                </span>
+                                <p>
+                                    เตรียมสอบ CKA/CKAD ด้วย lab แบบ hands-on ทุกข้อ
+                                    — สไตล์การทำ lab เดียวกันถูกนำไปใช้ตั้ง cluster
+                                    ใหม่จริงบน Proxmox ทุกครั้ง
+                                </p>
+                            </div>
+                        </li>
+                        <li class="course">
+                            <span class="ck">✓</span>
+                            <div>
+                                <b>
+                                    Prepare for the Certified Kubernetes
+                                    Administrators Certification with live
+                                    practice tests right in your browser - CKA
+                                </b>
+                                <span class="prov">Mumshad Mannambeth</span>
+                                <p>
+                                    How to Administer a Kubernetes Cluster, How
+                                    to Design a Kubernetes Cluster, How to Build
+                                    a Kubernetes Cluster from scratch - "The
+                                    Hard Way", How to Test a Kubernetes Cluster
+                                    end-to-end, How to Troubleshoot a Kubernetes
+                                    Cluster, How to Secure a Kubernetes Cluster,
+                                    How to Configure Storage on a Kubernetes
+                                    Cluster, How to Configure Network on a
+                                    Kubernetes Cluster,
+                                </p>
+                            </div>
+                        </li>
+                        <li class="course">
+                            <span class="ck">✓</span>
+                            <div>
+                                <b>
+                                    Learn concepts and practice for the
+                                    Kubernetes Certification with hands-on labs
+                                    right in your browser - DevOps - CKAD
+                                </b>
+                                <span class="prov">Mumshad Mannambeth</span>
+                                <p>
+                                    Kubernetes Certification, Design and Deploy
+                                    applications on Kubernetes Cluster, Develop
+                                    Cloud First Applications, Secure Kubernetes
+                                    cluster with Secrets and Network Policies,
+                                    Create and Schedule Jobs in Kubernetes,
+                                    Create and Configure Persistent Volumes,
+                                    Configure Readiness and Liveness Probes in a
+                                    cluster, Troubleshoot Applications Deployed
+                                    using Logs, Upgrade and Rollback
+                                    Applications deployed on Kubernetes,
+                                </p>
+                            </div>
+                        </li>
+                        <li class="course">
+                            <span class="ck">✓</span>
+                            <div>
+                                <b>
+                                    AWS Certified DevOps Engineer Professional
+                                    2026 - DOP-C02
+                                </b>
+                                <span class="prov">
+                                    Stephane Maarek | AWS Certified Cloud
+                                    Practitioner,Solutions Architect,Developer
+                                </span>
+                                <p>
+                                    เตรียมสอบ AWS Certified DevOps Engineer —
+                                    เนื้อหาเรื่อง SDLC Automation, Configure
+                                    Management & IaC, Resilient Cloud Solutions,
+                                    Monitoring and Logging, Incident and Event
+                                    Response, Security and Compliance
+                                </p>
+                            </div>
+                        </li>
+                        <li class="course">
+                            <span class="ck">-</span>
+                            <div>
+                                <b>
+                                    Ultimate AWS Certified Solutions Architect
+                                    Associate 2026
+                                </b>
+                                <span class="prov">
+                                    Stephane Maarek | AWS Certified Cloud
+                                    Practitioner,Solutions Architect,Developer
+                                </span>
+                                <p>
+                                    Perform Real-World Solution Architecture on
+                                    AWS Learn the AWS Fundamentals (EC2, ELB,
+                                    ASG, RDS, ElastiCache, S3) Learn the
+                                    Serverless Fundamentals (Lambda, DynamoDB,
+                                    Cognito, API Gateway) Analyze 10+ Solution
+                                    Architectures (traditional & serverless)
+                                    Understand the Well Architected Framework,
+                                    Disaster Recovery Master all the differences
+                                    of Databases on AWS Secure your entire AWS
+                                    Cloud using KMS, IAM Policies & SSM
+                                </p>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+                <div class="rv" style="--d:1">
+                    <h3 class="learn-h">
+                        E-BOOKS and BOOKS · <b>READ FULLY</b>
+                    </h3>
+                    <ul class="books">
+                        <li class="book">
+                            <span class="pg">BOOK</span>
+                            <b>Practical DevOps and Cloud Engineering</b>
+                            <span class="auth">อ.ดร.ณัฐโชติ พรหมฤทธิ์</span>
+                            <p>
+                                หนังสือ Practical DEVOPS and Cloud Engineering
+                                เล่มนี้เป็นคู่มือพัฒนาทักษะทางด้าน Practical DEVOPS and
+                                Cloud Engineering ภาคปฏิบัติ มีจุดประสงค์เพื่อพัฒนาทักษะ 2
+                                ด้าน คือ "Reskill" (การเสริมทักษะใหม่เพื่อรองรับอนาคต)
+                                และ "Upskill"
+                                (การพัฒนาทักษะที่มีอยู่ให้ดีขึ้นตามที่บริษัทต้องการ)
+                                โดยเน้นการพัฒนาซอฟต์แวร์ผ่าน Practice & Workshop
+                                ภายใต้แนวคิดใหม่อย่าง "Microservices Architecture"
+                                (Design-Develop-Deploy)
+                                เพื่อให้ผู้อ่านมีแนวทางที่จะนำความรู้และทักษะที่ได้จากหนังสือเล่มนี้ไปประยุกต์ใช้ได้ในการทำงานจริง
+                                หนังสือเล่มนี้จึงเหมาะสำหรับนักศึกษา โปรแกรมเมอร์
+                                นักพัฒนาซอฟต์แวร์และผู้ที่อยากข้ามสายงานมาทำงานทางด้าน
+                                "DevOps Engineer/Cloud DevOps Engineer"
+                                สายงานที่มีบทบาทสำคัญต่อการพัฒนาผลิตภัณฑ์ที่เป็นซอฟต์แวร์
+                                และเป็นที่ต้องการมากที่สุดอาชีพหนึ่งในปัจจุบัน
+                            </p>
+                        </li>
+                    </ul>
+                    <ul class="books">
+                        <li class="book">
+                            <span class="pg">BOOK</span>
+                            <b>
+                                Fundamental of Software Engineering & Digital
+                                Transformation
+                            </b>
+                            <span class="auth">รศ.ดร. ปานใจ ธารทัศนวงศ์</span>
+                            <p>
+                                หนังสือที่รวบรวมหลักทฤษฎีวิศวกรรมซอฟต์แวร์ (Software
+                                Engineering) และประยุกต์
+                                ซึ่งเป็นเครื่องมือสำคัญในการที่องค์กรจะปรับเปลี่ยนสู่ดิจิทัล
+                                (Digital Transformation)
+                                ซึ่งต้องอาศัยความรู้และความเข้าใจในหลายมิติ
+                                นอกจากนี้ยังได้รวบรวมแนวคิดในการพัฒนาซอฟต์แวร์แบบใหม่ ๆ
+                                และกรณีศึกษา
+                                เพื่อให้ผู้อ่านได้ก้าวทันตามการเปลี่ยนแปลงของเทคโนโลยีด้านวิศวกรรมซอฟต์แวร์
+                                ที่มีบทบาทอย่างมากในการปรับเปลี่ยนสู่ดิจิทัล
+                                หนังสือเล่มนี้จะเป็นประโยชน์ต่อการพัฒนาองค์กรดิจิทัล
+                                หรือได้มีส่วนร่วมที่ทำให้การพัฒนาซอฟต์แวร์ของประเทศให้ประสบผลสำเร็จ
+                            </p>
+                        </li>
+                    </ul>
                 </div>
             </div>
         </div>
@@ -2074,7 +2297,7 @@ function shotSrc(name: string): string | null {
             border-color: var(--line);
         }
         .nav-in {
-            max-width: 1180px;
+            max-width: 1300px;
             margin: 0 auto;
             padding: 0 24px;
             height: 58px;
@@ -3634,6 +3857,132 @@ function shotSrc(name: string): string | null {
             font-size: 0.78rem;
         }
 
+        /* ============ LEARNING · COURSES & E-BOOKS ============ */
+        .learn-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 56px;
+            align-items: start;
+        }
+        .learn-h {
+            font-family: var(--mono);
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--dim);
+            letter-spacing: 0.14em;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+        .learn-h::after {
+            content: "";
+            flex: 1;
+            height: 1px;
+            background: var(--line);
+        }
+        .learn-h b {
+            color: var(--grn);
+        }
+        .courses,
+        .books {
+            list-style: none;
+            display: grid;
+            gap: 12px;
+        }
+        .course {
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            background: var(--panel);
+            padding: 15px 18px;
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 14px;
+            align-items: start;
+            transition:
+                border-color 0.2s,
+                transform 0.2s;
+        }
+        .course:hover {
+            border-color: var(--line2);
+            transform: translateX(4px);
+        }
+        .course .ck {
+            font-family: var(--mono);
+            font-size: 12px;
+            line-height: 1.9;
+            color: var(--grn);
+            border: 1px solid rgba(52, 211, 153, 0.35);
+            background: var(--grn-dk);
+            border-radius: 4px;
+            padding: 1px 7px;
+        }
+        .course b {
+            display: block;
+            font-size: 0.98rem;
+        }
+        .course .prov {
+            font-family: var(--mono);
+            font-size: 10.5px;
+            color: var(--amb);
+            letter-spacing: 0.08em;
+            display: block;
+            margin-top: 2px;
+        }
+        .course p {
+            color: var(--mut);
+            font-size: 0.84rem;
+            margin-top: 6px;
+        }
+        .book {
+            position: relative;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            background: var(--panel);
+            padding: 15px 18px 15px 24px;
+            overflow: hidden;
+            transition:
+                border-color 0.2s,
+                transform 0.2s;
+        }
+        .book::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 5px;
+            background: linear-gradient(180deg, var(--cyn), var(--grn));
+        }
+        .book:nth-child(2n)::before {
+            background: linear-gradient(180deg, var(--amb), var(--red));
+        }
+        .book:hover {
+            border-color: var(--line2);
+            transform: translateX(4px);
+        }
+        .book b {
+            display: block;
+            font-size: 0.98rem;
+        }
+        .book .auth {
+            color: var(--cyn);
+            font-size: 0.82rem;
+        }
+        .book p {
+            color: var(--mut);
+            font-size: 0.84rem;
+            margin-top: 6px;
+        }
+        .book .pg {
+            position: absolute;
+            right: 14px;
+            top: 13px;
+            font-family: var(--mono);
+            font-size: 10px;
+            color: var(--dim);
+        }
+
         /* ============ CONTACT ============ */
         .contact {
             text-align: left;
@@ -3741,7 +4090,8 @@ function shotSrc(name: string): string | null {
             .arch-grid,
             .iac-grid,
             .gitops-grid,
-            .res-grid {
+            .res-grid,
+            .learn-grid {
                 grid-template-columns: 1fr;
             }
             .arch-stick {
