@@ -29,7 +29,7 @@ function shotSrc(name: string): string | null {
 
 <Layout
     title="TRAIPOAP HUNTHONG — DevOps Engineer Portfolio"
-    description="พอร์ตโฟลิโอสาย DevOps — GitOps Kubernetes platform 4 โครงการบน Proxmox + AWS DR สร้างเองจากเหล็กจน Live Production"
+    description="พอร์ตโฟลิโอ DevOps: K3s cluster บน Proxmox, GitOps ด้วย ArgoCD, CI/CD และ AWS DR"
     lang="th"
     bodyClass="pf"
 >
@@ -80,14 +80,13 @@ function shotSrc(name: string): string | null {
                     TRAIPOAP HUNTHONG
                 </h1>
                 <div class="role mono">
-                    Traipoap Hunthong <span class="slash">//</span> DevOps
-                    Engineer
+                    DevOps Engineer <span class="slash">//</span> Kubernetes ·
+                    GitOps
                 </div>
                 <p class="lead">
-                    ทุกส่วนที่นี่สร้างและประกอบเองทั้งหมด — ตั้งแต่เครื่อง Server ที่ประกอบเอง
-                    จนแพลตฟอร์ม Web Application นี้ที่รันอยู่บน Kubernetes platform ที่
-                    provision เองและ
-                    <strong>กำลังให้บริการอยู่ในขณะนี้</strong>
+                    หน้านี้เสิร์ฟจาก K3s cluster ในบ้านที่ผมสร้างเอง ตั้งแต่ Provision VM
+                    และตั้งค่าโหนด จนถึง GitOps ที่ deploy แอปนี้ขึ้น
+                    <strong>production จริง</strong>
                 </p>
                 <div class="hero-cta">
                     <a class="btn prime" href="#arch">
@@ -103,12 +102,11 @@ function shotSrc(name: string): string | null {
                 <div class="hero-stats">
                     <div class="hstat">
                         <b>
-                            <span class="count" data-to="4" data-dec="0">
-                                4
+                            <span class="count" data-to="6" data-dec="0">
+                                6
                             </span>
-                            +,
                         </b>
-                        <span>ปี Cloud/Network Ops</span>
+                        <span>ปี Infrastructure Ops</span>
                     </div>
                     <div class="hstat">
                         <b>
@@ -143,7 +141,7 @@ function shotSrc(name: string): string | null {
                         <i></i>k3s-cp ×3 · etcd quorum
                     </span>
                     <span class="nchip">
-                        <i></i>k3s-worker ×2 · crun/youki
+                        <i></i>k3s-worker ×3 · crun/youki
                     </span>
                 </div>
             </div>
@@ -155,15 +153,14 @@ function shotSrc(name: string): string | null {
                     <em>traipoap@super-node: ~/cluster — ssh</em>
                 </div>
                 <div class="term-body" id="term">
-                    <div class="tl-cmd">kubectl get nodes -o wide</div>
-                    <div class="tl-out">
-                        NAME STATUS ROLES AGE VERSION controlplan-1 Ready
-                        control-plane,etcd 88d v1.37.2+k3s1 controlplan-2 Ready
-                        control-plane,etcd 88d v1.37.2+k3s1 controlplan-3 Ready
-                        control-plane,etcd 88d v1.37.2+k3s1 worker-2 Ready
-                        worker 88d v1.37.2+k3s1 worker-2 Ready worker 88d
-                        v1.37.2+k3s1 worker-2 Ready worker 88d v1.37.2+k3s1
-                    </div>
+                    <div class="tl-cmd">kubectl get nodes</div>
+                    <pre class="tl-out">NAME             STATUS   ROLES                 AGE   VERSION
+controlplane-1   Ready    control-plane,etcd    88d   v1.37.2+k3s1
+controlplane-2   Ready    control-plane,etcd    88d   v1.37.2+k3s1
+controlplane-3   Ready    control-plane,etcd    88d   v1.37.2+k3s1
+worker-1         Ready    worker                88d   v1.37.2+k3s1
+worker-2         Ready    worker                88d   v1.37.2+k3s1
+worker-3         Ready    worker                88d   v1.37.2+k3s1</pre>
                     <div class="tl-cmd">
                         kubectl get pods -A --no-headers | grep -c Running
                     </div>
@@ -174,7 +171,7 @@ function shotSrc(name: string): string | null {
                     <div class="tl-ok">&#123;"status":"ok"&#125;</div>
                     <div class="tl-dim">
                         ────────────────────────────────────────────
-                        แพลตฟอร์มที่คุณกำลังดู คือผลลัพธ์ของคำสั่งด้านบน ✓
+                        หน้านี้เสิร์ฟจากคลัสเตอร์เดียวกัน
                     </div>
                 </div>
             </div>
@@ -213,7 +210,7 @@ function shotSrc(name: string): string | null {
                         <span>สถาปัตยกรรมทั้งหมด ในหนึ่งรูป</span>
                     </h2>
                     <p class="sub">
-                        ทุกชิ้นส่วนในระบบนี้ออกแบบและประกอบเอง — เลื่อนอ่านทีละชั้น
+                        ภาพรวมการไหลของ request จากอินเทอร์เน็ตถึง pod เลื่อนอ่านทีละชั้น
                         ไดอะแกรมด้านซ้ายจะไฮไลต์ตาม
                     </p>
                 </div>
@@ -706,45 +703,44 @@ function shotSrc(name: string): string | null {
                             <span class="mono">LAYER 01</span>
                         </h3>
                         <p>
-                            DNS ของ Cloudflare resolve app.traipoap.com → เข้า
-                            CloudFront ตัวเดียว — behaviors เป็นตัวกำหนด condition:
-                            main → k3s-origin.traipoap.com ผ่าน Cloudflare Tunnel
-                            เข้า lab และ DR → S3 web static + Lambda
+                            Cloudflare resolve app.traipoap.com แล้วส่งเข้า
+                            CloudFront ซึ่งแยกทางตาม behavior: request ปกติไปที่
+                            k3s-origin ผ่าน Cloudflare Tunnel ส่วน DR ไปที่ static
+                            site บน S3 + Lambda
                         </p>
                         <ul>
                             <li>
-                                <b>AWS CloudFront · behaviors</b> — single entry
-                                ของทั้งระบบ behaviors เลือก origin ตาม condition
-                                lab ไม่เปิด public IP ไว้
+                                <b>AWS CloudFront · behaviors</b> — จุดเข้าเดียว
+                                ของทั้งระบบ เลือก origin ตาม condition เครื่อง lab
+                                ไม่ต้องเปิด public IP
                             </li>
                             <li>
                                 <b>Main — k3s-origin.traipoap.com</b> →
-                                Cloudflare Tunnel เข้า super-node ไม่เปิดพอร์ต
-                                สาธารณะ ตัวเดียว edge ทำ TLS/protect ให้
+                                Cloudflare Tunnel วิ่งเข้า super-node
+                                โดยไม่เปิดพอร์ตสาธารณะ TLS จบที่ edge
                             </li>
                             <li>
                                 <b>DR — S3 web static + Lambda</b> — เมื่อ origin
-                                หลักล่ม CloudFront failover ไป static site บน S3
-                                (Lambda จัดการ routing/fallback)
+                                หลักล่ม CloudFront สลับไป static site บน S3 โดยมี
+                                Lambda ช่วย routing/fallback
                             </li>
-                            <li>2 Regional — ap-southeast-1, ap-southeast-7</li>
+                            <li>
+                                สอง region: ap-southeast-1 และ ap-southeast-7
+                            </li>
                         </ul>
                     </article>
                     <article class="layer-card rv" data-layer="gateway">
                         <h3>
                             Gateway <span class="mono">LAYER 02</span>
                         </h3>
-                        <p>
-                            Super-node คือด่านหน้าของแพลตฟอร์ม —
-                            จุดเดียวที่ต่อเข้าคลัสเตอร์บนเครื่อง lab
-                        </p>
+                        <p>Super-node เป็นด่านหน้าและจุดเดียวที่ต่อเข้าคลัสเตอร์ใน lab</p>
                         <ul>
                             <li>
-                                <b>HAProxy</b> ทำ L7 load balancing ต่อหน้า K3s
+                                <b>HAProxy</b> รับ L7 load balancing หน้า K3s
                                 nodes
                             </li>
                             <li>
-                                <b>NFS + Garage S3</b> เป็น shared storage
+                                <b>NFS + Garage S3</b> ใช้เป็น shared storage
                                 ของทั้งแพลตฟอร์ม
                             </li>
                         </ul>
@@ -754,23 +750,23 @@ function shotSrc(name: string): string | null {
                             Compute <span class="mono">LAYER 03</span>
                         </h3>
                         <p>
-                            K3s 5 โหนดบน VM ของ Proxmox — 3 control-planes (etcd
-                            quorum) + 2 workers — Terraform clone จาก template
-                            แล้ว scale node ด้วย count variable ทั้งระบบ repeatable
-                            และ teardown ด้วย terraform destroy
+                            K3s 6 โหนดบน VM ของ Proxmox: 3 control-plane (etcd
+                            quorum) + 3 worker — Terraform clone จาก template
+                            และ scale จำนวนโหนดด้วยตัวแปร count จากนั้น teardown
+                            ทั้งระบบด้วย terraform destroy
                         </p>
                         <ul>
                             <li>
-                                <b>Terraform</b> remote state บน HCP — render
-                                Ansible inventory + HAProxy config จาก state
+                                <b>Terraform</b> เก็บ state บน HCP และ render
+                                Ansible inventory กับ HAProxy config จาก state
                             </li>
                             <li>
-                                <b>6 Ansible playbooks</b> idempotent ครอบคลุม
-                                kernel tuning → K3s bootstrap
+                                <b>6 Ansible playbooks</b> ที่รันซ้ำได้ ตั้งแต่ kernel
+                                tuning ถึง K3s bootstrap
                             </li>
                             <li>
-                                zero → full platform ในเวลา
-                                <b>ไม่ถึง 1 ชั่วโมง</b>
+                                สร้างใหม่จากศูนย์ได้ในเวลา
+                                <b>ต่ำกว่า 1 ชั่วโมง</b>
                             </li>
                         </ul>
                     </article>
@@ -780,21 +776,21 @@ function shotSrc(name: string): string | null {
                             <span class="mono">LAYER 04</span>
                         </h3>
                         <p>
-                            ชั้นของงานจริง: แพลตฟอร์ม log-search, observability และ
-                            GitOps ที่ self-heal เมื่อ config เกิด drift
+                            ชั้นที่รันงานจริง: log-search platform, observability และ
+                            GitOps ที่ self-heal เมื่อ config drift
                         </p>
                         <ul>
                             <li>
-                                <b>app</b> — Go/GIN + Astro log-search platform
+                                <b>app</b> — Go/Gin + Astro log-search platform
                                 ที่ app.traipoap.com
                             </li>
                             <li>
-                                <b>Prometheus + Grafana</b> เฝ้า metric และ Otel
-                                → Loki เก็บ log
+                                <b>Prometheus + Grafana</b> เก็บ metric และ
+                                OpenTelemetry ส่ง log ไป Loki
                             </li>
                             <li>
                                 <b>ArgoCD</b> reconcile จาก Git ต่อเนื่อง — drift
-                                auto-heal, deploy ด้วยมือ 0 ขั้นตอน
+                                ถูกแก้กลับอัตโนมัติ ไม่ต้อง deploy ด้วยมือ
                             </li>
                         </ul>
                     </article>
@@ -817,7 +813,7 @@ function shotSrc(name: string): string | null {
                         <span>ฮาร์ดแวร์จริงที่รันทุกอย่าง</span>
                     </h2>
                     <p class="sub">
-                        ไม่ใช่บริการที่เปิดจากคลาวด์ — เป็นเครื่องที่ประกอบเอง จ่ายค่าไฟเอง
+                        เป็นเครื่องที่ประกอบเองในบ้าน จ่ายค่าไฟเอง
                         และซ่อมเองทุกครั้งที่เกิดปัญหา
                     </p>
                 </div>
@@ -878,9 +874,9 @@ function shotSrc(name: string): string | null {
                     </div>
                 </article>
                 <article class="hw-card rv" style="--d:3">
-                    <div class="hw-host">edge-node</div>
+                    <div class="hw-host">super-node</div>
                     <span class="hw-role">
-                        EDGE-NODE · HAPROXY + NFS + GARAGE
+                        SUPER-NODE · HAPROXY + NFS + GARAGE
                     </span>
                     <div class="hw-spec">
                         <div>
@@ -942,7 +938,7 @@ function shotSrc(name: string): string | null {
                         <li>
                             <span class="n">03</span>
                             <div>
-                                <b>ArgoCD — แอปและคอนฟิกทั้งหมดอยู่ใน Git</b>
+                                <b>ArgoCD — แอปและ config ทั้งหมดอยู่ใน Git</b>
                                 <p>
                                     ทุก state อยู่ใน Git — ArgoCD reconcile ต่อเนื่อง
                                     drift เมื่อไหร่ ระบบ heal เองโดยอัตโนมัติ
@@ -953,20 +949,19 @@ function shotSrc(name: string): string | null {
                     <div class="iac-metrics">
                         <div class="im">
                             <b>
-                                <span class="count" data-to="3400" data-dec="0">
-                                    3,400
+                                <span class="count" data-to="6" data-dec="0">
+                                    6
                                 </span>
-                                +
                             </b>
-                            <span>บรรทัด IaC</span>
+                            <span>Ansible playbooks</span>
                         </div>
                         <div class="im">
                             <b>
-                                <span class="count" data-to="18" data-dec="0">
-                                    18
+                                <span class="count" data-to="14" data-dec="0">
+                                    14
                                 </span>
                             </b>
-                            <span>modules / roles</span>
+                            <span>ADRs / runbooks</span>
                         </div>
                         <div class="im">
                             <b>&lt; 1 ชม.</b>
@@ -983,14 +978,14 @@ function shotSrc(name: string): string | null {
                             site.yml
                         </button>
                         <button class="tab" data-t="hm" type="button">
-                            imagepolicy.yaml
+                            application.yaml
                         </button>
                     </div>
                     <div class="codebox">
                         <div class="codep on" data-p="tf">
                             <pre><span class="c"># proxmox/cluster.tf — clone VM จาก template แล้ว scale ด้วยตัวแปรเดียว</span>
 <span class="k">resource</span> <span class="f">"proxmox_virtual_environment_vm"</span> <span class="v">"k3s_node"</span> &#123;
-  count     = <span class="v">var.node_count</span>      <span class="c"># 3 cp + 2 workers</span>
+  count     = <span class="v">var.node_count</span>      <span class="c"># 3 cp + 3 workers</span>
   name      = <span class="s">"k3s-&#36;&#123;count.index + 1&#125;"</span>
 
   clone &#123;
@@ -1061,7 +1056,7 @@ function shotSrc(name: string): string | null {
                 <div>
                     <span class="sec-tag">CI/CD · LIVE FROM GITHUB</span>
                     <h2 class="lm">
-                        <span>commit โค้ดหนึ่งบรรทัด — ดู pipeline วิ่งจนจบ</span>
+                        <span>ทุก commit ผ่าน pipeline เดียวกัน</span>
                     </h2>
                     <p class="sub">
                         ข้อมูลจริงจาก GitHub Actions ของ{" "}
@@ -1138,22 +1133,22 @@ function shotSrc(name: string): string | null {
                 <div class="pn rv">
                     <b>ทำไมต้อง GitOps?</b>
                     <p>
-                        เพราะ git เป็น single source of truth — production
-                        สอดคล้องกับ git เสมอ ไม่มีการ kubectl apply ภายนอก git
+                        Git เป็น source of truth เดียว — สิ่งที่อยู่ในคลัสเตอร์
+                        ควรตรงกับที่อยู่ใน repo ถ้าไม่ตรง ArgoCD จะ sync กลับให้
                     </p>
                 </div>
                 <div class="pn rv" style="--d:1">
-                    <b>Rollback กี่วินาที?</b>
+                    <b>Rollback ทำอย่างไร?</b>
                     <p>
-                        git revert หนึ่ง commit → ArgoCD sync กลับเวอร์ชันเดิม
-                        ทั้งกระบวนการไม่เกิน 60 วินาที
+                        revert commit แล้วให้ ArgoCD sync กลับ
+                        ไม่ต้องจำว่าครั้งก่อนรันคำสั่งอะไรไปบ้าง
                     </p>
                 </div>
                 <div class="pn rv" style="--d:2">
                     <b>ถ้า build ล้มเหลวกลางทาง?</b>
                     <p>
-                        pipeline หยุดทันที — image ที่มี secret (Gitleaks) หรือช่องโหว่
-                        CRITICAL/HIGH (Trivy) ไม่มีทางหลุดถึงคลัสเตอร์
+                        pipeline หยุดก่อน push — image ที่ติด secret scanning
+                        หรือมีช่องโหว่ CRITICAL/HIGH จะไม่ถูกส่งขึ้น registry
                     </p>
                 </div>
             </div>
@@ -1168,12 +1163,11 @@ function shotSrc(name: string): string | null {
                 <div>
                     <span class="sec-tag">ARGOCD · GITOPS</span>
                     <h2 class="lm">
-                        <span>สถานะแอปในคลัสเตอร์ตอนนี้</span>
+                        <span>สถานะแอปใน ArgoCD (ตัวอย่าง)</span>
                     </h2>
                     <p class="sub">
                         แอปทั้งหมดในคลัสเตอร์ — รวมถึง Google microservices-demo (10
-                        services) · แถว grafana เป็น ตัวอย่าง drift พร้อมเดโมการ
-                        sync
+                        services) · แถว grafana เป็นตัวอย่าง drift พร้อมเดโมการ sync
                     </p>
                 </div>
             </div>
@@ -1203,7 +1197,7 @@ function shotSrc(name: string): string | null {
                                     style="font-size:12px"
                                     id="pfSync"
                                 >
-                                    2 นาทีที่แล้ว
+                                    ล่าสุด
                                 </td>
                                 <td></td>
                             </tr>
@@ -1216,7 +1210,7 @@ function shotSrc(name: string): string | null {
                                     <span class="badge health">HEALTHY</span>
                                 </td>
                                 <td class="mono" style="font-size:12px">
-                                    14 นาทีที่แล้ว
+                                    ล่าสุด
                                 </td>
                                 <td></td>
                             </tr>
@@ -1229,7 +1223,7 @@ function shotSrc(name: string): string | null {
                                     <span class="badge health">HEALTHY</span>
                                 </td>
                                 <td class="mono" style="font-size:12px">
-                                    32 แค็ท่าไปเลด
+                                    ล่าสุด
                                 </td>
                                 <td>
                                     <a
@@ -1349,7 +1343,7 @@ function shotSrc(name: string): string | null {
                 </div>
                 <div class="gpanel p-slo rv" style="--d:3">
                     <header>
-                        <b>SLO · 30 วัน</b>
+                        <b>SLO · ตัวอย่าง 30 วัน</b>
                         <span style="color:var(--grn)">● MET</span>
                     </header>
                     <div class="gbody">
@@ -1386,7 +1380,7 @@ function shotSrc(name: string): string | null {
                             2
                         </span>
                     </b>
-                    <span>alerts เดือนนี้ (โดนทั้งคู่ตอนตี 3)</span>
+                    <span>alerts ที่ต้องตื่นกลางคืน</span>
                 </div>
                 <div class="ostat rv" style="--d:2">
                     <b>
@@ -1395,7 +1389,7 @@ function shotSrc(name: string): string | null {
                         </span>{" "}
                         นาที
                     </b>
-                    <span>MTTA — เวลาเฉลี่ยในการรับรู้การแจ้งเตือน</span>
+                    <span>เวลาเฉลี่ยในการรับรู้ alert (MTTA)</span>
                 </div>
                 <div class="ostat rv" style="--d:3">
                     <b>
@@ -1404,7 +1398,7 @@ function shotSrc(name: string): string | null {
                         </span>
                         /สัปดาห์
                     </b>
-                    <span>ความถี่การดีพลอย</span>
+                    <span>deploys ต่อสัปดาห์</span>
                 </div>
             </div>
 
@@ -1414,8 +1408,8 @@ function shotSrc(name: string): string | null {
                     <span class="mono">GAME-DAY</span>
                 </h3>
                 <p>
-                    DR ที่เขียนไว้แค่ในไดอะแกรม ไม่เรียกว่า DR — นี่คือบันทึกการจำลองให้
-                    origin หลักล้มจริง แล้วสังเกตกระบวนการ failover
+                    บันทึกการซ้อม: จำลองให้ origin หลักล้ม แล้ววัดว่า failover
+                    ใช้เวลานานแค่ไหน
                 </p>
                 <div class="timeline">
                     <div class="tl-item">
@@ -1454,9 +1448,6 @@ function shotSrc(name: string): string | null {
                     <span class="cr">
                         ข้อมูลหาย <b>0 ไบต์</b>
                     </span>
-                    <span class="cr">
-                        หัวใจคนทำ <b>138 bpm</b>
-                    </span>
                 </div>
                 <div class="lesson">
                     <b>บทเรียนที่ได้:</b> รอบแรก failover ช้าเพราะ edge cache ยังถือ
@@ -1478,8 +1469,7 @@ function shotSrc(name: string): string | null {
                         <span>กว่าจะเป็นระบบนี้ — 6 ขั้นตอน</span>
                     </h2>
                     <p class="sub">
-                        เล่าตามจริง ไม่ตัดช่วงที่ล้มเหลวออก —
-                        เพราะกระบวนการที่ดีวัดกันที่วิธีรับมือ ตอนที่ทุกอย่างไม่ได้ดั่งใจ
+                        ลำดับงานตั้งแต่ตัดสินใจจนระบบรัน รวมช่วงที่ล้มเหลว และวิธีแก้
                     </p>
                 </div>
             </div>
@@ -1490,13 +1480,10 @@ function shotSrc(name: string): string | null {
                         <h3>ตัดสินใจบนกระดาษก่อน</h3>
                         <div class="tool">14 ADRs · RUNBOOK</div>
                         <p>
-                            ทุก architectural decision ตั้งแต่ครั้งแรก ถูกจดเป็น ADR —
-                            เลือกอะไร, ปฏิเสธอะไร, เพราะอะไร พร้อม runbook สำหรับ
-                            deploy และ troubleshooting ที่เกิดขึ้นจริง
+                            ทุก decision ด้านสถาปัตยกรรมถูกจดเป็น ADR: เลือกอะไร
+                            ปฏิเสธอะไร เพราะอะไร พร้อม runbook สำหรับ deploy และ
+                            troubleshooting
                         </p>
-                        <div class="quote">
-                            "decision ที่คนอื่นอ่านไม่ออก คือ bug รอวันตัดสินใจใหม่"
-                        </div>
                     </div>
                 </article>
                 <article class="scard">
@@ -1507,12 +1494,10 @@ function shotSrc(name: string): string | null {
                             TERRAFORM + PROXMOX TEMPLATE CLONE
                         </div>
                         <p>
-                            Terraform ครั้งแรกใช้เวลาหลายวัน —
-                            แต่หลังจากนั้นสร้างโหนดใหม่ไม่กี่นาที เหมือนเดิมทุกครั้งไม่มีเพี้ยน —
-                            remote state บน HCP render inventory + HAProxy
-                            config จาก state
+                            Terraform ครั้งแรกใช้เวลาหลายวัน หลังจากนั้นสร้างโหนดใหม่
+                            ได้ในไม่กี่นาทีและได้ผลเหมือนเดิมทุกครั้ง — state อยู่บน HCP
+                            และใช้ render inventory กับ HAProxy config
                         </p>
-                        <div class="quote">"ช้าวันแรก เพื่อเร็วทุกวันถัดไป"</div>
                     </div>
                 </article>
                 <article class="scard">
@@ -1521,13 +1506,10 @@ function shotSrc(name: string): string | null {
                         <h3>Configure ให้เหมือนกันทุกเครื่อง</h3>
                         <div class="tool">ANSIBLE · 6 PLAYBOOKS</div>
                         <p>
-                            6 playbooks idempotent ครอบคลุมตั้งแต่ kernel tuning,
-                            SSH hardening ยันการ bootstrap K3s ทั้ง control-plane
-                            และ worker — รันซ้ำได้ไม่จำกัดครั้ง
+                            6 playbooks ที่รันซ้ำได้ ตั้งแต่ kernel tuning, SSH
+                            hardening ถึงการ bootstrap K3s ทั้ง control-plane และ
+                            worker
                         </p>
-                        <div class="quote">
-                            "สโนว์เฟลก์มีไว้ประดับตู้เย็น ไม่ใช่เซิร์ฟเวอร์"
-                        </div>
                     </div>
                 </article>
                 <article class="scard">
@@ -1538,12 +1520,8 @@ function shotSrc(name: string): string | null {
                         <p>
                             ทุกการเปลี่ยนแปลงผ่าน pipeline เดียว: Gitleaks +
                             SonarQube → build → Trivy gate → GHCR → ArgoCD
-                            auto-deploy — deploy ด้วยมือ 0 ขั้นตอน
-                            คืนวันศุกร์ก็ไม่ต่างจากคืนไหน
+                            deploy — ไม่มีขั้นตอน deploy ด้วยมือ
                         </p>
-                        <div class="quote">
-                            "ถ้าการดีพลอยยังน่าตื่นเต้น แปลว่าระบบยังไม่น่าไว้วางใจ"
-                        </div>
                     </div>
                 </article>
                 <article class="scard">
@@ -1552,13 +1530,10 @@ function shotSrc(name: string): string | null {
                         <h3>เฝ้าให้เหมือนมีเวรยาม</h3>
                         <div class="tool">PROMETHEUS + GRAFANA</div>
                         <p>
-                            metric ระดับโหนดยัน service mesh, pipeline log
-                            มาตรฐานเดียว Otel → Loki — แจ้งเตือนเฉพาะตอนที่ต้องตื่นจริง
-                            ไม่ใช่ทุกเรื่องจนคนชาชิน
+                            เก็บ metric ตั้งแต่ระดับโหนดถึง service mesh และส่ง log ผ่าน
+                            OpenTelemetry ไป Loki — ตั้ง alert
+                            เฉพาะเรื่องที่ต้องเข้าไปแก้
                         </p>
-                        <div class="quote">
-                            "Alert ที่ดี คือ alert ที่ปลุกเฉพาะตอนที่ต้องตื่น"
-                        </div>
                     </div>
                 </article>
                 <article class="scard">
@@ -1567,13 +1542,9 @@ function shotSrc(name: string): string | null {
                         <h3>ทุบเพื่อเรียนรู้</h3>
                         <div class="tool">CHAOS DRILL + ADR</div>
                         <p>
-                            ทุกเดือนปิดอะไรสักอย่างในระบบโดยตั้งใจ — ซ้อม failover AWS,
-                            ถอดโหนด — แล้วจดทุกอย่างที่เรียนรู้ ระบบทนขึ้นเรื่อย ๆ และค่อย ๆ
-                            ใจเย็นขึ้น (นิดหน่อย)
+                            ทุกเดือนจะปิดอะไรสักอย่างโดยตั้งใจ — ซ้อม failover AWS
+                            หรือถอดโหนด — แล้วจดสิ่งที่เรียนรู้ไว้
                         </p>
-                        <div class="quote">
-                            "ระบบที่ไม่เคยถูกทดสอบ จะถูกทดสอบในเวลาที่แย่ที่สุด"
-                        </div>
                     </div>
                 </article>
             </div>
@@ -1588,11 +1559,11 @@ function shotSrc(name: string): string | null {
                 <div>
                     <span class="sec-tag">EVIDENCE · CHECK IT YOURSELF</span>
                     <h2 class="lm">
-                        <span>หลักฐาน 6 ด้าน — กดตรวจสอบได้เอง</span>
+                        <span>หลักฐาน 5 ด้าน — ตรวจสอบได้เอง</span>
                     </h2>
                     <p class="sub">
-                        ไม่ใช่แค่ภาพ — แต่ละด้านมี link ไปที่ระบบจริง: repo ทั้ง 3 เป็น
-                        public กดดู commit และ pipeline ได้เลย
+                        แต่ละด้านมี link ไปที่ระบบจริง — repo ทั้ง 3 เป็น public กดดู
+                        commit และ pipeline ได้เลย
                     </p>
                 </div>
             </div>
@@ -1609,7 +1580,7 @@ function shotSrc(name: string): string | null {
                             <span class="ev-ph">
                                 AWAITING SCREENSHOT
                                 <br />
-                                public/shots/01-cic.webp
+                                public/shots/01-cicd.webp
                             </span>
                         )}
                     </div>
@@ -1812,7 +1783,7 @@ function shotSrc(name: string): string | null {
                         <span>เรซูเม่ฉบับย่อ</span>
                     </h2>
                     <p class="sub">
-                        ทุกทักษะผ่านการนำไปใช้งานจริง — ไม่ใช่เพียงความรู้ในตำรา
+                        เครื่องมือที่ผมใช้จริงในโปรเจกต์นี้ และประสบการณ์ทำงานที่ผ่านมา
                     </p>
                 </div>
             </div>
@@ -1923,15 +1894,14 @@ function shotSrc(name: string): string | null {
                         <span>คอร์สที่เรียน · หนังสือที่อ่าน</span>
                     </h2>
                     <p class="sub">
-                        เรียนทุกคอร์สเพื่อลงมือทำ — skills จาก lab ถูกนำไปใช้ ตั้งระบบบน
-                        platform และหนังสือใช้เติมหลัก DevOps เพิ่มเติม
+                        คอร์สที่ใช้เตรียมสอบและลงมือทำ lab ส่วนหนังสือใช้อ่านเสริมหลัก DevOps
                     </p>
                 </div>
             </div>
             <div class="learn-grid">
                 <div class="rv">
                     <h3 class="learn-h">
-                        COURSES · <b>COMPLETED</b>
+                        COURSES · <b>DONE &amp; IN PROGRESS</b>
                     </h3>
                     <ul class="courses">
                         <li class="course">
@@ -1951,22 +1921,12 @@ function shotSrc(name: string): string | null {
                         <li class="course">
                             <span class="ck">✓</span>
                             <div>
-                                <b>
-                                    Prepare for the Certified Kubernetes
-                                    Administrators Certification with live
-                                    practice tests right in your browser - CKA
-                                </b>
+                                <b>Certified Kubernetes Administrator (CKA)</b>
                                 <span class="prov">Mumshad Mannambeth</span>
                                 <p>
-                                    How to Administer a Kubernetes Cluster, How
-                                    to Design a Kubernetes Cluster, How to Build
-                                    a Kubernetes Cluster from scratch - "The
-                                    Hard Way", How to Test a Kubernetes Cluster
-                                    end-to-end, How to Troubleshoot a Kubernetes
-                                    Cluster, How to Secure a Kubernetes Cluster,
-                                    How to Configure Storage on a Kubernetes
-                                    Cluster, How to Configure Network on a
-                                    Kubernetes Cluster,
+                                    ออกแบบ ติดตั้ง ทดสอบ troubleshoot และ secure
+                                    คลัสเตอร์ Kubernetes รวมถึงการสร้างคลัสเตอร์
+                                    จากศูนย์แบบ The Hard Way
                                 </p>
                             </div>
                         </li>
@@ -1974,22 +1934,15 @@ function shotSrc(name: string): string | null {
                             <span class="ck">✓</span>
                             <div>
                                 <b>
-                                    Learn concepts and practice for the
-                                    Kubernetes Certification with hands-on labs
-                                    right in your browser - DevOps - CKAD
+                                    Certified Kubernetes Application Developer
+                                    (CKAD)
                                 </b>
                                 <span class="prov">Mumshad Mannambeth</span>
                                 <p>
-                                    Kubernetes Certification, Design and Deploy
-                                    applications on Kubernetes Cluster, Develop
-                                    Cloud First Applications, Secure Kubernetes
-                                    cluster with Secrets and Network Policies,
-                                    Create and Schedule Jobs in Kubernetes,
-                                    Create and Configure Persistent Volumes,
-                                    Configure Readiness and Liveness Probes in a
-                                    cluster, Troubleshoot Applications Deployed
-                                    using Logs, Upgrade and Rollback
-                                    Applications deployed on Kubernetes,
+                                    ออกแบบและ deploy แอปบน Kubernetes, จัดการ
+                                    secrets และ network policies, jobs,
+                                    persistent volumes, probes, logs,
+                                    upgrade/rollback
                                 </p>
                             </div>
                         </li>
@@ -1998,18 +1951,14 @@ function shotSrc(name: string): string | null {
                             <div>
                                 <b>
                                     AWS Certified DevOps Engineer Professional
-                                    2026 - DOP-C02
+                                    (DOP-C02)
                                 </b>
-                                <span class="prov">
-                                    Stephane Maarek | AWS Certified Cloud
-                                    Practitioner,Solutions Architect,Developer
-                                </span>
+                                <span class="prov">Stephane Maarek</span>
                                 <p>
-                                    เตรียมสอบ AWS Certified DevOps Engineer —
-                                    เนื้อหาเรื่อง SDLC Automation, Configure
-                                    Management & IaC, Resilient Cloud Solutions,
-                                    Monitoring and Logging, Incident and Event
-                                    Response, Security and Compliance
+                                    เตรียมสอบ DOP-C02: SDLC automation,
+                                    configuration management และ IaC, resilient
+                                    architecture, monitoring และ logging,
+                                    incident response, security และ compliance
                                 </p>
                             </div>
                         </li>
@@ -2017,24 +1966,13 @@ function shotSrc(name: string): string | null {
                             <span class="ck">-</span>
                             <div>
                                 <b>
-                                    Ultimate AWS Certified Solutions Architect
-                                    Associate 2026
+                                    AWS Certified Solutions Architect Associate
                                 </b>
-                                <span class="prov">
-                                    Stephane Maarek | AWS Certified Cloud
-                                    Practitioner,Solutions Architect,Developer
-                                </span>
+                                <span class="prov">Stephane Maarek</span>
                                 <p>
-                                    Perform Real-World Solution Architecture on
-                                    AWS Learn the AWS Fundamentals (EC2, ELB,
-                                    ASG, RDS, ElastiCache, S3) Learn the
-                                    Serverless Fundamentals (Lambda, DynamoDB,
-                                    Cognito, API Gateway) Analyze 10+ Solution
-                                    Architectures (traditional & serverless)
-                                    Understand the Well Architected Framework,
-                                    Disaster Recovery Master all the differences
-                                    of Databases on AWS Secure your entire AWS
-                                    Cloud using KMS, IAM Policies & SSM
+                                    พื้นฐาน AWS ตั้งแต่ EC2, ELB, S3, RDS, Lambda ถึง
+                                    Well-Architected Framework และ Disaster
+                                    Recovery
                                 </p>
                             </div>
                         </li>
@@ -2050,21 +1988,9 @@ function shotSrc(name: string): string | null {
                             <b>Practical DevOps and Cloud Engineering</b>
                             <span class="auth">อ.ดร.ณัฐโชติ พรหมฤทธิ์</span>
                             <p>
-                                หนังสือ Practical DEVOPS and Cloud Engineering
-                                เล่มนี้เป็นคู่มือพัฒนาทักษะทางด้าน Practical DEVOPS and
-                                Cloud Engineering ภาคปฏิบัติ มีจุดประสงค์เพื่อพัฒนาทักษะ 2
-                                ด้าน คือ "Reskill" (การเสริมทักษะใหม่เพื่อรองรับอนาคต)
-                                และ "Upskill"
-                                (การพัฒนาทักษะที่มีอยู่ให้ดีขึ้นตามที่บริษัทต้องการ)
-                                โดยเน้นการพัฒนาซอฟต์แวร์ผ่าน Practice & Workshop
-                                ภายใต้แนวคิดใหม่อย่าง "Microservices Architecture"
-                                (Design-Develop-Deploy)
-                                เพื่อให้ผู้อ่านมีแนวทางที่จะนำความรู้และทักษะที่ได้จากหนังสือเล่มนี้ไปประยุกต์ใช้ได้ในการทำงานจริง
-                                หนังสือเล่มนี้จึงเหมาะสำหรับนักศึกษา โปรแกรมเมอร์
-                                นักพัฒนาซอฟต์แวร์และผู้ที่อยากข้ามสายงานมาทำงานทางด้าน
-                                "DevOps Engineer/Cloud DevOps Engineer"
-                                สายงานที่มีบทบาทสำคัญต่อการพัฒนาผลิตภัณฑ์ที่เป็นซอฟต์แวร์
-                                และเป็นที่ต้องการมากที่สุดอาชีพหนึ่งในปัจจุบัน
+                                คู่มือภาคปฏิบัติสำหรับ Reskill/Upskill ด้าน DevOps และ
+                                Cloud ผ่าน workshop และแนวคิด Microservices
+                                (Design–Develop–Deploy)
                             </p>
                         </li>
                     </ul>
@@ -2077,17 +2003,9 @@ function shotSrc(name: string): string | null {
                             </b>
                             <span class="auth">รศ.ดร. ปานใจ ธารทัศนวงศ์</span>
                             <p>
-                                หนังสือที่รวบรวมหลักทฤษฎีวิศวกรรมซอฟต์แวร์ (Software
-                                Engineering) และประยุกต์
-                                ซึ่งเป็นเครื่องมือสำคัญในการที่องค์กรจะปรับเปลี่ยนสู่ดิจิทัล
-                                (Digital Transformation)
-                                ซึ่งต้องอาศัยความรู้และความเข้าใจในหลายมิติ
-                                นอกจากนี้ยังได้รวบรวมแนวคิดในการพัฒนาซอฟต์แวร์แบบใหม่ ๆ
-                                และกรณีศึกษา
-                                เพื่อให้ผู้อ่านได้ก้าวทันตามการเปลี่ยนแปลงของเทคโนโลยีด้านวิศวกรรมซอฟต์แวร์
-                                ที่มีบทบาทอย่างมากในการปรับเปลี่ยนสู่ดิจิทัล
-                                หนังสือเล่มนี้จะเป็นประโยชน์ต่อการพัฒนาองค์กรดิจิทัล
-                                หรือได้มีส่วนร่วมที่ทำให้การพัฒนาซอฟต์แวร์ของประเทศให้ประสบผลสำเร็จ
+                                รวมหลักวิศวกรรมซอฟต์แวร์และการประยุกต์ใช้ในการเปลี่ยน
+                                องค์กรสู่ดิจิทัล
+                                พร้อมกรณีศึกษาและแนวคิดการพัฒนาซอฟต์แวร์แบบใหม่
                             </p>
                         </li>
                     </ul>
@@ -2103,12 +2021,12 @@ function shotSrc(name: string): string | null {
                 <span class="sec-tag">CONTACT</span>
                 <h2 class="lm">
                     <span>
-                        ต้องการทราบรายละเอียดว่าระบบนี้รับมือกับความล้มเหลวอย่างไร —{" "}
+                        สนใจคุยเรื่องระบบ หรือตำแหน่ง DevOps —{" "}
                         <mark>ติดต่อได้ด้านล่าง</mark>
                     </span>
                 </h2>
                 <p class="sub" style="max-width:62ch;margin-top:16px">
-                    หรือเริ่มจากเดโมด้านบนก่อนก็ได้ — ตอบทุกข้อความภายใน 24 ชั่วโมง
+                    หรือลองดูเดโมและ repo ด้านบนก่อนก็ได้
                 </p>
             </div>
             <div class="c-cards">
@@ -2116,7 +2034,7 @@ function shotSrc(name: string): string | null {
                     <span class="arr">→</span>
                     <span class="mono">EMAIL</span>
                     <b>traipoap@hotmail.com</b>
-                    <span>ตอบกลับภายใน 24 ชั่วโมง</span>
+                    <span>อีเมลหลัก</span>
                 </a>
                 <a
                     class="ccard rv"
@@ -4331,34 +4249,34 @@ function shotSrc(name: string): string | null {
                 /* terminal typing — markup มีเนื้อหาอยู่แล้ว ถ้าจะพิมพ์ใหม่ค่อยล้าง */
                 (function () {
                     const TERM = [
-                        ["cmd", "kubectl get nodes -o wide"],
+                        ["cmd", "kubectl get nodes"],
                         [
                             "out",
-                            "NAME         STATUS   ROLES                AGE    VERSION",
+                            "NAME             STATUS   ROLES                 AGE   VERSION",
                         ],
                         [
                             "out",
-                            "controlplan-1    Ready    control-plane,etcd   88d    v1.37.2+k3s1",
+                            "controlplane-1   Ready    control-plane,etcd    88d   v1.37.2+k3s1",
                         ],
                         [
                             "out",
-                            "controlplan-2    Ready    control-plane,etcd   88d    v1.37.2+k3s1",
+                            "controlplane-2   Ready    control-plane,etcd    88d   v1.37.2+k3s1",
                         ],
                         [
                             "out",
-                            "controlplan-3    Ready    control-plane,etcd   88d    v1.37.2+k3s1",
+                            "controlplane-3   Ready    control-plane,etcd    88d   v1.37.2+k3s1",
                         ],
                         [
                             "out",
-                            "worker-1 Ready    worker               88d    v1.37.2+k3s1",
+                            "worker-1         Ready    worker                88d   v1.37.2+k3s1",
                         ],
                         [
                             "out",
-                            "worker-2 Ready    worker               88d    v1.37.2+k3s1",
+                            "worker-2         Ready    worker                88d   v1.37.2+k3s1",
                         ],
                         [
                             "out",
-                            "worker-3 Ready    worker               88d    v1.37.2+k3s1",
+                            "worker-3         Ready    worker                88d   v1.37.2+k3s1",
                         ],
                         [
                             "cmd",
@@ -4368,7 +4286,7 @@ function shotSrc(name: string): string | null {
                         ["cmd", "curl -s https://app.traipoap.com/healthz"],
                         ["ok", '{"status":"ok"}'],
                         ["dim", "────────────────────────────────────────────"],
-                        ["dim", "แพลตฟอร์มที่คุณกำลังดู คือผลลัพธ์ของคำสั่งด้านบน ✓"],
+                        ["dim", "หน้านี้เสิร์ฟจากคลัสเตอร์เดียวกัน"],
                     ];
                     const body = $("#term");
                     if (!body || REDUCED) return;
@@ -4722,7 +4640,7 @@ function shotSrc(name: string): string | null {
                         $("#certBadge").textContent = "SYNCED";
                         $("#certSync").textContent = "เมื่อสักครู่";
                         this.textContent = "✓ แล้ว";
-                        toast("✓ grafana synced — image ใหม่เข้าคลัสเตอร์เรียบร้อย");
+                        toast("เดโม: sync grafana แล้ว (ไม่ได้ยิงคำสั่งจริง)");
                     });
 
                 /* sparkline charts */
